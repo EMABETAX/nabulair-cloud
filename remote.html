@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>NabulAir PRO - Remote Control</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        /* Animazioni */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes gradientBg {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes ripple {
+            0% { transform: scale(0); opacity: 0.5; }
+            100% { transform: scale(4); opacity: 0; }
+        }
+
+        /* Container principale */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header Glassmorphism */
+        .glass-header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            padding: 20px 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 8px 32px rgba(0, 212, 255, 0.3);
+        }
+
+        .logo-text h1 {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff, #00d4ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .logo-text p {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 20px;
+            border-radius: 50px;
+        }
+
+        .status-led {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #e53e3e;
+            animation: pulse 2s infinite;
+        }
+
+        .status-led.online {
+            background: #00e676;
+            box-shadow: 0 0 10px #00e676;
+        }
+
+        .ip-badge {
+            font-family: monospace;
+            font-size: 14px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 12px;
+            border-radius: 20px;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 25px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .stat-card:hover::before {
+            left: 100%;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(0, 212, 255, 0.5);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-icon {
+            font-size: 40px;
+            margin-bottom: 15px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.7;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: 800;
+            margin-top: 10px;
+            background: linear-gradient(135deg, #fff, #00d4ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .stat-unit {
+            font-size: 14px;
+            opacity: 0.5;
+        }
+
+        /* Control Panel */
+        .control-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 25px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .panel-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+        }
+
+        .btn-remote {
+            padding: 18px 25px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-remote::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn-remote:active::after {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #00e676, #00b0ff);
+            color: white;
+            box-shadow: 0 5px 20px rgba(0, 230, 118, 0.3);
+        }
+
+        .btn-stop {
+            background: linear-gradient(135deg, #ff5252, #e53935);
+            color: white;
+            box-shadow: 0 5px 20px rgba(255, 82, 82, 0.3);
+        }
+
+        .btn-wash {
+            background: linear-gradient(135deg, #2196f3, #1976d2);
+            color: white;
+        }
+
+        .btn-test {
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            color: white;
+        }
+
+        .btn-remote:hover {
+            transform: translateY(-3px);
+            filter: brightness(1.05);
+        }
+
+        .btn-remote:active {
+            transform: translateY(0);
+        }
+
+        /* Status Circle */
+        .main-status {
+            display: flex;
+            justify-content: center;
+            margin: 30px 0;
+        }
+
+        .status-circle {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 0 60px rgba(0, 212, 255, 0.5);
+            animation: pulse 2s infinite;
+        }
+
+        .status-circle::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: rgba(0, 212, 255, 0.3);
+            animation: ripple 2s infinite;
+        }
+
+        .status-text {
+            font-size: 28px;
+            font-weight: 800;
+            z-index: 1;
+        }
+
+        .status-subtext {
+            font-size: 14px;
+            opacity: 0.9;
+            z-index: 1;
+            margin-top: 10px;
+        }
+
+        .timer-ring {
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Programs Section */
+        .programs-section {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 25px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .programs-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .programs-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .program-item {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 20px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            transition: all 0.3s;
+            border-left: 4px solid #00d4ff;
+        }
+
+        .program-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateX(5px);
+        }
+
+        .program-info {
+            flex: 1;
+        }
+
+        .program-name {
+            font-weight: 700;
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .program-details {
+            font-size: 13px;
+            opacity: 0.7;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .program-badge {
+            background: rgba(0, 212, 255, 0.2);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+
+        .program-badge.active {
+            background: rgba(0, 230, 118, 0.2);
+            color: #00e676;
+        }
+
+        .program-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .icon-btn-small {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 10px;
+            padding: 8px 15px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .icon-btn-small:hover {
+            background: rgba(0, 212, 255, 0.3);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border-radius: 30px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+        }
+
+        .modal-body input, .modal-body select {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            color: white;
+            font-size: 16px;
+        }
+
+        .modal-body input:focus {
+            outline: none;
+            border-color: #00d4ff;
+        }
+
+        .modal-btn {
+            width: 100%;
+            padding: 15px;
+            margin-top: 20px;
+            background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 15px 25px;
+            border-radius: 50px;
+            border-left: 4px solid #00d4ff;
+            transform: translateX(400px);
+            transition: transform 0.3s;
+            z-index: 1100;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #00d4ff;
+            border-radius: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            .stat-value {
+                font-size: 28px;
+            }
+            .status-circle {
+                width: 150px;
+                height: 150px;
+            }
+            .status-text {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="glass-header">
+            <div class="logo-area">
+                <div class="logo-icon">🌿</div>
+                <div class="logo-text">
+                    <h1>NABULAIR PRO</h1>
+                    <p>Sistema di nebulizzazione professionale</p>
+                </div>
+            </div>
+            <div class="connection-status">
+                <div class="status-led" id="statusLed"></div>
+                <span id="statusText">Connessione...</span>
+                <span class="ip-badge" id="ipDisplay">--</span>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">💧</div>
+                <div class="stat-label">Volume Totale</div>
+                <div class="stat-value" id="totalVolume">0 <span class="stat-unit">L</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🧪</div>
+                <div class="stat-label">Consumo Insetticida</div>
+                <div class="stat-value" id="totalInsecticide">0 <span class="stat-unit">ml</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div class="stat-label">Cicli Oggi</div>
+                <div class="stat-value" id="cyclesToday">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⏱️</div>
+                <div class="stat-label">Flusso Attuale</div>
+                <div class="stat-value" id="flowRate">0 <span class="stat-unit">L/min</span></div>
+            </div>
+        </div>
+
+        <!-- Main Status Circle -->
+        <div class="main-status">
+            <div class="status-circle" id="statusCircle">
+                <div class="status-text" id="mainStatusText">FERMO</div>
+                <div class="status-subtext" id="timerText"></div>
+                <div class="timer-ring" id="timerRing" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <div class="panel-title">
+                <span>🎮</span> Controllo Remoto
+            </div>
+            <div class="button-group">
+                <button class="btn-remote btn-start" id="btnStart">
+                    ▶️ AVVIA CICLO
+                </button>
+                <button class="btn-remote btn-stop" id="btnStop">
+                    ⏹️ STOP
+                </button>
+                <button class="btn-remote btn-wash" id="btnWash">
+                    🚿 LAVAGGIO
+                </button>
+                <button class="btn-remote btn-test" id="btnTest">
+                    🔬 TEST (1%)
+                </button>
+            </div>
+        </div>
+
+        <!-- Sensors Status -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">💦</div>
+                <div class="stat-label">Livello Acqua</div>
+                <div class="stat-value" id="waterLevel" style="font-size: 24px;">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⚠️</div>
+                <div class="stat-label">Insetticida</div>
+                <div class="stat-value" id="insecticideLevel" style="font-size: 24px;">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📡</div>
+                <div class="stat-label">Prossima Attivazione</div>
+                <div class="stat-value" id="nextActivation" style="font-size: 20px;">--:--</div>
+            </div>
+        </div>
+
+        <!-- Programs Section -->
+        <div class="programs-section">
+            <div class="programs-header">
+                <div class="panel-title">
+                    <span>📅</span> Programmi Attivi
+                </div>
+                <button class="icon-btn-small" id="refreshProgramsBtn">🔄 Ricarica</button>
+            </div>
+            <div class="programs-list" id="programsList">
+                <div style="text-align: center; padding: 40px;">Caricamento programmi...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Loading -->
+    <div class="loading-overlay" id="loading">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <script>
+        // ============================================
+        // CONFIGURAZIONE - CAMBIA CON L'IP DEL TUO ESP32
+        // ============================================
+        let ESP_IP = '192.168.4.3';  // IP dell'ESP32 (lo puoi cambiare)
+        
+        let updateInterval = null;
+        let isOnline = false;
+        let currentCycle = false;
+
+        // Helper per le API
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            const url = `http://${ESP_IP}${endpoint}`;
+            const options = { method, headers: { 'Content-Type': 'application/json' } };
+            if (body) options.body = JSON.stringify(body);
+            
+            try {
+                const response = await fetch(url, options);
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('API Error:', error);
+                return null;
+            }
+        }
+
+        // Aggiorna stato sistema
+        async function updateStatus() {
+            const data = await apiCall('/status');
+            if (data && data.success) {
+                isOnline = true;
+                document.getElementById('statusLed').classList.add('online');
+                document.getElementById('statusText').innerText = 'Online';
+                document.getElementById('ipDisplay').innerText = ESP_IP;
+                
+                // Aggiorna stats
+                document.getElementById('totalVolume').innerHTML = (data.volume_totale_L || 0).toFixed(1) + ' <span class="stat-unit">L</span>';
+                document.getElementById('totalInsecticide').innerHTML = (data.consumo_insett_ml || 0).toFixed(1) + ' <span class="stat-unit">ml</span>';
+                document.getElementById('cyclesToday').innerHTML = data.cicli_oggi || 0;
+                document.getElementById('flowRate').innerHTML = (data.flow_lmin || 0).toFixed(2) + ' <span class="stat-unit">L/min</span>';
+                
+                // Sensori
+                const waterOk = data.livello_acqua_ok;
+                const insOk = data.insetticida_ok;
+                document.getElementById('waterLevel').innerHTML = waterOk ? '✅ OK' : '❌ BASSO';
+                document.getElementById('waterLevel').style.color = waterOk ? '#00e676' : '#ff5252';
+                document.getElementById('insecticideLevel').innerHTML = insOk ? '✅ OK' : '❌ ESAURITO';
+                document.getElementById('insecticideLevel').style.color = insOk ? '#00e676' : '#ff5252';
+                document.getElementById('nextActivation').innerHTML = data.prossima_attivazione || '--:--';
+                
+                // Stato ciclo
+                const isActive = data.ciclo_attivo || data.status === 'CICLO_ATTIVO';
+                currentCycle = isActive;
+                
+                const mainText = document.getElementById('mainStatusText');
+                const timerText = document.getElementById('timerText');
+                const timerRing = document.getElementById('timerRing');
+                
+                if (isActive) {
+                    mainText.innerHTML = '🔄 IN Corso';
+                    mainText.style.color = '#00e676';
+                    if (data.secondi_rimanenti > 0) {
+                        const mins = Math.floor(data.secondi_rimanenti / 60);
+                        const secs = data.secondi_rimanenti % 60;
+                        timerText.innerHTML = `${mins}:${secs.toString().padStart(2, '0')}`;
+                        timerRing.style.display = 'block';
+                    } else {
+                        timerText.innerHTML = 'Nebulizzazione...';
+                        timerRing.style.display = 'block';
+                    }
+                } else {
+                    mainText.innerHTML = '⏹️ FERMO';
+                    mainText.style.color = '#ff5252';
+                    timerText.innerHTML = 'Pronto';
+                    timerRing.style.display = 'none';
+                }
+            } else {
+                isOnline = false;
+                document.getElementById('statusLed').classList.remove('online');
+                document.getElementById('statusText').innerText = 'Offline';
+                showToast('⚠️ Connessione persa, riconnessione...', 'error');
+            }
+        }
+
+        // Carica programmi
+        async function loadPrograms() {
+            const data = await apiCall('/getPrograms');
+            const container = document.getElementById('programsList');
+            
+            if (data && Array.isArray(data)) {
+                const activePrograms = data.filter(p => p.attivo);
+                
+                if (activePrograms.length === 0) {
+                    container.innerHTML = '<div style="text-align: center; padding: 40px; opacity: 0.7;">📭 Nessun programma attivo</div>';
+                    return;
+                }
+                
+                container.innerHTML = activePrograms.map(prog => {
+                    const daysMap = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+                    const days = (prog.days || []).map(d => daysMap[d-1]).join(', ');
+                    
+                    return `
+                        <div class="program-item">
+                            <div class="program-info">
+                                <div class="program-name">${escapeHtml(prog.nome)}</div>
+                                <div class="program-details">
+                                    <span>⏰ ${prog.orario || '--:--'}</span>
+                                    <span>⏱️ ${prog.durata || 120}s</span>
+                                    <span>🧪 ${prog.percentuale || 1.5}%</span>
+                                    <span>📅 ${days}</span>
+                                </div>
+                            </div>
+                            <div class="program-actions">
+                                <span class="program-badge ${prog.attivo ? 'active' : ''}">
+                                    ${prog.attivo ? '✅ ATTIVO' : '⭕ DISATTIVO'}
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                container.innerHTML = '<div style="text-align: center; padding: 40px;">❌ Errore caricamento programmi</div>';
+            }
+        }
+
+        // Azioni
+        async function startCycle() {
+            showLoading(true);
+            const result = await apiCall('/start');
+            if (result && result.success) {
+                showToast('✅ Ciclo avviato!', 'success');
+                updateStatus();
+            } else {
+                showToast('❌ ' + (result?.message || 'Errore avvio'), 'error');
+            }
+            showLoading(false);
+        }
+
+        async function stopCycle() {
+            showLoading(true);
+            const result = await apiCall('/stop');
+            if (result && result.success) {
+                showToast('⏹️ Ciclo fermato', 'success');
+                updateStatus();
+            } else {
+                showToast('❌ Errore stop', 'error');
+            }
+            showLoading(false);
+        }
+
+        async function washCycle() {
+            showLoading(true);
+            const result = await apiCall('/lavaggio');
+            if (result && result.success) {
+                showToast('🚿 Lavaggio avviato', 'success');
+                updateStatus();
+            } else {
+                showToast('❌ ' + (result?.message || 'Errore lavaggio'), 'error');
+            }
+            showLoading(false);
+        }
+
+        async function testCycle() {
+            showLoading(true);
+            const result = await apiCall('/test');
+            if (result && result.success) {
+                showToast('🔬 Test avviato (1%)', 'success');
+                updateStatus();
+            } else {
+                showToast('❌ ' + (result?.message || 'Errore test'), 'error');
+            }
+            showLoading(false);
+        }
+
+        // Utility
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.innerHTML = message;
+            toast.style.borderLeftColor = type === 'error' ? '#ff5252' : '#00e676';
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'flex' : 'none';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Setup IP (utile per configurare IP diverso)
+        function setupIP() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const ipParam = urlParams.get('ip');
+            if (ipParam) {
+                ESP_IP = ipParam;
+                document.getElementById('ipDisplay').innerText = ESP_IP;
+                showToast(`📍 Connessione a ${ESP_IP}`, 'info');
+            }
+        }
+
+        // Eventi
+        document.getElementById('btnStart').addEventListener('click', startCycle);
+        document.getElementById('btnStop').addEventListener('click', stopCycle);
+        document.getElementById('btnWash').addEventListener('click', washCycle);
+        document.getElementById('btnTest').addEventListener('click', testCycle);
+        document.getElementById('refreshProgramsBtn').addEventListener('click', loadPrograms);
+
+        // Avvia
+        setupIP();
+        updateStatus();
+        loadPrograms();
+        updateInterval = setInterval(() => {
+            updateStatus();
+        }, 3000);
+    </script>
+</body>
+</html>
