@@ -12,18 +12,13 @@ app.use(cors());
 app.use(express.json());
 
 // ============================================
-// VERIFICA VARIABILI D'AMBIENTE
+// VARIABILI D'AMBIENTE
 // ============================================
 const JWT_SECRET = process.env.JWT_SECRET;
 const DATABASE_URL = process.env.DATABASE_URL;
 
-console.log('🔧 ** VERIFICA VARIABILI **');
-console.log(`📡 DATABASE_URL: ${DATABASE_URL ? '✅ Presente' : '❌ MANCANTE'}`);
-console.log(`🔐 JWT_SECRET: ${JWT_SECRET ? '✅ Presente' : '❌ MANCANTE'}`);
-
 if (!JWT_SECRET) {
     console.error('❌ ERRORE: JWT_SECRET non configurato!');
-    console.error('👉 Aggiungi JWT_SECRET alle variabili d\'ambiente su Railway');
     process.exit(1);
 }
 
@@ -33,7 +28,7 @@ if (!DATABASE_URL) {
 }
 
 // ============================================
-// DATABASE CONNECTION (usa DATABASE_URL di Railway)
+// DATABASE CONNECTION
 // ============================================
 const pool = new Pool({
     connectionString: DATABASE_URL,
@@ -42,7 +37,7 @@ const pool = new Pool({
 
 pool.connect((err) => {
     if (err) {
-        console.error('❌ Errore connessione DB:', err.message);
+        console.error('❌ Errore DB:', err.message);
     } else {
         console.log('✅ Connesso a PostgreSQL su Railway!');
     }
@@ -79,23 +74,20 @@ app.post('/api/login', async (req, res) => {
     }
     
     try {
-        // Query per prendere utente
         const result = await pool.query(
-            `SELECT id, username, password_hash, role FROM users WHERE username = $1`,
+            'SELECT * FROM users WHERE username = $1',
             [username.toLowerCase()]
         );
         
         const user = result.rows[0];
         
         if (!user) {
-            await new Promise(resolve => setTimeout(resolve, 100));
             return res.status(401).json({ success: false, message: 'Credenziali non valide' });
         }
         
         const passwordValid = await bcrypt.compare(password, user.password_hash);
         
         if (!passwordValid) {
-            await new Promise(resolve => setTimeout(resolve, 100));
             return res.status(401).json({ success: false, message: 'Credenziali non valide' });
         }
         
@@ -118,11 +110,11 @@ app.post('/api/login', async (req, res) => {
 });
 
 // ============================================
-// API MACCHINE (con filtro per ruolo)
+// API MACCHINE (protetta)
 // ============================================
 app.get('/api/machines', authenticateToken, async (req, res) => {
     try {
-        let query = `
+        const result = await pool.query(`
             SELECT 
                 m.id, 
                 m.machine_name, 
@@ -135,9 +127,7 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
             FROM machines m
             LEFT JOIN clients c ON m.client_id = c.id
             ORDER BY m.status DESC, m.last_seen DESC NULLS LAST
-        `;
-        
-        const result = await pool.query(query);
+        `);
         
         res.json({ success: true, machines: result.rows });
         
@@ -148,7 +138,7 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
 });
 
 // ============================================
-// API REGISTRAZIONE ESP32
+// API REGISTRAZIONE ESP32 (pubblica)
 // ============================================
 app.post('/api/register', async (req, res) => {
     const { mac_address, ip, version } = req.body;
@@ -176,7 +166,7 @@ app.post('/api/register', async (req, res) => {
 });
 
 // ============================================
-// API PING
+// API PING ESP32
 // ============================================
 app.post('/api/ping', async (req, res) => {
     const { mac_address, ip } = req.body;
@@ -205,7 +195,7 @@ app.post('/api/ping', async (req, res) => {
 app.get('/health', async (req, res) => {
     try {
         await pool.query('SELECT 1');
-        res.json({ status: 'healthy' });
+        res.json({ status: 'healthy', timestamp: new Date().toISOString() });
     } catch (error) {
         res.status(500).json({ status: 'unhealthy', error: error.message });
     }
@@ -222,6 +212,11 @@ app.get('/', (req, res) => {
     });
 });
 
+// ============================================
+// AVVIO SERVER
+// ============================================
 app.listen(PORT, () => {
     console.log(`✅ Server avviato su porta ${PORT}`);
+    console.log(`🔐 JWT_SECRET: ${JWT_SECRET ? '✅ Configurato' : '❌ MANCANTE'}`);
+    console.log(`🗄️ Database: ${DATABASE_URL ? '✅ Configurato' : '❌ MANCANTE'}`);
 });
