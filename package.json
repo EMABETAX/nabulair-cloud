@@ -1,26 +1,15 @@
 {
   "name": "nabulair-cloud",
-  "version": "1.0.0",
-  "description": "",
-  "main": "backend.js",
+  "version": "2.0.0",
+  "main": "backend-railway.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node backend-railway.js"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/emabetax/nabulair-cloud.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/emabetax/nabulair-cloud/issues"
-  },
-  "homepage": "https://github.com/emabetax/nabulair-cloud#readme",
   "dependencies": {
-    "cors": "^2.8.6",
-    "express": "^5.2.1",
-    "mysql2": "^3.22.3"
+    "express": "^4.18.0",
+    "cors": "^2.8.5",
+    "pg": "^8.11.0",
+    "jsonwebtoken": "^9.0.0",
+    "bcrypt": "^5.1.0"
   }
 }
