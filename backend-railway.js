@@ -4,12 +4,37 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const { Pool } = require('pg');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Middleware
 app.use(cors());
 app.use(express.json());
+
+// ============================================
+// FILE STATICI (HTML, CSS, JS)
+// ============================================
+// Serve i file dalla cartella corrente
+app.use(express.static(__dirname));
+
+// Rotte esplicite per le pagine HTML
+app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dashboard.html'));
+});
+
+app.get('/remote', (req, res) => {
+    res.sendFile(path.join(__dirname, 'remote.html'));
+});
+
+app.get('/dashboard.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dashboard.html'));
+});
+
+app.get('/remote.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'remote.html'));
+});
 
 // ============================================
 // VARIABILI D'AMBIENTE
@@ -19,11 +44,13 @@ const DATABASE_URL = process.env.DATABASE_URL;
 
 if (!JWT_SECRET) {
     console.error('❌ ERRORE: JWT_SECRET non configurato!');
+    console.error('👉 Aggiungi JWT_SECRET alle variabili d\'ambiente su Railway');
     process.exit(1);
 }
 
 if (!DATABASE_URL) {
     console.error('❌ ERRORE: DATABASE_URL non configurato!');
+    console.error('👉 Collega il database al backend su Railway');
     process.exit(1);
 }
 
@@ -82,12 +109,14 @@ app.post('/api/login', async (req, res) => {
         const user = result.rows[0];
         
         if (!user) {
+            await new Promise(resolve => setTimeout(resolve, 100));
             return res.status(401).json({ success: false, message: 'Credenziali non valide' });
         }
         
         const passwordValid = await bcrypt.compare(password, user.password_hash);
         
         if (!passwordValid) {
+            await new Promise(resolve => setTimeout(resolve, 100));
             return res.status(401).json({ success: false, message: 'Credenziali non valide' });
         }
         
@@ -138,6 +167,32 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
 });
 
 // ============================================
+// API DETTAGLIO MACCHINA
+// ============================================
+app.get('/api/machine/:id', authenticateToken, async (req, res) => {
+    const { id } = req.params;
+    
+    try {
+        const result = await pool.query(`
+            SELECT m.*, c.name as client_name, c.email, c.phone, c.address
+            FROM machines m
+            LEFT JOIN clients c ON m.client_id = c.id
+            WHERE m.id = $1
+        `, [id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Macchina non trovata' });
+        }
+        
+        res.json({ success: true, machine: result.rows[0] });
+        
+    } catch (error) {
+        console.error('Errore GET machine:', error.message);
+        res.status(500).json({ success: false, message: 'Errore caricamento' });
+    }
+});
+
+// ============================================
 // API REGISTRAZIONE ESP32 (pubblica)
 // ============================================
 app.post('/api/register', async (req, res) => {
@@ -145,6 +200,12 @@ app.post('/api/register', async (req, res) => {
     
     if (!mac_address || !ip) {
         return res.status(400).json({ success: false, message: 'Dati mancanti' });
+    }
+    
+    // Valida formato MAC address
+    const macRegex = /^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$/i;
+    if (!macRegex.test(mac_address)) {
+        return res.status(400).json({ success: false, message: 'MAC address non valido' });
     }
     
     try {
@@ -157,7 +218,7 @@ app.post('/api/register', async (req, res) => {
         );
         
         console.log(`📡 ESP32 registrato: ${mac_address}`);
-        res.json({ success: true });
+        res.json({ success: true, message: 'Registrato con successo' });
         
     } catch (error) {
         console.error('Errore registrazione:', error.message);
@@ -185,6 +246,7 @@ app.post('/api/ping', async (req, res) => {
         res.json({ success: true });
         
     } catch (error) {
+        console.error('Errore ping:', error.message);
         res.json({ success: false });
     }
 });
@@ -195,20 +257,38 @@ app.post('/api/ping', async (req, res) => {
 app.get('/health', async (req, res) => {
     try {
         await pool.query('SELECT 1');
-        res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+        res.json({ 
+            status: 'healthy', 
+            timestamp: new Date().toISOString(),
+            uptime: process.uptime()
+        });
     } catch (error) {
-        res.status(500).json({ status: 'unhealthy', error: error.message });
+        res.status(500).json({ 
+            status: 'unhealthy', 
+            error: error.message,
+            timestamp: new Date().toISOString()
+        });
     }
 });
 
 // ============================================
-// ROOT
+// ROOT ENDPOINT
 // ============================================
 app.get('/', (req, res) => {
     res.json({ 
         message: 'NabulAir Cloud API', 
         version: '2.0',
-        status: 'online'
+        status: 'online',
+        endpoints: [
+            'GET /',
+            'GET /health',
+            'GET /dashboard',
+            'GET /remote',
+            'POST /api/login',
+            'GET /api/machines (protected)',
+            'POST /api/register',
+            'POST /api/ping'
+        ]
     });
 });
 
@@ -216,7 +296,8 @@ app.get('/', (req, res) => {
 // AVVIO SERVER
 // ============================================
 app.listen(PORT, () => {
-    console.log(`✅ Server avviato su porta ${PORT}`);
+    console.log(`✅ NabulAir Cloud avviato su porta ${PORT}`);
     console.log(`🔐 JWT_SECRET: ${JWT_SECRET ? '✅ Configurato' : '❌ MANCANTE'}`);
     console.log(`🗄️ Database: ${DATABASE_URL ? '✅ Configurato' : '❌ MANCANTE'}`);
+    console.log(`📁 File statici: ${__dirname}`);
 });
