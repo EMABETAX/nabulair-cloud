@@ -51,6 +51,8 @@
         .stats-summary {
             display: flex;
             gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
         }
         
         .stat-pill {
@@ -66,6 +68,157 @@
             padding: 0 20px;
         }
         
+        /* Login Screen */
+        #loginScreen {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .login-box {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 30px;
+            border: 1px solid rgba(255,255,255,0.1);
+            width: 90%;
+            max-width: 400px;
+        }
+        
+        .login-box h2 { text-align: center; margin-bottom: 25px; }
+        .login-box input {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 15px;
+            color: white;
+            font-size: 16px;
+        }
+        .login-box input::placeholder { color: rgba(255,255,255,0.5); }
+        .login-box button {
+            width: 100%;
+            padding: 15px;
+            margin-top: 20px;
+            background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .login-error {
+            color: #ff5252;
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+            display: none;
+        }
+        
+        /* Alerts Section */
+        .alerts-bar {
+            background: rgba(255, 82, 82, 0.15);
+            border: 1px solid rgba(255, 82, 82, 0.3);
+            border-radius: 15px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .alerts-bar.active { display: block; }
+        .alert-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .alert-item:last-child { border-bottom: none; }
+        .alert-resolve {
+            background: rgba(0,230,118,0.2);
+            color: #00e676;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        /* Admin Panel */
+        .admin-panel {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255,255,255,0.1);
+            display: none;
+        }
+        .admin-panel.active { display: block; }
+        .admin-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 10px;
+        }
+        .admin-tab {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.6);
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 10px;
+        }
+        .admin-tab.active { background: rgba(0,212,255,0.2); color: #00d4ff; }
+        .admin-section { display: none; }
+        .admin-section.active { display: block; }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .form-row input, .form-row select {
+            padding: 12px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            color: white;
+            font-size: 14px;
+        }
+        .btn-admin {
+            padding: 10px 25px;
+            background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+            border: none;
+            border-radius: 25px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        .data-table th, .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .data-table th {
+            background: rgba(0,0,0,0.2);
+            font-weight: 600;
+        }
+        
         /* Tabella Macchine */
         .machines-table {
             background: rgba(255,255,255,0.05);
@@ -75,11 +228,7 @@
             border: 1px solid rgba(255,255,255,0.1);
         }
         
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
+        table { width: 100%; border-collapse: collapse; }
         th {
             text-align: left;
             padding: 20px;
@@ -89,15 +238,11 @@
             text-transform: uppercase;
             letter-spacing: 1px;
         }
-        
         td {
             padding: 15px 20px;
             border-bottom: 1px solid rgba(255,255,255,0.05);
         }
-        
-        tr:hover {
-            background: rgba(255,255,255,0.03);
-        }
+        tr:hover { background: rgba(255,255,255,0.03); }
         
         .status-badge {
             display: inline-flex;
@@ -108,21 +253,9 @@
             font-size: 12px;
             font-weight: 600;
         }
-        
-        .status-online {
-            background: rgba(0,230,118,0.2);
-            color: #00e676;
-        }
-        
-        .status-offline {
-            background: rgba(255,82,82,0.2);
-            color: #ff5252;
-        }
-        
-        .status-warning {
-            background: rgba(255,152,0,0.2);
-            color: #ff9800;
-        }
+        .status-online { background: rgba(0,230,118,0.2); color: #00e676; }
+        .status-offline { background: rgba(255,82,82,0.2); color: #ff5252; }
+        .status-warning { background: rgba(255,152,0,0.2); color: #ff9800; }
         
         .btn-enter {
             background: linear-gradient(135deg, #00d4ff, #7b2ff7);
@@ -134,10 +267,7 @@
             font-weight: 600;
             transition: transform 0.2s;
         }
-        
-        .btn-enter:hover {
-            transform: scale(1.05);
-        }
+        .btn-enter:hover { transform: scale(1.05); }
         
         .online-dot {
             width: 10px;
@@ -146,34 +276,24 @@
             background: #00e676;
             animation: pulse 2s infinite;
         }
-        
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
         
-        .last-seen {
-            font-size: 12px;
-            font-family: monospace;
-        }
+        .last-seen { font-size: 12px; font-family: monospace; }
         
         /* Modal dettaglio macchina */
         .modal {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             background: rgba(0,0,0,0.9);
             backdrop-filter: blur(5px);
             z-index: 1000;
         }
-        
-        .modal.active {
-            display: flex;
-        }
-        
+        .modal.active { display: flex; }
         .modal-content {
             background: linear-gradient(135deg, #1a1a2e, #16213e);
             border-radius: 30px;
@@ -184,7 +304,6 @@
             margin: auto;
             border: 1px solid rgba(0,212,255,0.3);
         }
-        
         .modal-header {
             padding: 20px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
@@ -192,7 +311,6 @@
             justify-content: space-between;
             align-items: center;
         }
-        
         .modal-close {
             background: none;
             border: none;
@@ -200,34 +318,44 @@
             font-size: 28px;
             cursor: pointer;
         }
-        
-        .modal-body {
-            padding: 20px;
-        }
-        
+        .modal-body { padding: 20px; }
         .iframe-container {
             width: 100%;
             height: 70vh;
             border-radius: 15px;
             overflow: hidden;
         }
+        iframe { width: 100%; height: 100%; border: none; background: white; }
         
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            background: white;
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 14px;
+        }
+        .logout-btn {
+            background: rgba(255,82,82,0.2);
+            color: #ff5252;
+            border: 1px solid rgba(255,82,82,0.3);
+            padding: 6px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .admin-btn {
+            background: rgba(0,212,255,0.2);
+            color: #00d4ff;
+            border: 1px solid rgba(0,212,255,0.3);
+            padding: 6px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
         }
         
         @media (max-width: 768px) {
-            th, td {
-                padding: 10px;
-                font-size: 12px;
-            }
-            .btn-enter {
-                padding: 6px 12px;
-                font-size: 11px;
-            }
+            th, td { padding: 10px; font-size: 12px; }
+            .btn-enter { padding: 6px 12px; font-size: 11px; }
+            .header-content { flex-direction: column; align-items: flex-start; }
         }
         
         .refresh-btn {
@@ -241,7 +369,22 @@
     </style>
 </head>
 <body>
-    <div class="header">
+    <!-- Login Screen -->
+    <div id="loginScreen">
+        <div class="login-box">
+            <div style="text-align:center; margin-bottom:30px;">
+                <div style="width:60px; height:60px; background:linear-gradient(135deg, #00d4ff, #7b2ff7); border-radius:20px; display:flex; align-items:center; justify-content:center; font-size:32px; margin:0 auto 15px;">🌿</div>
+                <h2>NabulAir Cloud</h2>
+                <p style="font-size:12px; opacity:0.7;">Centrale Operativa</p>
+            </div>
+            <input type="text" id="loginUser" placeholder="Username">
+            <input type="password" id="loginPass" placeholder="Password">
+            <button onclick="doLogin()">Accedi</button>
+            <div class="login-error" id="loginError"></div>
+        </div>
+    </div>
+
+    <div class="header" id="mainHeader" style="display:none;">
         <div class="header-content">
             <div class="logo">
                 <div class="logo-icon">🌿</div>
@@ -254,12 +397,80 @@
                 <div class="stat-pill" id="totalMachines">📊 Totale: --</div>
                 <div class="stat-pill" id="onlineMachines">🟢 Online: --</div>
                 <div class="stat-pill" id="offlineMachines">🔴 Offline: --</div>
+                <div class="stat-pill" id="activeAlerts">🚨 Allarmi: --</div>
                 <button class="refresh-btn" onclick="loadMachines()">🔄 Aggiorna</button>
+                <div class="user-info">
+                    <span id="userName">--</span>
+                    <span id="userRole" style="opacity:0.6; font-size:12px;">--</span>
+                    <button class="admin-btn" id="adminBtn" style="display:none;" onclick="toggleAdmin()">⚙️ Admin</button>
+                    <button class="logout-btn" onclick="logout()">Esci</button>
+                </div>
             </div>
         </div>
     </div>
     
-    <div class="container">
+    <div class="container" id="mainContainer" style="display:none;">
+        <!-- Alerts -->
+        <div class="alerts-bar" id="alertsBar">
+            <h3 style="margin-bottom:10px; font-size:16px;">🚨 Allarmi Attivi</h3>
+            <div id="alertsList"></div>
+        </div>
+
+        <!-- Admin Panel -->
+        <div class="admin-panel" id="adminPanel">
+            <h2 style="margin-bottom:20px;">⚙️ Pannello Amministrazione</h2>
+            <div class="admin-tabs">
+                <button class="admin-tab active" onclick="switchAdminTab('clients')">👥 Clienti</button>
+                <button class="admin-tab" onclick="switchAdminTab('users')">🔑 Utenti</button>
+                <button class="admin-tab" onclick="switchAdminTab('machines')">🏭 Macchine</button>
+            </div>
+            
+            <div class="admin-section active" id="tab-clients">
+                <h3 style="margin-bottom:15px;">Gestione Clienti</h3>
+                <div class="form-row">
+                    <input type="text" id="newClientName" placeholder="Nome cliente">
+                    <input type="email" id="newClientEmail" placeholder="Email">
+                    <input type="text" id="newClientPhone" placeholder="Telefono">
+                    <input type="text" id="newClientTelegram" placeholder="Chat ID Telegram">
+                </div>
+                <button class="btn-admin" onclick="addClient()">➕ Aggiungi Cliente</button>
+                <table class="data-table" id="clientsTable">
+                    <thead><tr><th>Nome</th><th>Email</th><th>Telefono</th><th>Telegram Chat ID</th><th></th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            
+            <div class="admin-section" id="tab-users">
+                <h3 style="margin-bottom:15px;">Gestione Utenti</h3>
+                <div class="form-row">
+                    <input type="text" id="newUserName" placeholder="Username">
+                    <input type="password" id="newUserPass" placeholder="Password">
+                    <select id="newUserRole">
+                        <option value="client">Cliente</option>
+                        <option value="installer">Installatore</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                    <select id="newUserClient">
+                        <option value="">-- Nessun cliente --</option>
+                    </select>
+                </div>
+                <button class="btn-admin" onclick="addUser()">➕ Crea Utente</button>
+                <table class="data-table" id="usersTable">
+                    <thead><tr><th>Username</th><th>Ruolo</th><th>Cliente</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            
+            <div class="admin-section" id="tab-machines">
+                <h3 style="margin-bottom:15px;">Assegna Macchine</h3>
+                <table class="data-table" id="assignTable">
+                    <thead><tr><th>Macchina</th><th>MAC</th><th>Cliente</th><th></th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Machines Table -->
         <div class="machines-table">
             <table>
                 <thead>
@@ -270,11 +481,13 @@
                         <th>IP</th>
                         <th>Ultimo Contatto</th>
                         <th>Firmware</th>
+                        <th>Acqua</th>
+                        <th>Insetticida</th>
                         <th></th>
                     </tr>
                 </thead>
                 <tbody id="machinesList">
-                    <tr><td colspan="7" style="text-align: center;">Caricamento macchine...</td></tr>
+                    <tr><td colspan="9" style="text-align: center;">Caricamento macchine...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -296,34 +509,124 @@
     </div>
     
     <script>
-        // Configurazione
         const CLOUD_API = '/api';
-        
-        // Carica lista macchine
-        async function loadMachines() {
+        let authToken = localStorage.getItem('nabulair_token');
+        let currentUser = JSON.parse(localStorage.getItem('nabulair_user') || 'null');
+        let allMachines = [];
+        let allClients = [];
+
+        // ========== AUTH ==========
+        function showLogin() {
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('mainHeader').style.display = 'none';
+            document.getElementById('mainContainer').style.display = 'none';
+        }
+
+        function hideLogin() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainHeader').style.display = 'block';
+            document.getElementById('mainContainer').style.display = 'block';
+        }
+
+        async function doLogin() {
+            const username = document.getElementById('loginUser').value;
+            const password = document.getElementById('loginPass').value;
+            const err = document.getElementById('loginError');
+            
             try {
-                const response = await fetch(`${CLOUD_API}/machines`);
-                const data = await response.json();
+                const res = await fetch(`${CLOUD_API}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
                 
                 if (data.success) {
+                    authToken = data.token;
+                    currentUser = data.user;
+                    localStorage.setItem('nabulair_token', authToken);
+                    localStorage.setItem('nabulair_user', JSON.stringify(currentUser));
+                    hideLogin();
+                    initDashboard();
+                } else {
+                    err.textContent = data.message || 'Credenziali non valide';
+                    err.style.display = 'block';
+                }
+            } catch (e) {
+                err.textContent = 'Errore di connessione al server';
+                err.style.display = 'block';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('nabulair_token');
+            localStorage.removeItem('nabulair_user');
+            location.reload();
+        }
+
+        // ========== DASHBOARD ==========
+        async function initDashboard() {
+            if (!currentUser) return;
+            
+            document.getElementById('userName').textContent = currentUser.username;
+            document.getElementById('userRole').textContent = currentUser.role.toUpperCase();
+            
+            if (currentUser.role === 'admin') {
+                document.getElementById('adminBtn').style.display = 'inline-block';
+                await loadClients();
+                await loadUsers();
+            }
+            
+            loadMachines();
+            loadAlerts();
+        }
+
+        async function apiGet(endpoint) {
+            const res = await fetch(`${CLOUD_API}${endpoint}`, {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            return res.json();
+        }
+
+        async function apiPost(endpoint, body) {
+            const res = await fetch(`${CLOUD_API}${endpoint}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            return res.json();
+        }
+
+        async function apiPut(endpoint, body) {
+            const res = await fetch(`${CLOUD_API}${endpoint}`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            return res.json();
+        }
+
+        // ========== MACHINES ==========
+        async function loadMachines() {
+            try {
+                const data = await apiGet('/machines');
+                if (data.success) {
+                    allMachines = data.machines;
                     renderMachines(data.machines);
                     updateStats(data.machines);
-                } else {
-                    showError('Errore caricamento macchine');
+                    if (currentUser.role === 'admin') renderAssignTable(data.machines);
                 }
             } catch (error) {
                 console.error('Errore:', error);
                 document.getElementById('machinesList').innerHTML = 
-                    '<tr><td colspan="7" style="text-align: center; color: #ff5252;">❌ Connessione al server fallita</td></tr>';
+                    '<tr><td colspan="9" style="text-align: center; color: #ff5252;">❌ Errore connessione</td></tr>';
             }
         }
-        
-        // Render tabella
+
         function renderMachines(machines) {
             const tbody = document.getElementById('machinesList');
-            
             if (machines.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">📭 Nessuna macchina registrata</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center;">📭 Nessuna macchina trovata</td></tr>';
                 return;
             }
             
@@ -332,13 +635,14 @@
                                    (machine.status === 'warning' ? 'status-warning' : 'status-offline');
                 const statusText = machine.status === 'online' ? 'Online' : 
                                   (machine.status === 'warning' ? '⚠️ Attenzione' : 'Offline');
-                
                 const lastSeen = machine.last_seen ? new Date(machine.last_seen).toLocaleString() : 'Mai';
+                const waterIcon = machine.water_ok === false ? '❌' : '✅';
+                const insIcon = machine.insecticide_ok === false ? '❌' : '✅';
                 
                 return `
                     <tr>
                         <td>${escapeHtml(machine.client_name || '—')}</td>
-                        <td><strong>${escapeHtml(machine.machine_name)}</strong><br><span style="font-size: 11px; opacity: 0.6;">${machine.mac_address}</span></td>
+                        <td><strong>${escapeHtml(machine.machine_name || '—')}</strong><br><span style="font-size: 11px; opacity: 0.6;">${machine.mac_address}</span></td>
                         <td>
                             <span class="status-badge ${statusClass}">
                                 ${machine.status === 'online' ? '<span class="online-dot"></span>' : ''}
@@ -348,8 +652,10 @@
                         <td><span class="last-seen">${machine.sta_ip || '—'}</span></td>
                         <td><span class="last-seen">${lastSeen}</span></td>
                         <td>v${machine.firmware_version || '1.0'}</td>
+                        <td style="text-align:center;">${waterIcon}</td>
+                        <td style="text-align:center;">${insIcon}</td>
                         <td>
-                            <button class="btn-enter" onclick="openMachine(${machine.id}, '${escapeHtml(machine.machine_name)}', '${machine.sta_ip || machine.mac_address}')">
+                            <button class="btn-enter" onclick="openMachine(${machine.id}, '${escapeHtml(machine.machine_name || 'Macchina')}', '${machine.sta_ip || machine.mac_address}')">
                                 ▶️ ENTRARE
                             </button>
                         </td>
@@ -357,53 +663,191 @@
                 `;
             }).join('');
         }
-        
-        // Aggiorna statistiche
+
         function updateStats(machines) {
             const total = machines.length;
             const online = machines.filter(m => m.status === 'online').length;
             const offline = machines.filter(m => m.status === 'offline').length;
+            const alerts = machines.filter(m => m.water_ok === false || m.insecticide_ok === false).length;
             
             document.getElementById('totalMachines').innerHTML = `📊 Totale: ${total}`;
             document.getElementById('onlineMachines').innerHTML = `🟢 Online: ${online}`;
             document.getElementById('offlineMachines').innerHTML = `🔴 Offline: ${offline}`;
+            document.getElementById('activeAlerts').innerHTML = `🚨 Allarmi: ${alerts}`;
         }
-        
-        // Apri dettaglio macchina (iframe con la tua interfaccia remota)
+
+        // ========== ALERTS ==========
+        async function loadAlerts() {
+            try {
+                const data = await apiGet('/alerts');
+                if (data.success && data.alerts.length > 0) {
+                    const bar = document.getElementById('alertsBar');
+                    bar.classList.add('active');
+                    document.getElementById('alertsList').innerHTML = data.alerts.map(a => `
+                        <div class="alert-item">
+                            <div>
+                                <strong>${escapeHtml(a.machine_name)}</strong> — ${escapeHtml(a.message)}
+                                <div style="font-size:12px; opacity:0.6; margin-top:4px;">${new Date(a.created_at).toLocaleString()}</div>
+                            </div>
+                            <button class="alert-resolve" onclick="resolveAlert(${a.id})">✓ Risolvi</button>
+                        </div>
+                    `).join('');
+                } else {
+                    document.getElementById('alertsBar').classList.remove('active');
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function resolveAlert(id) {
+            await apiPost(`/alerts/${id}/resolve`, {});
+            loadAlerts();
+            loadMachines();
+        }
+
+        // ========== ADMIN ==========
+        function toggleAdmin() {
+            const panel = document.getElementById('adminPanel');
+            panel.classList.toggle('active');
+        }
+
+        function switchAdminTab(tab) {
+            document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tab}`).classList.add('active');
+        }
+
+        async function loadClients() {
+            const data = await apiGet('/clients');
+            if (data.success) {
+                allClients = data.clients;
+                const tbody = document.querySelector('#clientsTable tbody');
+                tbody.innerHTML = data.clients.map(c => `
+                    <tr>
+                        <td>${escapeHtml(c.name)}</td>
+                        <td>${escapeHtml(c.email || '')}</td>
+                        <td>${escapeHtml(c.phone || '')}</td>
+                        <td><input type="text" value="${escapeHtml(c.telegram_chat_id || '')}" onchange="updateClient(${c.id}, this.value)" style="background:rgba(0,0,0,0.3); border:none; padding:5px 10px; border-radius:8px; color:white; width:150px;"></td>
+                        <td><button class="btn-admin" style="padding:5px 15px; font-size:12px;" onclick="saveClientTelegram(${c.id}, this)">💾 Salva</button></td>
+                    </tr>
+                `).join('');
+                
+                // Popola select utenti
+                const sel = document.getElementById('newUserClient');
+                sel.innerHTML = '<option value="">-- Nessun cliente --</option>' + 
+                    data.clients.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+            }
+        }
+
+        async function addClient() {
+            const body = {
+                name: document.getElementById('newClientName').value,
+                email: document.getElementById('newClientEmail').value,
+                phone: document.getElementById('newClientPhone').value,
+                telegram_chat_id: document.getElementById('newClientTelegram').value
+            };
+            if (!body.name) return alert('Nome obbligatorio');
+            await apiPost('/clients', body);
+            loadClients();
+        }
+
+        async function saveClientTelegram(id, btn) {
+            const input = btn.parentElement.previousElementSibling.querySelector('input');
+            await apiPut(`/clients/${id}`, { telegram_chat_id: input.value });
+            btn.textContent = '✅ Salvato';
+            setTimeout(() => btn.textContent = '💾 Salva', 2000);
+        }
+
+        async function loadUsers() {
+            const data = await apiGet('/users');
+            if (data.success) {
+                const tbody = document.querySelector('#usersTable tbody');
+                tbody.innerHTML = data.users.map(u => `
+                    <tr>
+                        <td>${escapeHtml(u.username)}</td>
+                        <td>${u.role}</td>
+                        <td>${escapeHtml(u.client_name || '—')}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        async function addUser() {
+            const body = {
+                username: document.getElementById('newUserName').value,
+                password: document.getElementById('newUserPass').value,
+                role: document.getElementById('newUserRole').value,
+                client_id: document.getElementById('newUserClient').value || null
+            };
+            if (!body.username || !body.password) return alert('Username e password obbligatori');
+            const res = await apiPost('/users', body);
+            if (res.success) {
+                loadUsers();
+                document.getElementById('newUserName').value = '';
+                document.getElementById('newUserPass').value = '';
+            } else {
+                alert(res.message);
+            }
+        }
+
+        function renderAssignTable(machines) {
+            const tbody = document.querySelector('#assignTable tbody');
+            tbody.innerHTML = machines.map(m => `
+                <tr>
+                    <td>${escapeHtml(m.machine_name || '—')}</td>
+                    <td>${m.mac_address}</td>
+                    <td>
+                        <select id="assign-${m.id}" style="background:rgba(0,0,0,0.3); border:none; padding:8px; border-radius:8px; color:white;">
+                            <option value="">-- Nessun cliente --</option>
+                            ${allClients.map(c => `<option value="${c.id}" ${m.client_id == c.id ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td><button class="btn-admin" style="padding:5px 15px; font-size:12px;" onclick="assignMachine(${m.id})">💾 Assegna</button></td>
+                </tr>
+            `).join('');
+        }
+
+        async function assignMachine(id) {
+            const clientId = document.getElementById(`assign-${id}`).value;
+            await apiPut(`/machines/${id}/assign`, { client_id: clientId || null });
+            loadMachines();
+        }
+
+        // ========== MODAL ==========
         function openMachine(id, name, ip) {
             const modal = document.getElementById('machineModal');
             const iframe = document.getElementById('machineIframe');
-            const title = document.getElementById('modalTitle');
-            
-            title.innerHTML = `🌿 ${name}`;
-            
-            // Carica la tua interfaccia remota con l'IP della macchina
-            // Assicurati di avere remote.html nel tuo server o file locale
+            document.getElementById('modalTitle').innerHTML = `🌿 ${name}`;
             iframe.src = `/remote.html?ip=${ip}`;
-            
             modal.classList.add('active');
         }
-        
+
         function closeModal() {
-            const modal = document.getElementById('machineModal');
-            const iframe = document.getElementById('machineIframe');
-            modal.classList.remove('active');
-            iframe.src = '';  // Ferma il refresh
+            document.getElementById('machineModal').classList.remove('active');
+            document.getElementById('machineIframe').src = '';
         }
-        
+
         function escapeHtml(text) {
+            if (!text) return '';
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
-        
-        function showError(msg) {
-            console.error(msg);
+
+        // ========== INIT ==========
+        if (authToken && currentUser) {
+            hideLogin();
+            initDashboard();
+        } else {
+            showLogin();
         }
-        
-        // Auto-refresh ogni 30 secondi
-        loadMachines();
-        setInterval(loadMachines, 30000);
+
+        setInterval(() => {
+            if (authToken) {
+                loadMachines();
+                loadAlerts();
+            }
+        }, 30000);
     </script>
 </body>
 </html>
