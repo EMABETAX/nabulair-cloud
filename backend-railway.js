@@ -16,10 +16,8 @@ app.use(express.json());
 // ============================================
 // FILE STATICI (HTML, CSS, JS)
 // ============================================
-// Serve i file dalla cartella corrente
 app.use(express.static(__dirname));
 
-// Rotte esplicite per le pagine HTML
 app.get('/dashboard', (req, res) => {
     res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
@@ -44,13 +42,11 @@ const DATABASE_URL = process.env.DATABASE_URL;
 
 if (!JWT_SECRET) {
     console.error('❌ ERRORE: JWT_SECRET non configurato!');
-    console.error('👉 Aggiungi JWT_SECRET alle variabili d\'ambiente su Railway');
     process.exit(1);
 }
 
 if (!DATABASE_URL) {
     console.error('❌ ERRORE: DATABASE_URL non configurato!');
-    console.error('👉 Collega il database al backend su Railway');
     process.exit(1);
 }
 
@@ -62,11 +58,43 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-pool.connect((err) => {
+// ============================================
+// INIZIALIZZA DATABASE (Tabelle e trigger)
+// ============================================
+async function initDatabase() {
+    try {
+        // Crea tabella alerts se non esiste
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS alerts (
+                id SERIAL PRIMARY KEY,
+                machine_id INTEGER REFERENCES machines(id) ON DELETE CASCADE,
+                type VARCHAR(50) NOT NULL,
+                status VARCHAR(20) DEFAULT 'active',
+                message TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                resolved_at TIMESTAMP NULL
+            )
+        `);
+        
+        // Aggiungi colonne water_ok e insecticide_ok a machines se non esistono
+        await pool.query(`
+            ALTER TABLE machines ADD COLUMN IF NOT EXISTS water_ok BOOLEAN DEFAULT TRUE;
+            ALTER TABLE machines ADD COLUMN IF NOT EXISTS insecticide_ok BOOLEAN DEFAULT TRUE;
+            ALTER TABLE machines ADD COLUMN IF NOT EXISTS flow FLOAT DEFAULT 0;
+        `).catch(e => console.log('Colonne già esistenti'));
+        
+        console.log('✅ Database inizializzato correttamente');
+    } catch (err) {
+        console.error('❌ Errore init database:', err.message);
+    }
+}
+
+pool.connect(async (err) => {
     if (err) {
         console.error('❌ Errore DB:', err.message);
     } else {
         console.log('✅ Connesso a PostgreSQL su Railway!');
+        await initDatabase();
     }
 });
 
@@ -152,6 +180,9 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
                 m.last_seen, 
                 m.firmware_version, 
                 m.status,
+                m.water_ok,
+                m.insecticide_ok,
+                m.flow,
                 c.name as client_name
             FROM machines m
             LEFT JOIN clients c ON m.client_id = c.id
@@ -163,6 +194,51 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('Errore GET machines:', error.message);
         res.status(500).json({ success: false, message: 'Errore caricamento' });
+    }
+});
+
+// ============================================
+// API ALLARMI ATTIVI (protetta)
+// ============================================
+app.get('/api/alerts', authenticateToken, async (req, res) => {
+    try {
+        let query = `
+            SELECT a.*, m.machine_name, c.name as client_name
+            FROM alerts a
+            JOIN machines m ON a.machine_id = m.id
+            LEFT JOIN clients c ON m.client_id = c.id
+            WHERE a.status = 'active'
+            ORDER BY a.created_at DESC
+        `;
+        
+        if (req.user.role === 'installer') {
+            query += ` AND m.installer_id = ${req.user.id}`;
+        }
+        
+        const result = await pool.query(query);
+        res.json({ success: true, alerts: result.rows });
+        
+    } catch (error) {
+        console.error('Errore GET alerts:', error.message);
+        res.status(500).json({ success: false, message: 'Errore caricamento allarmi' });
+    }
+});
+
+// ============================================
+// API RISOLVI ALLARME
+// ============================================
+app.post('/api/alerts/:id/resolve', authenticateToken, async (req, res) => {
+    const { id } = req.params;
+    
+    try {
+        await pool.query(
+            `UPDATE alerts SET status = 'resolved', resolved_at = NOW()
+             WHERE id = $1`,
+            [id]
+        );
+        res.json({ success: true, message: 'Allarme risolto' });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -202,7 +278,6 @@ app.post('/api/register', async (req, res) => {
         return res.status(400).json({ success: false, message: 'Dati mancanti' });
     }
     
-    // Valida formato MAC address
     const macRegex = /^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$/i;
     if (!macRegex.test(mac_address)) {
         return res.status(400).json({ success: false, message: 'MAC address non valido' });
@@ -227,21 +302,70 @@ app.post('/api/register', async (req, res) => {
 });
 
 // ============================================
-// API PING ESP32
+// API PING ESP32 (con stato allarmi)
 // ============================================
 app.post('/api/ping', async (req, res) => {
-    const { mac_address, ip } = req.body;
+    const { mac_address, ip, water_ok, insecticide_ok, flow, status } = req.body;
     
     if (!mac_address) {
         return res.status(400).json({ success: false });
     }
     
     try {
+        // Aggiorna macchina con i nuovi stati
         await pool.query(
-            `UPDATE machines SET last_seen = NOW(), sta_ip = COALESCE($1, sta_ip), status = 'online'
-             WHERE mac_address = $2`,
-            [ip, mac_address]
+            `UPDATE machines 
+             SET last_seen = NOW(), 
+                 sta_ip = COALESCE($1, sta_ip), 
+                 status = $2,
+                 water_ok = COALESCE($3, water_ok),
+                 insecticide_ok = COALESCE($4, insecticide_ok),
+                 flow = COALESCE($5, flow)
+             WHERE mac_address = $6`,
+            [ip, status || 'online', water_ok, insecticide_ok, flow, mac_address]
         );
+        
+        // Ottieni machine_id
+        const machineResult = await pool.query(
+            'SELECT id FROM machines WHERE mac_address = $1',
+            [mac_address]
+        );
+        
+        const machine_id = machineResult.rows[0]?.id;
+        
+        if (machine_id) {
+            // Gestione allarme insetticida
+            if (insecticide_ok === false) {
+                await pool.query(
+                    `INSERT INTO alerts (machine_id, type, message)
+                     VALUES ($1, 'insecticide', '⚠️ Insetticida esaurito - Verificare il contenitore')
+                     ON CONFLICT DO NOTHING`,
+                    [machine_id]
+                );
+                console.log(`🚨 Allarme: Insetticida esaurito su macchina ${machine_id}`);
+            }
+            
+            // Gestione allarme acqua
+            if (water_ok === false) {
+                await pool.query(
+                    `INSERT INTO alerts (machine_id, type, message)
+                     VALUES ($1, 'water', '⚠️ Flusso acqua assente - Verificare la pressione')
+                     ON CONFLICT DO NOTHING`,
+                    [machine_id]
+                );
+                console.log(`🚨 Allarme: Acqua assente su macchina ${machine_id}`);
+            }
+            
+            // Risolvi allarmi se tutto OK
+            if (water_ok === true && insecticide_ok === true) {
+                await pool.query(
+                    `UPDATE alerts 
+                     SET status = 'resolved', resolved_at = NOW()
+                     WHERE machine_id = $1 AND status = 'active'`,
+                    [machine_id]
+                );
+            }
+        }
         
         res.json({ success: true });
         
@@ -277,8 +401,9 @@ app.get('/health', async (req, res) => {
 app.get('/', (req, res) => {
     res.json({ 
         message: 'NabulAir Cloud API', 
-        version: '2.0',
+        version: '2.1',
         status: 'online',
+        features: ['Alerts', 'Telegram Ready'],
         endpoints: [
             'GET /',
             'GET /health',
@@ -286,6 +411,7 @@ app.get('/', (req, res) => {
             'GET /remote',
             'POST /api/login',
             'GET /api/machines (protected)',
+            'GET /api/alerts (protected)',
             'POST /api/register',
             'POST /api/ping'
         ]
@@ -300,4 +426,5 @@ app.listen(PORT, () => {
     console.log(`🔐 JWT_SECRET: ${JWT_SECRET ? '✅ Configurato' : '❌ MANCANTE'}`);
     console.log(`🗄️ Database: ${DATABASE_URL ? '✅ Configurato' : '❌ MANCANTE'}`);
     console.log(`📁 File statici: ${__dirname}`);
+    console.log(`🚨 Sistema allarmi: ATTIVO`);
 });
