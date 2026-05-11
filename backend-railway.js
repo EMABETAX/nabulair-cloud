@@ -649,7 +649,12 @@ app.get('/', (req, res) => {
         ]
     });
 });
-
+// EMERGENZA: Reset password admin. RIMUOVI DOPO AVER ENTRATO!
+app.post('/api/reset', async (req, res) => {
+    const hash = await bcrypt.hash(req.body.password || 'admin', 10);
+    await pool.query("UPDATE users SET password_hash = $1 WHERE username = 'admin'", [hash]);
+    res.json({success: true, message: 'Password resettata. Rimuovi questo endpoint!'});
+});
 // ============================================
 // AVVIO SERVER
 // ============================================
