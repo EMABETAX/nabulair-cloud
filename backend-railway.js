@@ -39,6 +39,7 @@ app.get('/remote.html', (req, res) => {
 // ============================================
 const JWT_SECRET = process.env.JWT_SECRET;
 const DATABASE_URL = process.env.DATABASE_URL;
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
 if (!JWT_SECRET) {
     console.error('❌ ERRORE: JWT_SECRET non configurato!');
@@ -81,7 +82,17 @@ async function initDatabase() {
             ALTER TABLE machines ADD COLUMN IF NOT EXISTS water_ok BOOLEAN DEFAULT TRUE;
             ALTER TABLE machines ADD COLUMN IF NOT EXISTS insecticide_ok BOOLEAN DEFAULT TRUE;
             ALTER TABLE machines ADD COLUMN IF NOT EXISTS flow FLOAT DEFAULT 0;
-        `).catch(e => console.log('Colonne già esistenti'));
+        `).catch(e => console.log('Colonne machines già esistenti'));
+
+        // Aggiungi telegram_chat_id a clients
+        await pool.query(`
+            ALTER TABLE clients ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(50);
+        `).catch(e => console.log('Colonna telegram_chat_id già esistente'));
+
+        // Aggiungi client_id a users per collegare utente cliente al record cliente
+        await pool.query(`
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS client_id INTEGER REFERENCES clients(id);
+        `).catch(e => console.log('Colonna client_id su users già esistente'));
         
         console.log('✅ Database inizializzato correttamente');
     } catch (err) {
@@ -97,6 +108,30 @@ pool.connect(async (err) => {
         await initDatabase();
     }
 });
+
+// ============================================
+// TELEGRAM NOTIFICHE
+// ============================================
+async function sendTelegramMessage(chatId, text) {
+    if (!TELEGRAM_BOT_TOKEN || !chatId) return;
+    try {
+        const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: chatId,
+                text: text,
+                parse_mode: 'HTML'
+            })
+        });
+        const data = await res.json();
+        if (!data.ok) {
+            console.error('Telegram API error:', data.description);
+        }
+    } catch (err) {
+        console.error('Errore invio Telegram:', err.message);
+    }
+}
 
 // ============================================
 // MIDDLEWARE AUTH
@@ -117,6 +152,38 @@ const authenticateToken = (req, res, next) => {
         next();
     });
 };
+
+const requireAdmin = (req, res, next) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: 'Accesso negato: richiesto ruolo admin' });
+    }
+    next();
+};
+
+// ============================================
+// API SETUP (primo avvio — crea admin)
+// ============================================
+app.post('/api/setup', async (req, res) => {
+    try {
+        const count = await pool.query('SELECT COUNT(*) FROM users');
+        if (parseInt(count.rows[0].count) > 0) {
+            return res.status(403).json({ success: false, message: 'Setup già completato' });
+        }
+        const { username, password } = req.body;
+        if (!username || !password) {
+            return res.status(400).json({ success: false, message: 'Credenziali richieste' });
+        }
+        const hash = await bcrypt.hash(password, 10);
+        await pool.query(
+            'INSERT INTO users (username, password_hash, role) VALUES ($1, $2, $3)',
+            [username.toLowerCase(), hash, 'admin']
+        );
+        res.json({ success: true, message: 'Admin creato con successo' });
+    } catch (error) {
+        console.error('Errore setup:', error.message);
+        res.status(500).json({ success: false, message: 'Errore server' });
+    }
+});
 
 // ============================================
 // API LOGIN
@@ -149,7 +216,7 @@ app.post('/api/login', async (req, res) => {
         }
         
         const token = jwt.sign(
-            { id: user.id, username: user.username, role: user.role },
+            { id: user.id, username: user.username, role: user.role, client_id: user.client_id },
             JWT_SECRET,
             { expiresIn: '24h' }
         );
@@ -157,7 +224,7 @@ app.post('/api/login', async (req, res) => {
         res.json({
             success: true,
             token,
-            user: { id: user.id, username: user.username, role: user.role }
+            user: { id: user.id, username: user.username, role: user.role, client_id: user.client_id }
         });
         
     } catch (error) {
@@ -167,11 +234,18 @@ app.post('/api/login', async (req, res) => {
 });
 
 // ============================================
-// API MACCHINE (protetta)
+// API ME (utente corrente)
+// ============================================
+app.get('/api/me', authenticateToken, (req, res) => {
+    res.json({ success: true, user: req.user });
+});
+
+// ============================================
+// API MACCHINE (protetta + filtrata per ruolo)
 // ============================================
 app.get('/api/machines', authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query(`
+        let baseQuery = `
             SELECT 
                 m.id, 
                 m.machine_name, 
@@ -186,8 +260,21 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
                 c.name as client_name
             FROM machines m
             LEFT JOIN clients c ON m.client_id = c.id
-            ORDER BY m.status DESC, m.last_seen DESC NULLS LAST
-        `);
+        `;
+        let whereClause = '';
+        let params = [];
+        
+        if (req.user.role === 'installer') {
+            whereClause = 'WHERE m.installer_id = $1';
+            params.push(req.user.id);
+        } else if (req.user.role === 'client') {
+            whereClause = 'WHERE m.client_id = $1';
+            params.push(req.user.client_id);
+        }
+        
+        const orderBy = `ORDER BY m.status DESC, m.last_seen DESC NULLS LAST`;
+        
+        const result = await pool.query(`${baseQuery} ${whereClause} ${orderBy}`, params);
         
         res.json({ success: true, machines: result.rows });
         
@@ -198,24 +285,31 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
 });
 
 // ============================================
-// API ALLARMI ATTIVI (protetta)
+// API ALLARMI ATTIVI (protetta + filtrata)
 // ============================================
 app.get('/api/alerts', authenticateToken, async (req, res) => {
     try {
-        let query = `
+        let baseQuery = `
             SELECT a.*, m.machine_name, c.name as client_name
             FROM alerts a
             JOIN machines m ON a.machine_id = m.id
             LEFT JOIN clients c ON m.client_id = c.id
             WHERE a.status = 'active'
-            ORDER BY a.created_at DESC
         `;
+        let params = [];
+        let paramIndex = 1;
         
         if (req.user.role === 'installer') {
-            query += ` AND m.installer_id = ${req.user.id}`;
+            baseQuery += ` AND m.installer_id = $${paramIndex++}`;
+            params.push(req.user.id);
+        } else if (req.user.role === 'client') {
+            baseQuery += ` AND m.client_id = $${paramIndex++}`;
+            params.push(req.user.client_id);
         }
         
-        const result = await pool.query(query);
+        baseQuery += ` ORDER BY a.created_at DESC`;
+        
+        const result = await pool.query(baseQuery, params);
         res.json({ success: true, alerts: result.rows });
         
     } catch (error) {
@@ -269,6 +363,96 @@ app.get('/api/machine/:id', authenticateToken, async (req, res) => {
 });
 
 // ============================================
+// API CLIENTI (solo admin)
+// ============================================
+app.get('/api/clients', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM clients ORDER BY name');
+        res.json({ success: true, clients: result.rows });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.put('/api/clients/:id', authenticateToken, requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { telegram_chat_id, name, email, phone, address } = req.body;
+    try {
+        await pool.query(
+            `UPDATE clients SET telegram_chat_id = $1, name = $2, email = $3, phone = $4, address = $5 WHERE id = $6`,
+            [telegram_chat_id || null, name, email, phone, address, id]
+        );
+        res.json({ success: true, message: 'Cliente aggiornato' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.post('/api/clients', authenticateToken, requireAdmin, async (req, res) => {
+    const { name, email, phone, address, telegram_chat_id } = req.body;
+    try {
+        const result = await pool.query(
+            `INSERT INTO clients (name, email, phone, address, telegram_chat_id) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+            [name, email, phone, address, telegram_chat_id || null]
+        );
+        res.json({ success: true, client: result.rows[0] });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ============================================
+// API UTENTI (solo admin)
+// ============================================
+app.get('/api/users', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT u.id, u.username, u.role, u.client_id, c.name as client_name 
+            FROM users u 
+            LEFT JOIN clients c ON u.client_id = c.id 
+            ORDER BY u.id
+        `);
+        res.json({ success: true, users: result.rows });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
+    const { username, password, role, client_id } = req.body;
+    if (!username || !password || !role) {
+        return res.status(400).json({ success: false, message: 'Dati mancanti' });
+    }
+    try {
+        const hash = await bcrypt.hash(password, 10);
+        await pool.query(
+            'INSERT INTO users (username, password_hash, role, client_id) VALUES ($1, $2, $3, $4)',
+            [username.toLowerCase(), hash, role, client_id || null]
+        );
+        res.json({ success: true, message: 'Utente creato' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ============================================
+// API ASSEGNAZIONE MACCHINA (solo admin)
+// ============================================
+app.put('/api/machines/:id/assign', authenticateToken, requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { client_id, installer_id } = req.body;
+    try {
+        await pool.query(
+            'UPDATE machines SET client_id = $1, installer_id = $2 WHERE id = $3',
+            [client_id || null, installer_id || null, id]
+        );
+        res.json({ success: true, message: 'Macchina aggiornata' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ============================================
 // API REGISTRAZIONE ESP32 (pubblica)
 // ============================================
 app.post('/api/register', async (req, res) => {
@@ -302,7 +486,7 @@ app.post('/api/register', async (req, res) => {
 });
 
 // ============================================
-// API PING ESP32 (con stato allarmi)
+// API PING ESP32 (con stato allarmi + Telegram)
 // ============================================
 app.post('/api/ping', async (req, res) => {
     const { mac_address, ip, water_ok, insecticide_ok, flow, status } = req.body;
@@ -325,43 +509,86 @@ app.post('/api/ping', async (req, res) => {
             [ip, status || 'online', water_ok, insecticide_ok, flow, mac_address]
         );
         
-        // Ottieni machine_id
+        // Ottieni machine_id e dati cliente
         const machineResult = await pool.query(
-            'SELECT id FROM machines WHERE mac_address = $1',
+            'SELECT id, machine_name, client_id FROM machines WHERE mac_address = $1',
             [mac_address]
         );
         
-        const machine_id = machineResult.rows[0]?.id;
+        const machine = machineResult.rows[0];
+        const machine_id = machine?.id;
         
         if (machine_id) {
+            // Recupera dati cliente per Telegram
+            let clientInfo = null;
+            if (machine.client_id) {
+                const clientResult = await pool.query(
+                    'SELECT telegram_chat_id, name FROM clients WHERE id = $1',
+                    [machine.client_id]
+                );
+                clientInfo = clientResult.rows[0];
+            }
+            
             // Gestione allarme insetticida
             if (insecticide_ok === false) {
-                await pool.query(
-                    `INSERT INTO alerts (machine_id, type, message)
-                     VALUES ($1, 'insecticide', '⚠️ Insetticida esaurito - Verificare il contenitore')
-                     ON CONFLICT DO NOTHING`,
+                const existing = await pool.query(
+                    `SELECT id FROM alerts WHERE machine_id = $1 AND type = 'insecticide' AND status = 'active'`,
                     [machine_id]
                 );
-                console.log(`🚨 Allarme: Insetticida esaurito su macchina ${machine_id}`);
+                if (existing.rows.length === 0) {
+                    await pool.query(
+                        `INSERT INTO alerts (machine_id, type, message)
+                         VALUES ($1, 'insecticide', '⚠️ Insetticida esaurito - Verificare il contenitore')`,
+                        [machine_id]
+                    );
+                    console.log(`🚨 Allarme: Insetticida esaurito su macchina ${machine_id}`);
+                    
+                    if (clientInfo?.telegram_chat_id) {
+                        await sendTelegramMessage(clientInfo.telegram_chat_id,
+                            `🚨 <b>Allarme NabulAir</b>\n\n` +
+                            `🏭 Macchina: <b>${machine.machine_name || mac_address}</b>\n` +
+                            `⚠️ Insetticida esaurito\n` +
+                            `Verificare il contenitore e rabboccare.`
+                        );
+                    }
+                }
+            } else if (insecticide_ok === true) {
+                await pool.query(
+                    `UPDATE alerts 
+                     SET status = 'resolved', resolved_at = NOW()
+                     WHERE machine_id = $1 AND type = 'insecticide' AND status = 'active'`,
+                    [machine_id]
+                );
             }
             
             // Gestione allarme acqua
             if (water_ok === false) {
-                await pool.query(
-                    `INSERT INTO alerts (machine_id, type, message)
-                     VALUES ($1, 'water', '⚠️ Flusso acqua assente - Verificare la pressione')
-                     ON CONFLICT DO NOTHING`,
+                const existing = await pool.query(
+                    `SELECT id FROM alerts WHERE machine_id = $1 AND type = 'water' AND status = 'active'`,
                     [machine_id]
                 );
-                console.log(`🚨 Allarme: Acqua assente su macchina ${machine_id}`);
-            }
-            
-            // Risolvi allarmi se tutto OK
-            if (water_ok === true && insecticide_ok === true) {
+                if (existing.rows.length === 0) {
+                    await pool.query(
+                        `INSERT INTO alerts (machine_id, type, message)
+                         VALUES ($1, 'water', '⚠️ Flusso acqua assente - Verificare la pressione')`,
+                        [machine_id]
+                    );
+                    console.log(`🚨 Allarme: Acqua assente su macchina ${machine_id}`);
+                    
+                    if (clientInfo?.telegram_chat_id) {
+                        await sendTelegramMessage(clientInfo.telegram_chat_id,
+                            `🚨 <b>Allarme NabulAir</b>\n\n` +
+                            `🏭 Macchina: <b>${machine.machine_name || mac_address}</b>\n` +
+                            `💧 Flusso acqua assente\n` +
+                            `Verificare la pressione dell'acqua.`
+                        );
+                    }
+                }
+            } else if (water_ok === true) {
                 await pool.query(
                     `UPDATE alerts 
                      SET status = 'resolved', resolved_at = NOW()
-                     WHERE machine_id = $1 AND status = 'active'`,
+                     WHERE machine_id = $1 AND type = 'water' AND status = 'active'`,
                     [machine_id]
                 );
             }
@@ -401,17 +628,22 @@ app.get('/health', async (req, res) => {
 app.get('/', (req, res) => {
     res.json({ 
         message: 'NabulAir Cloud API', 
-        version: '2.1',
+        version: '2.2',
         status: 'online',
-        features: ['Alerts', 'Telegram Ready'],
+        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel'],
         endpoints: [
             'GET /',
             'GET /health',
             'GET /dashboard',
             'GET /remote',
+            'POST /api/setup',
             'POST /api/login',
+            'GET /api/me',
             'GET /api/machines (protected)',
             'GET /api/alerts (protected)',
+            'GET /api/clients (admin)',
+            'POST /api/users (admin)',
+            'PUT /api/machines/:id/assign (admin)',
             'POST /api/register',
             'POST /api/ping'
         ]
@@ -425,6 +657,7 @@ app.listen(PORT, () => {
     console.log(`✅ NabulAir Cloud avviato su porta ${PORT}`);
     console.log(`🔐 JWT_SECRET: ${JWT_SECRET ? '✅ Configurato' : '❌ MANCANTE'}`);
     console.log(`🗄️ Database: ${DATABASE_URL ? '✅ Configurato' : '❌ MANCANTE'}`);
+    console.log(`📱 Telegram: ${TELEGRAM_BOT_TOKEN ? '✅ Configurato' : '❌ DISABILITATO'}`);
     console.log(`📁 File statici: ${__dirname}`);
     console.log(`🚨 Sistema allarmi: ATTIVO`);
 });
