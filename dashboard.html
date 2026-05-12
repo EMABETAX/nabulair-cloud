@@ -219,6 +219,44 @@
             font-weight: 600;
         }
         
+        /* QR Section */
+        .qr-section {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255,255,255,0.1);
+            display: none;
+        }
+        .qr-section.active { display: block; }
+        .qr-box {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            display: inline-block;
+            margin: 15px 0;
+        }
+        .qr-link {
+            background: rgba(0,0,0,0.3);
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 14px;
+            word-break: break-all;
+            margin-top: 10px;
+        }
+        .btn-qr {
+            background: linear-gradient(135deg, #00e676, #00b0ff);
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
         /* Tabella Macchine */
         .machines-table {
             background: rgba(255,255,255,0.05);
@@ -283,7 +321,7 @@
         
         .last-seen { font-size: 12px; font-family: monospace; }
         
-        /* Modal dettaglio macchina */
+        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -352,6 +390,28 @@
             font-size: 12px;
         }
         
+        .machine-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .btn-small {
+            padding: 5px 12px;
+            border-radius: 15px;
+            border: none;
+            font-size: 11px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-qr-small {
+            background: rgba(0,230,118,0.2);
+            color: #00e676;
+        }
+        .btn-assign-small {
+            background: rgba(255,152,0,0.2);
+            color: #ff9800;
+        }
+        
         @media (max-width: 768px) {
             th, td { padding: 10px; font-size: 12px; }
             .btn-enter { padding: 6px 12px; font-size: 11px; }
@@ -416,6 +476,25 @@
             <div id="alertsList"></div>
         </div>
 
+        <!-- QR Section (Installatore) -->
+        <div class="qr-section" id="qrSection">
+            <h2 style="margin-bottom:15px;">📲 Attivazione Cliente</h2>
+            <p style="opacity:0.7; margin-bottom:15px;">Seleziona una macchina e genera il QR Code per il cliente. Il cliente scansiona e preme START su Telegram.</p>
+            <div class="form-row" style="max-width:400px;">
+                <select id="qrMachineSelect" style="background:rgba(0,0,0,0.3);">
+                    <option value="">-- Seleziona macchina --</option>
+                </select>
+                <button class="btn-qr" onclick="generateQR()">Genera QR</button>
+            </div>
+            <div id="qrResult" style="display:none; margin-top:20px;">
+                <div class="qr-box">
+                    <div id="qrcode"></div>
+                </div>
+                <div class="qr-link" id="qrLink"></div>
+                <p style="margin-top:10px; font-size:14px; opacity:0.8;">📱 Fai scansionare questo QR al cliente con la fotocamera del telefono</p>
+            </div>
+        </div>
+
         <!-- Admin Panel -->
         <div class="admin-panel" id="adminPanel">
             <h2 style="margin-bottom:20px;">⚙️ Pannello Amministrazione</h2>
@@ -464,7 +543,7 @@
             <div class="admin-section" id="tab-machines">
                 <h3 style="margin-bottom:15px;">Assegna Macchine</h3>
                 <table class="data-table" id="assignTable">
-                    <thead><tr><th>Macchina</th><th>MAC</th><th>Cliente</th><th></th></tr></thead>
+                    <thead><tr><th>Macchina</th><th>MAC</th><th>Cliente</th><th>Installatore</th><th></th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -480,10 +559,10 @@
                         <th>Stato</th>
                         <th>IP</th>
                         <th>Ultimo Contatto</th>
-                        <th>Firmware</th>
-                        <th>Acqua</th>
-                        <th>Insetticida</th>
-                        <th></th>
+                        <th>FW</th>
+                        <th>💧</th>
+                        <th>🧪</th>
+                        <th>Azioni</th>
                     </tr>
                 </thead>
                 <tbody id="machinesList">
@@ -497,7 +576,7 @@
     <div class="modal" id="machineModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="modalTitle">NabulAir - Milano Centro</h2>
+                <h2 id="modalTitle">NabulAir</h2>
                 <button class="modal-close" onclick="closeModal()">×</button>
             </div>
             <div class="modal-body">
@@ -508,12 +587,14 @@
         </div>
     </div>
     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script>
         const CLOUD_API = '/api';
         let authToken = localStorage.getItem('nabulair_token');
         let currentUser = JSON.parse(localStorage.getItem('nabulair_user') || 'null');
         let allMachines = [];
         let allClients = [];
+        let allUsers = [];
 
         // ========== AUTH ==========
         function showLogin() {
@@ -577,6 +658,10 @@
                 await loadUsers();
             }
             
+            if (currentUser.role === 'installer' || currentUser.role === 'admin') {
+                document.getElementById('qrSection').classList.add('active');
+            }
+            
             loadMachines();
             loadAlerts();
         }
@@ -614,6 +699,7 @@
                     allMachines = data.machines;
                     renderMachines(data.machines);
                     updateStats(data.machines);
+                    populateQRSelect(data.machines);
                     if (currentUser.role === 'admin') renderAssignTable(data.machines);
                 }
             } catch (error) {
@@ -639,6 +725,22 @@
                 const waterIcon = machine.water_ok === false ? '❌' : '✅';
                 const insIcon = machine.insecticide_ok === false ? '❌' : '✅';
                 
+                let actions = '';
+                if (currentUser.role === 'installer' || currentUser.role === 'admin') {
+                    actions = `
+                        <div class="machine-actions">
+                            <button class="btn-small btn-qr-small" onclick="showQRForMachine(${machine.id})">📲 QR</button>
+                            ${currentUser.role === 'admin' ? `<button class="btn-small btn-assign-small" onclick="showAssignModal(${machine.id})">⚙️</button>` : ''}
+                        </div>
+                    `;
+                } else {
+                    actions = `
+                        <button class="btn-enter" onclick="openMachine(${machine.id}, '${escapeHtml(machine.machine_name || 'Macchina')}', '${machine.sta_ip || machine.mac_address}')">
+                            ▶️ ENTRARE
+                        </button>
+                    `;
+                }
+                
                 return `
                     <tr>
                         <td>${escapeHtml(machine.client_name || '—')}</td>
@@ -654,11 +756,7 @@
                         <td>v${machine.firmware_version || '1.0'}</td>
                         <td style="text-align:center;">${waterIcon}</td>
                         <td style="text-align:center;">${insIcon}</td>
-                        <td>
-                            <button class="btn-enter" onclick="openMachine(${machine.id}, '${escapeHtml(machine.machine_name || 'Macchina')}', '${machine.sta_ip || machine.mac_address}')">
-                                ▶️ ENTRARE
-                            </button>
-                        </td>
+                        <td>${actions}</td>
                     </tr>
                 `;
             }).join('');
@@ -674,6 +772,45 @@
             document.getElementById('onlineMachines').innerHTML = `🟢 Online: ${online}`;
             document.getElementById('offlineMachines').innerHTML = `🔴 Offline: ${offline}`;
             document.getElementById('activeAlerts').innerHTML = `🚨 Allarmi: ${alerts}`;
+        }
+
+        // ========== QR SYSTEM ==========
+        function populateQRSelect(machines) {
+            const sel = document.getElementById('qrMachineSelect');
+            sel.innerHTML = '<option value="">-- Seleziona macchina --</option>' +
+                machines.map(m => `<option value="${m.id}">${escapeHtml(m.machine_name || m.mac_address)}</option>`).join('');
+        }
+
+        async function generateQR() {
+            const machineId = document.getElementById('qrMachineSelect').value;
+            if (!machineId) return alert('Seleziona una macchina');
+            
+            const res = await apiPost(`/machines/${machineId}/qr`, {});
+            if (res.success) {
+                const resultDiv = document.getElementById('qrResult');
+                resultDiv.style.display = 'block';
+                document.getElementById('qrLink').textContent = res.telegram_link;
+                
+                // Genera QR code
+                const qrDiv = document.getElementById('qrcode');
+                qrDiv.innerHTML = '';
+                new QRCode(qrDiv, {
+                    text: res.telegram_link,
+                    width: 200,
+                    height: 200,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            } else {
+                alert(res.message || 'Errore generazione QR');
+            }
+        }
+
+        function showQRForMachine(machineId) {
+            document.getElementById('qrMachineSelect').value = machineId;
+            generateQR();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         // ========== ALERTS ==========
@@ -732,7 +869,6 @@
                     </tr>
                 `).join('');
                 
-                // Popola select utenti
                 const sel = document.getElementById('newUserClient');
                 sel.innerHTML = '<option value="">-- Nessun cliente --</option>' + 
                     data.clients.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
@@ -761,6 +897,7 @@
         async function loadUsers() {
             const data = await apiGet('/users');
             if (data.success) {
+                allUsers = data.users;
                 const tbody = document.querySelector('#usersTable tbody');
                 tbody.innerHTML = data.users.map(u => `
                     <tr>
@@ -797,9 +934,15 @@
                     <td>${escapeHtml(m.machine_name || '—')}</td>
                     <td>${m.mac_address}</td>
                     <td>
-                        <select id="assign-${m.id}" style="background:rgba(0,0,0,0.3); border:none; padding:8px; border-radius:8px; color:white;">
+                        <select id="assign-client-${m.id}" style="background:rgba(0,0,0,0.3); border:none; padding:8px; border-radius:8px; color:white;">
                             <option value="">-- Nessun cliente --</option>
                             ${allClients.map(c => `<option value="${c.id}" ${m.client_id == c.id ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td>
+                        <select id="assign-installer-${m.id}" style="background:rgba(0,0,0,0.3); border:none; padding:8px; border-radius:8px; color:white;">
+                            <option value="">-- Nessun installatore --</option>
+                            ${allUsers.filter(u => u.role === 'installer').map(u => `<option value="${u.id}" ${m.installer_id == u.id ? 'selected' : ''}>${escapeHtml(u.username)}</option>`).join('')}
                         </select>
                     </td>
                     <td><button class="btn-admin" style="padding:5px 15px; font-size:12px;" onclick="assignMachine(${m.id})">💾 Assegna</button></td>
@@ -808,9 +951,20 @@
         }
 
         async function assignMachine(id) {
-            const clientId = document.getElementById(`assign-${id}`).value;
-            await apiPut(`/machines/${id}/assign`, { client_id: clientId || null });
+            const clientId = document.getElementById(`assign-client-${id}`).value;
+            const installerId = document.getElementById(`assign-installer-${id}`).value;
+            await apiPut(`/machines/${id}/assign`, { 
+                client_id: clientId || null, 
+                installer_id: installerId || null 
+            });
             loadMachines();
+        }
+
+        function showAssignModal(id) {
+            // Scrolla alla sezione admin
+            document.getElementById('adminPanel').classList.add('active');
+            switchAdminTab('machines');
+            window.scrollTo({ top: document.getElementById('adminPanel').offsetTop, behavior: 'smooth' });
         }
 
         // ========== MODAL ==========
