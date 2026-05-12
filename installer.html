@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NabulAir PRO — Installatore</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f0c29;
+            color: white;
+            min-height: 100vh;
+            padding-bottom: 80px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+            padding: 20px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header h1 { font-size: 20px; margin-bottom: 5px; }
+        .header p { font-size: 13px; opacity: 0.9; }
+        
+        .install-badge {
+            display: inline-block;
+            background: rgba(0,0,0,0.3);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+        
+        .container { padding: 15px; }
+        
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .action-btn {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 20px;
+            padding: 20px 15px;
+            text-align: center;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .action-btn:active { transform: scale(0.95); }
+        .action-btn.primary { background: linear-gradient(135deg, #00e676, #00b0ff); border: none; }
+        .action-btn.warning { background: linear-gradient(135deg, #ff9800, #f57c00); border: none; }
+        
+        .action-icon { font-size: 32px; margin-bottom: 8px; display: block; }
+        
+        /* Machine Card */
+        .machine-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .machine-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .machine-name { font-weight: 700; font-size: 16px; }
+        .machine-mac { font-size: 11px; opacity: 0.5; font-family: monospace; }
+        
+        .status-dot {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .status-online { background: #00e676; box-shadow: 0 0 8px #00e676; }
+        .status-offline { background: #ff5252; }
+        .status-installed { background: #2196f3; }
+        
+        .machine-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+        
+        .info-item {
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 12px;
+        }
+        
+        .info-label { opacity: 0.6; font-size: 11px; margin-bottom: 4px; }
+        .info-value { font-weight: 600; }
+        
+        /* Action Buttons in card */
+        .card-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .card-btn {
+            padding: 12px;
+            border-radius: 15px;
+            border: none;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        .btn-qr {
+            background: linear-gradient(135deg, #00e676, #00b0ff);
+            color: white;
+        }
+        
+        .btn-test {
+            background: rgba(255,152,0,0.2);
+            color: #ff9800;
+            border: 1px solid rgba(255,152,0,0.3);
+        }
+        
+        .btn-complete {
+            background: rgba(0,230,118,0.2);
+            color: #00e676;
+            border: 1px solid rgba(0,230,118,0.3);
+            grid-column: 1 / -1;
+        }
+        
+        .btn-done {
+            background: rgba(33,150,243,0.2);
+            color: #2196f3;
+            border: 1px solid rgba(33,150,243,0.3);
+            grid-column: 1 / -1;
+        }
+        
+        /* QR Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .modal-overlay.active { display: flex; }
+        
+        .modal-box {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border-radius: 30px;
+            padding: 30px;
+            text-align: center;
+            max-width: 350px;
+            width: 100%;
+            border: 1px solid rgba(0,212,255,0.3);
+        }
+        
+        .qr-white-box {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            display: inline-block;
+            margin: 20px 0;
+        }
+        
+        .qr-instruction {
+            font-size: 14px;
+            opacity: 0.8;
+            line-height: 1.6;
+        }
+        
+        .modal-close-btn {
+            margin-top: 20px;
+            padding: 15px 30px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 25px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(0,0,0,0.9);
+            padding: 15px 25px;
+            border-radius: 50px;
+            font-size: 14px;
+            transition: transform 0.3s;
+            z-index: 2000;
+            white-space: nowrap;
+        }
+        
+        .toast.show { transform: translateX(-50%) translateY(0); }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            opacity: 0.6;
+        }
+        
+        .empty-icon { font-size: 64px; margin-bottom: 20px; }
+        
+        /* Loading */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌿 NabulAir PRO</h1>
+        <p>App Installatore</p>
+        <div class="install-badge" id="installerName">Caricamento...</div>
+    </div>
+    
+    <div class="container">
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <div class="action-btn primary" onclick="scanNewMachine()">
+                <span class="action-icon">➕</span>
+                Nuova Macchina
+            </div>
+            <div class="action-btn warning" onclick="loadMachines()">
+                <span class="action-icon">🔄</span>
+                Aggiorna
+            </div>
+        </div>
+        
+        <!-- Machines List -->
+        <div id="machinesList">
+            <div class="empty-state">
+                <div class="empty-icon">📡</div>
+                <p>Caricamento macchine...</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- QR Modal -->
+    <div class="modal-overlay" id="qrModal">
+        <div class="modal-box">
+            <h2>📲 Attiva Notifiche Cliente</h2>
+            <p style="opacity:0.7; margin-top:10px;">Macchina: <span id="qrMachineName">--</span></p>
+            <div class="qr-white-box">
+                <div id="qrcode"></div>
+            </div>
+            <p class="qr-instruction">
+                <b>1.</b> Mostra questo QR al cliente<br>
+                <b>2.</b> Il cliente scansiona con la fotocamera<br>
+                <b>3.</b> Apre Telegram e preme START<br>
+                <b>✅</b> Riceverà le notifiche automatiche
+            </p>
+            <button class="modal-close-btn" onclick="closeQR()">Ho fatto vedere al cliente</button>
+        </div>
+    </div>
+    
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+        const API = '/api';
+        let token = localStorage.getItem('nabulair_token');
+        let currentMachineId = null;
+        
+        // ========== AUTH CHECK ==========
+        if (!token) {
+            alert('Sessione scaduta. Torna alla login.');
+            location.href = '/dashboard.html';
+        }
+        
+        // ========== LOAD DATA ==========
+        async function loadMachines() {
+            try {
+                const res = await fetch(`${API}/installer/dashboard`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                
+                if (!data.success) {
+                    if (res.status === 401 || res.status === 403) {
+                        alert('Sessione scaduta o non autorizzato');
+                        logout();
+                        return;
+                    }
+                    showToast('Errore caricamento');
+                    return;
+                }
+                
+                document.getElementById('installerName').textContent = 
+                    `Installatore: ${data.installer_name.toUpperCase()} | ${data.machines.length} macchine`;
+                
+                renderMachines(data.machines);
+                
+            } catch (e) {
+                showToast('Errore di connessione');
+            }
+        }
+        
+        function renderMachines(machines) {
+            const container = document.getElementById('machinesList');
+            
+            if (machines.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <p>Nessuna macchina assegnata</p>
+                        <p style="font-size:13px; margin-top:10px;">Contatta l'amministratore per l'assegnazione</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = machines.map(m => {
+                const isInstalled = m.status === 'installed';
+                const statusClass = m.status === 'online' ? 'status-online' : 
+                                   (m.status === 'installed' ? 'status-installed' : 'status-offline');
+                const statusText = m.status === 'online' ? 'Online' : 
+                                  (m.status === 'installed' ? 'Installata' : 'Offline');
+                
+                return `
+                    <div class="machine-card">
+                        <div class="machine-header">
+                            <div>
+                                <div class="machine-name">${escapeHtml(m.machine_name || 'NabulAir')}</div>
+                                <div class="machine-mac">${m.mac_address}</div>
+                            </div>
+                            <span class="status-dot ${statusClass}"></span>
+                        </div>
+                        
+                        <div class="machine-info">
+                            <div class="info-item">
+                                <div class="info-label">Stato</div>
+                                <div class="info-value">${statusText}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">IP</div>
+                                <div class="info-value">${m.sta_ip || '—'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Cliente</div>
+                                <div class="info-value">${m.client_name ? '✅ ' + escapeHtml(m.client_name) : '❌ Non assegnato'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Notifiche</div>
+                                <div class="info-value">${m.telegram_chat_id ? '✅ Attive' : '❌ Da attivare'}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="card-actions">
+                            ${!m.telegram_chat_id ? `
+                                <button class="card-btn btn-qr" onclick="generateQR(${m.id}, '${escapeHtml(m.machine_name || 'Macchina')}')">
+                                    📲 QR Cliente
+                                </button>
+                            ` : `
+                                <button class="card-btn btn-done" disabled>
+                                    ✅ Notifiche Attive
+                                </button>
+                            `}
+                            
+                            ${!isInstalled ? `
+                                <button class="card-btn btn-test" onclick="testHardware(${m.id})">
+                                    🔧 Test
+                                </button>
+                                <button class="card-btn btn-complete" onclick="completeInstall(${m.id})">
+                                    ✅ Fine Installazione
+                                </button>
+                            ` : `
+                                <button class="card-btn btn-done" disabled>
+                                    ✅ Installazione Completata
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // ========== QR GENERATION ==========
+        async function generateQR(machineId, machineName) {
+            currentMachineId = machineId;
+            document.getElementById('qrMachineName').textContent = machineName;
+            
+            try {
+                const res = await fetch(`${API}/machines/${machineId}/qr`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    // Genera QR
+                    const qrDiv = document.getElementById('qrcode');
+                    qrDiv.innerHTML = '';
+                    new QRCode(qrDiv, {
+                        text: data.telegram_link,
+                        width: 200,
+                        height: 200,
+                        colorDark: '#000000',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.M
+                    });
+                    
+                    document.getElementById('qrModal').classList.add('active');
+                } else {
+                    showToast(data.message || 'Errore generazione QR');
+                }
+            } catch (e) {
+                showToast('Errore di connessione');
+            }
+        }
+        
+        function closeQR() {
+            document.getElementById('qrModal').classList.remove('active');
+            loadMachines(); // Ricarica per vedere se il cliente ha attivato
+        }
+        
+        // ========== HARDWARE TEST ==========
+        async function testHardware(machineId) {
+            showToast('🔧 Test in corso...');
+            
+            try {
+                const res = await fetch(`${API}/installer/test/${machineId}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showToast('✅ Test hardware completato!');
+                } else {
+                    showToast('❌ ' + (data.message || 'Test fallito'));
+                }
+            } catch (e) {
+                showToast('❌ Macchina non raggiungibile');
+            }
+        }
+        
+        // ========== COMPLETE INSTALLATION ==========
+        async function completeInstall(machineId) {
+            if (!confirm('Confermi che l\'installazione è completata?')) return;
+            
+            try {
+                const res = await fetch(`${API}/installer/complete/${machineId}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showToast('✅ Installazione completata!');
+                    loadMachines();
+                } else {
+                    showToast(data.message || 'Errore');
+                }
+            } catch (e) {
+                showToast('Errore di connessione');
+            }
+        }
+        
+        // ========== UTILS ==========
+        function scanNewMachine() {
+            // Per ora ricarica, in futuro potrebbe aprire scanner MAC
+            loadMachines();
+            showToast('🔄 Macchine aggiornate');
+        }
+        
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function logout() {
+            localStorage.removeItem('nabulair_token');
+            localStorage.removeItem('nabulair_user');
+            location.href = '/dashboard.html';
+        }
+        
+        // ========== INIT ==========
+        loadMachines();
+        setInterval(loadMachines, 30000); // Auto-refresh ogni 30s
+    </script>
+</body>
+</html>
