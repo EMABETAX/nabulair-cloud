@@ -52,20 +52,29 @@ if (!DATABASE_URL) {
 }
 
 // ============================================
-// DATABASE CONNECTION - CONFIGURAZIONE MIGLIORATA (SOLUZIONE 1)
+// DATABASE CONNECTION - CONFIGURAZIONE SENZA SSL PER RAILWAY
 // ============================================
+// Rimuovi ?sslmode=require dalla connection string se presente
+let cleanDatabaseUrl = DATABASE_URL;
+if (cleanDatabaseUrl.includes('?sslmode=require')) {
+    cleanDatabaseUrl = cleanDatabaseUrl.replace('?sslmode=require', '');
+    console.log('⚠️ Rimosso ?sslmode=require dalla connection string');
+}
+if (cleanDatabaseUrl.includes('?sslmode=no-verify')) {
+    cleanDatabaseUrl = cleanDatabaseUrl.replace('?sslmode=no-verify', '');
+    console.log('⚠️ Rimosso ?sslmode=no-verify dalla connection string');
+}
+
 const pool = new Pool({
-    connectionString: DATABASE_URL,
-    ssl: { 
-        rejectUnauthorized: false,
-        require: true
-    },
+    connectionString: cleanDatabaseUrl,
+    // Disabilita completamente SSL per connessioni interne Railway
+    ssl: false,
     // Configurazione del pool per gestire le disconnessioni
-    max: 20,                       // Massimo numero di client nel pool
-    idleTimeoutMillis: 30000,      // Chiudi client inattivi dopo 30 secondi
-    connectionTimeoutMillis: 10000, // Timeout connessione 10 secondi
-    keepAlive: true,               // Mantieni la connessione attiva
-    keepAliveInitialDelayMillis: 10000 // Delay iniziale keep-alive
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000
 });
 
 // Gestione errori del pool
@@ -83,20 +92,12 @@ async function ensureDbConnection() {
         return true;
     } catch (error) {
         console.error('❌ Database disconnesso, tentativo di riconnessione...', error.message);
-        try {
-            // Prova a riconnetterti
-            await pool.connect();
-            console.log('✅ Riconnessione al database riuscita!');
-            return true;
-        } catch (reconnectError) {
-            console.error('❌ Fallita riconnessione:', reconnectError.message);
-            return false;
-        }
+        return false;
     }
 }
 
 // ============================================
-// QUERY CON RETRY AUTOMATICO (SOLUZIONE 3)
+// QUERY CON RETRY AUTOMATICO
 // ============================================
 async function queryWithRetry(query, params, maxRetries = 3) {
     for (let i = 0; i < maxRetries; i++) {
@@ -109,9 +110,6 @@ async function queryWithRetry(query, params, maxRetries = 3) {
             
             // Attendi prima di riprovare (backoff esponenziale)
             await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
-            
-            // Forza riconnessione
-            await ensureDbConnection();
         }
     }
 }
@@ -157,9 +155,20 @@ async function initDatabase() {
     }
 }
 
+// Connessione iniziale
 pool.connect(async (err) => {
     if (err) {
-        console.error('❌ Errore DB:', err.message);
+        console.error('❌ Errore DB iniziale:', err.message);
+        console.log('⚠️ Nuovo tentativo di connessione tra 5 secondi...');
+        setTimeout(async () => {
+            try {
+                await pool.connect();
+                console.log('✅ Connesso a PostgreSQL su Railway!');
+                await initDatabase();
+            } catch (retryErr) {
+                console.error('❌ Fallita riconnessione:', retryErr.message);
+            }
+        }, 5000);
     } else {
         console.log('✅ Connesso a PostgreSQL su Railway!');
         await initDatabase();
@@ -222,7 +231,7 @@ const requireAdmin = (req, res, next) => {
 // ============================================
 app.post('/api/setup', async (req, res) => {
     try {
-        const count = await pool.query('SELECT COUNT(*) FROM users');
+        const count = await queryWithRetry('SELECT COUNT(*) FROM users');
         if (parseInt(count.rows[0].count) > 0) {
             return res.status(403).json({ success: false, message: 'Setup già completato' });
         }
@@ -231,7 +240,7 @@ app.post('/api/setup', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Credenziali richieste' });
         }
         const hash = await bcrypt.hash(password, 10);
-        await pool.query(
+        await queryWithRetry(
             'INSERT INTO users (username, password_hash, role) VALUES ($1, $2, $3)',
             [username.toLowerCase(), hash, 'admin']
         );
@@ -253,7 +262,7 @@ app.post('/api/login', async (req, res) => {
     }
     
     try {
-        const result = await pool.query(
+        const result = await queryWithRetry(
             'SELECT * FROM users WHERE username = $1',
             [username.toLowerCase()]
         );
@@ -331,7 +340,7 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
         
         const orderBy = `ORDER BY m.status DESC, m.last_seen DESC NULLS LAST`;
         
-        const result = await pool.query(`${baseQuery} ${whereClause} ${orderBy}`, params);
+        const result = await queryWithRetry(`${baseQuery} ${whereClause} ${orderBy}`, params);
         
         res.json({ success: true, machines: result.rows });
         
@@ -366,7 +375,7 @@ app.get('/api/alerts', authenticateToken, async (req, res) => {
         
         baseQuery += ` ORDER BY a.created_at DESC`;
         
-        const result = await pool.query(baseQuery, params);
+        const result = await queryWithRetry(baseQuery, params);
         res.json({ success: true, alerts: result.rows });
         
     } catch (error) {
@@ -382,7 +391,7 @@ app.post('/api/alerts/:id/resolve', authenticateToken, async (req, res) => {
     const { id } = req.params;
     
     try {
-        await pool.query(
+        await queryWithRetry(
             `UPDATE alerts SET status = 'resolved', resolved_at = NOW()
              WHERE id = $1`,
             [id]
@@ -400,7 +409,7 @@ app.get('/api/machine/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     
     try {
-        const result = await pool.query(`
+        const result = await queryWithRetry(`
             SELECT m.*, c.name as client_name, c.email, c.phone, c.address
             FROM machines m
             LEFT JOIN clients c ON m.client_id = c.id
@@ -424,7 +433,7 @@ app.get('/api/machine/:id', authenticateToken, async (req, res) => {
 // ============================================
 app.get('/api/clients', authenticateToken, requireAdmin, async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM clients ORDER BY name');
+        const result = await queryWithRetry('SELECT * FROM clients ORDER BY name');
         res.json({ success: true, clients: result.rows });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -435,7 +444,7 @@ app.put('/api/clients/:id', authenticateToken, requireAdmin, async (req, res) =>
     const { id } = req.params;
     const { telegram_chat_id, name, email, phone, address } = req.body;
     try {
-        await pool.query(
+        await queryWithRetry(
             `UPDATE clients SET telegram_chat_id = $1, name = $2, email = $3, phone = $4, address = $5 WHERE id = $6`,
             [telegram_chat_id || null, name, email, phone, address, id]
         );
@@ -448,7 +457,7 @@ app.put('/api/clients/:id', authenticateToken, requireAdmin, async (req, res) =>
 app.post('/api/clients', authenticateToken, requireAdmin, async (req, res) => {
     const { name, email, phone, address, telegram_chat_id } = req.body;
     try {
-        const result = await pool.query(
+        const result = await queryWithRetry(
             `INSERT INTO clients (name, email, phone, address, telegram_chat_id) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
             [name, email, phone, address, telegram_chat_id || null]
         );
@@ -463,7 +472,7 @@ app.post('/api/clients', authenticateToken, requireAdmin, async (req, res) => {
 // ============================================
 app.get('/api/users', authenticateToken, requireAdmin, async (req, res) => {
     try {
-        const result = await pool.query(`
+        const result = await queryWithRetry(`
             SELECT u.id, u.username, u.role, u.client_id, c.name as client_name 
             FROM users u 
             LEFT JOIN clients c ON u.client_id = c.id 
@@ -482,7 +491,7 @@ app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
     }
     try {
         const hash = await bcrypt.hash(password, 10);
-        await pool.query(
+        await queryWithRetry(
             'INSERT INTO users (username, password_hash, role, client_id) VALUES ($1, $2, $3, $4)',
             [username.toLowerCase(), hash, role, client_id || null]
         );
@@ -499,7 +508,7 @@ app.put('/api/machines/:id/assign', authenticateToken, requireAdmin, async (req,
     const { id } = req.params;
     const { client_id, installer_id } = req.body;
     try {
-        await pool.query(
+        await queryWithRetry(
             'UPDATE machines SET client_id = $1, installer_id = $2 WHERE id = $3',
             [client_id || null, installer_id || null, id]
         );
@@ -510,12 +519,9 @@ app.put('/api/machines/:id/assign', authenticateToken, requireAdmin, async (req,
 });
 
 // ============================================
-// API REGISTRAZIONE ESP32 (pubblica) - AGGIORNATA CON RETRY
+// API REGISTRAZIONE ESP32 (pubblica) - CON RETRY
 // ============================================
 app.post('/api/register', async (req, res) => {
-    // Verifica connessione prima di procedere
-    await ensureDbConnection();
-    
     const { mac_address, ip, version, machine_name } = req.body;
     
     if (!mac_address || !ip) {
@@ -528,7 +534,6 @@ app.post('/api/register', async (req, res) => {
     }
     
     try {
-        // Usa queryWithRetry invece di pool.query diretto
         await queryWithRetry(
             `INSERT INTO machines (mac_address, sta_ip, firmware_version, machine_name, status, last_seen)
              VALUES ($1, $2, $3, $4, 'online', NOW())
@@ -562,7 +567,7 @@ app.post('/api/ping', async (req, res) => {
     
     try {
         // Aggiorna macchina con i nuovi stati
-        await pool.query(
+        await queryWithRetry(
             `UPDATE machines 
              SET last_seen = NOW(), 
                  sta_ip = COALESCE($1, sta_ip), 
@@ -575,7 +580,7 @@ app.post('/api/ping', async (req, res) => {
         );
         
         // Ottieni machine_id e dati cliente
-        const machineResult = await pool.query(
+        const machineResult = await queryWithRetry(
             'SELECT id, machine_name, client_id FROM machines WHERE mac_address = $1',
             [mac_address]
         );
@@ -587,7 +592,7 @@ app.post('/api/ping', async (req, res) => {
             // Recupera dati cliente per Telegram
             let clientInfo = null;
             if (machine.client_id) {
-                const clientResult = await pool.query(
+                const clientResult = await queryWithRetry(
                     'SELECT telegram_chat_id, name FROM clients WHERE id = $1',
                     [machine.client_id]
                 );
@@ -596,12 +601,12 @@ app.post('/api/ping', async (req, res) => {
             
             // Gestione allarme insetticida
             if (insecticide_ok === false) {
-                const existing = await pool.query(
+                const existing = await queryWithRetry(
                     `SELECT id FROM alerts WHERE machine_id = $1 AND type = 'insecticide' AND status = 'active'`,
                     [machine_id]
                 );
                 if (existing.rows.length === 0) {
-                    await pool.query(
+                    await queryWithRetry(
                         `INSERT INTO alerts (machine_id, type, message)
                          VALUES ($1, 'insecticide', '⚠️ Insetticida esaurito - Verificare il contenitore')`,
                         [machine_id]
@@ -618,7 +623,7 @@ app.post('/api/ping', async (req, res) => {
                     }
                 }
             } else if (insecticide_ok === true) {
-                await pool.query(
+                await queryWithRetry(
                     `UPDATE alerts 
                      SET status = 'resolved', resolved_at = NOW()
                      WHERE machine_id = $1 AND type = 'insecticide' AND status = 'active'`,
@@ -628,12 +633,12 @@ app.post('/api/ping', async (req, res) => {
             
             // Gestione allarme acqua
             if (water_ok === false) {
-                const existing = await pool.query(
+                const existing = await queryWithRetry(
                     `SELECT id FROM alerts WHERE machine_id = $1 AND type = 'water' AND status = 'active'`,
                     [machine_id]
                 );
                 if (existing.rows.length === 0) {
-                    await pool.query(
+                    await queryWithRetry(
                         `INSERT INTO alerts (machine_id, type, message)
                          VALUES ($1, 'water', '⚠️ Flusso acqua assente - Verificare la pressione')`,
                         [machine_id]
@@ -650,7 +655,7 @@ app.post('/api/ping', async (req, res) => {
                     }
                 }
             } else if (water_ok === true) {
-                await pool.query(
+                await queryWithRetry(
                     `UPDATE alerts 
                      SET status = 'resolved', resolved_at = NOW()
                      WHERE machine_id = $1 AND type = 'water' AND status = 'active'`,
@@ -668,7 +673,7 @@ app.post('/api/ping', async (req, res) => {
 });
 
 // ============================================
-// HEALTH CHECK MIGLIORATO CON STATO DB
+// HEALTH CHECK MIGLIORATO
 // ============================================
 app.get('/health', async (req, res) => {
     let dbConnected = false;
@@ -685,6 +690,7 @@ app.get('/health', async (req, res) => {
         status: dbConnected ? 'healthy' : 'degraded',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
+        ssl: false,
         database: {
             connected: dbConnected,
             error: dbError
@@ -698,8 +704,9 @@ app.get('/health', async (req, res) => {
 app.get('/', (req, res) => {
     res.json({ 
         message: 'NabulAir Cloud API', 
-        version: '2.3',
+        version: '2.4',
         status: 'online',
+        ssl_db: false,
         features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry'],
         endpoints: [
             'GET /',
@@ -723,7 +730,7 @@ app.get('/', (req, res) => {
 // EMERGENZA: Reset password admin. RIMUOVI DOPO AVER ENTRATO!
 app.post('/api/reset', async (req, res) => {
     const hash = await bcrypt.hash(req.body.password || 'admin', 10);
-    await pool.query("UPDATE users SET password_hash = $1 WHERE username = 'admin'", [hash]);
+    await queryWithRetry("UPDATE users SET password_hash = $1 WHERE username = 'admin'", [hash]);
     res.json({success: true, message: 'Password resettata. Rimuovi questo endpoint!'});
 });
 
@@ -734,6 +741,7 @@ app.listen(PORT, () => {
     console.log(`✅ NabulAir Cloud avviato su porta ${PORT}`);
     console.log(`🔐 JWT_SECRET: ${JWT_SECRET ? '✅ Configurato' : '❌ MANCANTE'}`);
     console.log(`🗄️ Database: ${DATABASE_URL ? '✅ Configurato' : '❌ MANCANTE'}`);
+    console.log(`🔒 SSL DB: DISABILITATO (per Railway internal network)`);
     console.log(`📱 Telegram: ${TELEGRAM_BOT_TOKEN ? '✅ Configurato' : '❌ DISABILITATO'}`);
     console.log(`📁 File statici: ${__dirname}`);
     console.log(`🚨 Sistema allarmi: ATTIVO`);
