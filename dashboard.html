@@ -482,6 +482,7 @@
             <div class="admin-tabs">
                 <button class="admin-tab active" onclick="switchAdminTab('clients')">👥 Clienti</button>
                 <button class="admin-tab" onclick="switchAdminTab('users')">🔑 Utenti</button>
+                <button class="admin-tab" onclick="switchAdminTab('telegram')">📱 Telegram</button>
             </div>
             
             <div class="admin-section active" id="tab-clients">
@@ -518,6 +519,21 @@
                     <thead><tr><th>Username</th><th>Ruolo</th><th>Cliente</th></tr></thead>
                     <tbody></tbody>
                 </table>
+            </div>
+
+            <div class="admin-section" id="tab-telegram">
+                <h3 style="margin-bottom:8px;">📱 Configurazione Bot Telegram</h3>
+                <p style="opacity:0.6; font-size:13px; margin-bottom:20px;">
+                    Il webhook collega il bot Telegram al tuo server Railway. Va registrato una volta sola dopo ogni nuovo deploy.
+                </p>
+                <div style="background:rgba(0,0,0,0.3); border-radius:12px; padding:15px; margin-bottom:20px; font-size:13px;">
+                    <div style="margin-bottom:6px; opacity:0.6;">URL webhook attuale:</div>
+                    <div id="webhookCurrentUrl" style="font-family:monospace; color:#00d4ff;">Caricamento...</div>
+                </div>
+                <button class="btn-admin" onclick="setupWebhook()" id="webhookBtn">
+                    🔗 Registra Webhook
+                </button>
+                <div id="webhookResult" style="margin-top:15px; display:none;"></div>
             </div>
         </div>
 
@@ -910,6 +926,62 @@
                 }
             });
             document.getElementById(`tab-${tab}`).classList.add('active');
+            if (tab === 'telegram') loadWebhookStatus();
+        }
+
+        async function loadWebhookStatus() {
+            try {
+                const res = await fetch(`https://api.telegram.org/bot${await getBotToken()}/getWebhookInfo`);
+                const data = await res.json();
+                const urlEl = document.getElementById('webhookCurrentUrl');
+                if (data.ok && data.result.url) {
+                    urlEl.textContent = data.result.url;
+                    urlEl.style.color = '#00e676';
+                } else {
+                    urlEl.textContent = 'Nessun webhook configurato';
+                    urlEl.style.color = '#ff9800';
+                }
+            } catch(e) {
+                document.getElementById('webhookCurrentUrl').textContent = 'Impossibile verificare';
+            }
+        }
+
+        async function getBotToken() {
+            // Non esponiamo il token nel frontend — usiamo il backend per verificare
+            return null;
+        }
+
+        async function setupWebhook() {
+            const btn = document.getElementById('webhookBtn');
+            const resultDiv = document.getElementById('webhookResult');
+            btn.textContent = '⏳ Registrazione...';
+            btn.disabled = true;
+
+            // Calcola automaticamente l'URL dal dominio corrente
+            const webhookUrl = window.location.origin + '/api/telegram/webhook';
+
+            try {
+                const res = await apiPost('/telegram/setup-webhook', { webhook_url: webhookUrl });
+                resultDiv.style.display = 'block';
+                if (res.success) {
+                    resultDiv.innerHTML = `
+                        <div style="background:rgba(0,230,118,0.15); border:1px solid rgba(0,230,118,0.3); border-radius:10px; padding:15px;">
+                            ✅ <strong>Webhook registrato con successo!</strong><br>
+                            <span style="font-size:12px; opacity:0.8; font-family:monospace;">${webhookUrl}</span><br><br>
+                            <span style="font-size:13px;">Ora il bot risponde ai messaggi. Prova a scrivere <strong>/chatid</strong> nella chat del bot.</span>
+                        </div>`;
+                    btn.textContent = '✅ Registrato';
+                    loadWebhookStatus();
+                } else {
+                    resultDiv.innerHTML = `<div style="background:rgba(255,82,82,0.15); border:1px solid rgba(255,82,82,0.3); border-radius:10px; padding:15px;">❌ Errore: ${res.message}</div>`;
+                    btn.textContent = '🔗 Riprova';
+                    btn.disabled = false;
+                }
+            } catch(e) {
+                resultDiv.innerHTML = `<div style="background:rgba(255,82,82,0.15); border:1px solid rgba(255,82,82,0.3); border-radius:10px; padding:15px;">❌ Errore di connessione</div>`;
+                btn.textContent = '🔗 Riprova';
+                btn.disabled = false;
+            }
         }
 
         async function loadClients() {
