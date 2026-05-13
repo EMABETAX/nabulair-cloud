@@ -698,6 +698,32 @@ app.post('/api/machines/:id/qr', authenticateToken, async (req, res) => {
 });
 
 // ============================================
+// API DEBUG — legge ultimi messaggi bot (trova Chat ID)
+// ============================================
+app.get('/api/telegram/last-messages', async (req, res) => {
+    if (!TELEGRAM_BOT_TOKEN) {
+        return res.status(500).json({ success: false, message: 'TELEGRAM_BOT_TOKEN non configurato' });
+    }
+    try {
+        const r = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?limit=10`);
+        const data = await r.json();
+        if (!data.ok) {
+            return res.json({ success: false, message: data.description });
+        }
+        const messages = data.result.map(u => ({
+            chat_id: u.message?.chat?.id,
+            name: u.message?.chat?.first_name + ' ' + (u.message?.chat?.last_name || ''),
+            username: u.message?.chat?.username,
+            text: u.message?.text,
+            date: u.message?.date ? new Date(u.message.date * 1000).toLocaleString('it-IT') : null
+        })).filter(m => m.chat_id);
+        res.json({ success: true, messages });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// ============================================
 // API REGISTRAZIONE ESP32 (pubblica) - CON RETRY
 // ============================================
 app.post('/api/register', async (req, res) => {
