@@ -453,10 +453,11 @@ app.put('/api/machines/:id/assign', authenticateToken, requireAdmin, async (req,
 });
 
 // ============================================
-// API REGISTRAZIONE ESP32 (pubblica)
+// API REGISTRAZIONE ESP32 (pubblica) - AGGIORNATA
 // ============================================
 app.post('/api/register', async (req, res) => {
-    const { mac_address, ip, version } = req.body;
+    // 1. Prendi anche machine_name dal body inviato dall'ESP32
+    const { mac_address, ip, version, machine_name } = req.body;
     
     if (!mac_address || !ip) {
         return res.status(400).json({ success: false, message: 'Dati mancanti' });
@@ -468,20 +469,26 @@ app.post('/api/register', async (req, res) => {
     }
     
     try {
+        // 2. Aggiorna la query per includere machine_name ($4)
         await pool.query(
-            `INSERT INTO machines (mac_address, sta_ip, firmware_version, status, last_seen)
-             VALUES ($1, $2, $3, 'online', NOW())
+            `INSERT INTO machines (mac_address, sta_ip, firmware_version, machine_name, status, last_seen)
+             VALUES ($1, $2, $3, $4, 'online', NOW())
              ON CONFLICT (mac_address) DO UPDATE SET 
-             sta_ip = EXCLUDED.sta_ip, last_seen = NOW(), status = 'online'`,
-            [mac_address.toUpperCase(), ip, version || '1.0']
+             sta_ip = EXCLUDED.sta_ip, 
+             machine_name = COALESCE(EXCLUDED.machine_name, machines.machine_name),
+             firmware_version = EXCLUDED.firmware_version,
+             last_seen = NOW(), 
+             status = 'online'`,
+            [mac_address.toUpperCase(), ip, version || '1.0', machine_name || 'NabulAir-Generic']
         );
         
-        console.log(`📡 ESP32 registrato: ${mac_address}`);
+        console.log(`📡 ESP32 registrato con successo: ${mac_address}`);
         res.json({ success: true, message: 'Registrato con successo' });
         
     } catch (error) {
-        console.error('Errore registrazione:', error.message);
-        res.status(500).json({ success: false });
+        // Questo ti scriverà l'errore preciso nei log di Railway
+        console.error('ERRORE CRITICO DATABASE:', error.message);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
