@@ -289,29 +289,6 @@ app.post('/api/telegram/webhook', async (req, res) => {
     }
 });
 
-// Registra il webhook su Telegram (chiamare una volta sola dopo il deploy)
-app.post('/api/telegram/setup-webhook', authenticateToken, requireAdmin, async (req, res) => {
-    const { webhook_url } = req.body; // es: https://tuo-dominio.railway.app/api/telegram/webhook
-    if (!webhook_url) {
-        return res.status(400).json({ success: false, message: 'webhook_url obbligatorio' });
-    }
-    if (!TELEGRAM_BOT_TOKEN) {
-        return res.status(500).json({ success: false, message: 'TELEGRAM_BOT_TOKEN non configurato' });
-    }
-    try {
-        const r = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: webhook_url })
-        });
-        const data = await r.json();
-        res.json({ success: data.ok, telegram_response: data });
-    } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
-    }
-});
-
-
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -335,6 +312,28 @@ const requireAdmin = (req, res, next) => {
     }
     next();
 };
+
+// Registra il webhook su Telegram (chiamare una volta sola dopo il deploy)
+app.post('/api/telegram/setup-webhook', authenticateToken, requireAdmin, async (req, res) => {
+    const { webhook_url } = req.body;
+    if (!webhook_url) {
+        return res.status(400).json({ success: false, message: 'webhook_url obbligatorio' });
+    }
+    if (!TELEGRAM_BOT_TOKEN) {
+        return res.status(500).json({ success: false, message: 'TELEGRAM_BOT_TOKEN non configurato' });
+    }
+    try {
+        const r = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: webhook_url })
+        });
+        const data = await r.json();
+        res.json({ success: data.ok, telegram_response: data });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
 
 // ============================================
 // API SETUP (primo avvio — crea admin)
