@@ -536,7 +536,22 @@
                 <div id="webhookResult" style="margin-top:15px; display:none;"></div>
 
                 <hr style="border-color:rgba(255,255,255,0.1); margin:25px 0;">
-                <h3 style="margin-bottom:8px;">🔍 Trova Chat ID</h3>
+                <h3 style="margin-bottom:8px;">🧪 Test Notifica</h3>
+                <p style="opacity:0.6; font-size:13px; margin-bottom:15px;">
+                    Invia un messaggio di test Telegram per verificare che tutto funzioni.
+                </p>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                    <select id="testMachineSelect" style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); padding:8px 12px; border-radius:8px; color:white; font-size:13px;">
+                        <option value="">— Seleziona macchina —</option>
+                    </select>
+                    <button onclick="sendTestAlert('water')" style="background:rgba(0,180,255,0.2); color:#00b4ff; border:1px solid rgba(0,180,255,0.3); padding:8px 15px; border-radius:8px; font-size:13px; cursor:pointer;">
+                        💧 Test acqua
+                    </button>
+                    <button onclick="sendTestAlert('insecticide')" style="background:rgba(255,152,0,0.2); color:#ff9800; border:1px solid rgba(255,152,0,0.3); padding:8px 15px; border-radius:8px; font-size:13px; cursor:pointer;">
+                        🧪 Test insetticida
+                    </button>
+                </div>
+                <div id="testAlertResult" style="margin-top:12px;"></div>
                 <p style="opacity:0.6; font-size:13px; margin-bottom:15px;">
                     Scrivi qualcosa al bot su Telegram, poi clicca qui per vedere chi ha scritto e il suo Chat ID.
                 </p>
@@ -936,7 +951,13 @@
                 }
             });
             document.getElementById(`tab-${tab}`).classList.add('active');
-            if (tab === 'telegram') loadWebhookStatus();
+            if (tab === 'telegram') {
+                loadWebhookStatus();
+                // Popola select macchine per test
+                const sel = document.getElementById('testMachineSelect');
+                sel.innerHTML = '<option value="">— Seleziona macchina —</option>' +
+                    allMachines.map(m => `<option value="${m.id}">${escapeHtml(m.machine_name || m.mac_address)} — ${escapeHtml(m.client_name || 'nessun cliente')}</option>`).join('');
+            }
         }
 
         async function loadWebhookStatus() {
@@ -959,6 +980,19 @@
         async function getBotToken() {
             // Non esponiamo il token nel frontend — usiamo il backend per verificare
             return null;
+        }
+
+        async function sendTestAlert(type) {
+            const machineId = document.getElementById('testMachineSelect').value;
+            const resultDiv = document.getElementById('testAlertResult');
+            if (!machineId) { resultDiv.innerHTML = '<span style="color:#ff9800;">Seleziona prima una macchina</span>'; return; }
+            resultDiv.innerHTML = '<span style="opacity:0.6;">Invio in corso...</span>';
+            const res = await apiPost('/telegram/test-alert', { machine_id: machineId, type });
+            if (res.success) {
+                resultDiv.innerHTML = `<span style="color:#00e676;">✅ ${res.message}</span>`;
+            } else {
+                resultDiv.innerHTML = `<span style="color:#ff5252;">❌ ${res.message}</span>`;
+            }
         }
 
         async function loadLastMessages() {
