@@ -850,7 +850,12 @@
         function switchAdminTab(tab) {
             document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
-            event.target.classList.add('active');
+            // Seleziona il tab corrispondente al nome
+            document.querySelectorAll('.admin-tab').forEach(t => {
+                if (t.getAttribute('onclick') && t.getAttribute('onclick').includes(`'${tab}'`)) {
+                    t.classList.add('active');
+                }
+            });
             document.getElementById(`tab-${tab}`).classList.add('active');
         }
 
@@ -961,7 +966,6 @@
         }
 
         function showAssignModal(id) {
-            // Scrolla alla sezione admin
             document.getElementById('adminPanel').classList.add('active');
             switchAdminTab('machines');
             window.scrollTo({ top: document.getElementById('adminPanel').offsetTop, behavior: 'smooth' });
