@@ -205,8 +205,113 @@ async function sendTelegramMessage(chatId, text) {
 }
 
 // ============================================
-// MIDDLEWARE AUTH
+// TELEGRAM WEBHOOK — riceve i messaggi dal bot
 // ============================================
+app.post('/api/telegram/webhook', async (req, res) => {
+    res.sendStatus(200); // Risponde subito a Telegram
+
+    try {
+        const update = req.body;
+        const message = update?.message;
+        if (!message) return;
+
+        const chatId = String(message.chat.id);
+        const text = message.text || '';
+        const firstName = message.chat.first_name || '';
+
+        // Comando /start con payload macchina: /start machine_123
+        if (text.startsWith('/start machine_')) {
+            const machineId = parseInt(text.replace('/start machine_', '').trim());
+
+            if (!machineId) {
+                await sendTelegramMessage(chatId, '❌ Link non valido. Chiedi un nuovo QR al tuo installatore.');
+                return;
+            }
+
+            // Trova la macchina e aggiorna il client con questo chat_id
+            const machineResult = await queryWithRetry(
+                'SELECT id, machine_name, client_id FROM machines WHERE id = $1',
+                [machineId]
+            );
+
+            if (machineResult.rows.length === 0) {
+                await sendTelegramMessage(chatId, '❌ Macchina non trovata. Contatta il tuo installatore.');
+                return;
+            }
+
+            const machine = machineResult.rows[0];
+
+            if (!machine.client_id) {
+                await sendTelegramMessage(chatId,
+                    `⚠️ La macchina <b>${machine.machine_name || 'NabulAir'}</b> non è ancora associata a un cliente.\n\n` +
+                    `Contatta il tuo installatore per completare la configurazione.\n\n` +
+                    `📋 Il tuo Chat ID è: <code>${chatId}</code>`
+                );
+                return;
+            }
+
+            // Salva il telegram_chat_id sul cliente
+            await queryWithRetry(
+                'UPDATE clients SET telegram_chat_id = $1 WHERE id = $2',
+                [chatId, machine.client_id]
+            );
+
+            await sendTelegramMessage(chatId,
+                `✅ <b>Attivazione completata!</b>\n\n` +
+                `Ciao ${firstName}! 👋\n` +
+                `Riceverai notifiche per la macchina:\n` +
+                `🏭 <b>${machine.machine_name || 'NabulAir'}</b>\n\n` +
+                `Ti avviseremo in caso di:\n` +
+                `💧 Problemi con il flusso acqua\n` +
+                `🧪 Insetticida esaurito\n\n` +
+                `📋 Il tuo Chat ID: <code>${chatId}</code>`
+            );
+
+            console.log(`✅ Cliente ID ${machine.client_id} attivato su Telegram: ${chatId}`);
+
+        } else if (text === '/start') {
+            // /start senza payload — risponde con le istruzioni
+            await sendTelegramMessage(chatId,
+                `👋 Benvenuto su <b>NabulAir</b>!\n\n` +
+                `Per attivare le notifiche, scansiona il QR Code che ti ha fornito il tuo installatore.\n\n` +
+                `📋 Il tuo Chat ID è: <code>${chatId}</code>`
+            );
+
+        } else if (text === '/chatid') {
+            // Comando utile per scoprire il proprio chat id manualmente
+            await sendTelegramMessage(chatId,
+                `📋 Il tuo Chat ID è:\n<code>${chatId}</code>\n\nComunicalo al tuo installatore.`
+            );
+        }
+
+    } catch (err) {
+        console.error('Errore webhook Telegram:', err.message);
+    }
+});
+
+// Registra il webhook su Telegram (chiamare una volta sola dopo il deploy)
+app.post('/api/telegram/setup-webhook', authenticateToken, requireAdmin, async (req, res) => {
+    const { webhook_url } = req.body; // es: https://tuo-dominio.railway.app/api/telegram/webhook
+    if (!webhook_url) {
+        return res.status(400).json({ success: false, message: 'webhook_url obbligatorio' });
+    }
+    if (!TELEGRAM_BOT_TOKEN) {
+        return res.status(500).json({ success: false, message: 'TELEGRAM_BOT_TOKEN non configurato' });
+    }
+    try {
+        const r = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: webhook_url })
+        });
+        const data = await r.json();
+        res.json({ success: data.ok, telegram_response: data });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
