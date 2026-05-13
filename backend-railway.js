@@ -52,12 +52,69 @@ if (!DATABASE_URL) {
 }
 
 // ============================================
-// DATABASE CONNECTION
+// DATABASE CONNECTION - CONFIGURAZIONE MIGLIORATA (SOLUZIONE 1)
 // ============================================
 const pool = new Pool({
     connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
+    ssl: { 
+        rejectUnauthorized: false,
+        require: true
+    },
+    // Configurazione del pool per gestire le disconnessioni
+    max: 20,                       // Massimo numero di client nel pool
+    idleTimeoutMillis: 30000,      // Chiudi client inattivi dopo 30 secondi
+    connectionTimeoutMillis: 10000, // Timeout connessione 10 secondi
+    keepAlive: true,               // Mantieni la connessione attiva
+    keepAliveInitialDelayMillis: 10000 // Delay iniziale keep-alive
 });
+
+// Gestione errori del pool
+pool.on('error', (err) => {
+    console.error('❌ Errore inaspettato nel pool PostgreSQL:', err.message);
+});
+
+// ============================================
+// FUNZIONE PER VERIFICARE E RIPRISTINARE CONNESSIONE DB
+// ============================================
+async function ensureDbConnection() {
+    try {
+        await pool.query('SELECT 1');
+        console.log('✅ Database connesso e attivo');
+        return true;
+    } catch (error) {
+        console.error('❌ Database disconnesso, tentativo di riconnessione...', error.message);
+        try {
+            // Prova a riconnetterti
+            await pool.connect();
+            console.log('✅ Riconnessione al database riuscita!');
+            return true;
+        } catch (reconnectError) {
+            console.error('❌ Fallita riconnessione:', reconnectError.message);
+            return false;
+        }
+    }
+}
+
+// ============================================
+// QUERY CON RETRY AUTOMATICO (SOLUZIONE 3)
+// ============================================
+async function queryWithRetry(query, params, maxRetries = 3) {
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            return await pool.query(query, params);
+        } catch (error) {
+            console.error(`Tentativo ${i + 1} fallito:`, error.message);
+            
+            if (i === maxRetries - 1) throw error;
+            
+            // Attendi prima di riprovare (backoff esponenziale)
+            await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
+            
+            // Forza riconnessione
+            await ensureDbConnection();
+        }
+    }
+}
 
 // ============================================
 // INIZIALIZZA DATABASE (Tabelle e trigger)
@@ -453,10 +510,12 @@ app.put('/api/machines/:id/assign', authenticateToken, requireAdmin, async (req,
 });
 
 // ============================================
-// API REGISTRAZIONE ESP32 (pubblica) - AGGIORNATA
+// API REGISTRAZIONE ESP32 (pubblica) - AGGIORNATA CON RETRY
 // ============================================
 app.post('/api/register', async (req, res) => {
-    // 1. Prendi anche machine_name dal body inviato dall'ESP32
+    // Verifica connessione prima di procedere
+    await ensureDbConnection();
+    
     const { mac_address, ip, version, machine_name } = req.body;
     
     if (!mac_address || !ip) {
@@ -469,8 +528,8 @@ app.post('/api/register', async (req, res) => {
     }
     
     try {
-        // 2. Aggiorna la query per includere machine_name ($4)
-        await pool.query(
+        // Usa queryWithRetry invece di pool.query diretto
+        await queryWithRetry(
             `INSERT INTO machines (mac_address, sta_ip, firmware_version, machine_name, status, last_seen)
              VALUES ($1, $2, $3, $4, 'online', NOW())
              ON CONFLICT (mac_address) DO UPDATE SET 
@@ -486,7 +545,6 @@ app.post('/api/register', async (req, res) => {
         res.json({ success: true, message: 'Registrato con successo' });
         
     } catch (error) {
-        // Questo ti scriverà l'errore preciso nei log di Railway
         console.error('ERRORE CRITICO DATABASE:', error.message);
         res.status(500).json({ success: false, error: error.message });
     }
@@ -610,23 +668,28 @@ app.post('/api/ping', async (req, res) => {
 });
 
 // ============================================
-// HEALTH CHECK
+// HEALTH CHECK MIGLIORATO CON STATO DB
 // ============================================
 app.get('/health', async (req, res) => {
+    let dbConnected = false;
+    let dbError = null;
+    
     try {
         await pool.query('SELECT 1');
-        res.json({ 
-            status: 'healthy', 
-            timestamp: new Date().toISOString(),
-            uptime: process.uptime()
-        });
+        dbConnected = true;
     } catch (error) {
-        res.status(500).json({ 
-            status: 'unhealthy', 
-            error: error.message,
-            timestamp: new Date().toISOString()
-        });
+        dbError = error.message;
     }
+    
+    res.json({ 
+        status: dbConnected ? 'healthy' : 'degraded',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        database: {
+            connected: dbConnected,
+            error: dbError
+        }
+    });
 });
 
 // ============================================
@@ -635,9 +698,9 @@ app.get('/health', async (req, res) => {
 app.get('/', (req, res) => {
     res.json({ 
         message: 'NabulAir Cloud API', 
-        version: '2.2',
+        version: '2.3',
         status: 'online',
-        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel'],
+        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry'],
         endpoints: [
             'GET /',
             'GET /health',
@@ -656,12 +719,14 @@ app.get('/', (req, res) => {
         ]
     });
 });
+
 // EMERGENZA: Reset password admin. RIMUOVI DOPO AVER ENTRATO!
 app.post('/api/reset', async (req, res) => {
     const hash = await bcrypt.hash(req.body.password || 'admin', 10);
     await pool.query("UPDATE users SET password_hash = $1 WHERE username = 'admin'", [hash]);
     res.json({success: true, message: 'Password resettata. Rimuovi questo endpoint!'});
 });
+
 // ============================================
 // AVVIO SERVER
 // ============================================
@@ -672,4 +737,5 @@ app.listen(PORT, () => {
     console.log(`📱 Telegram: ${TELEGRAM_BOT_TOKEN ? '✅ Configurato' : '❌ DISABILITATO'}`);
     console.log(`📁 File statici: ${__dirname}`);
     console.log(`🚨 Sistema allarmi: ATTIVO`);
+    console.log(`🔄 DB Auto-Retry: ATTIVO (max 3 tentativi)`);
 });
