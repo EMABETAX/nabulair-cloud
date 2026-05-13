@@ -432,7 +432,10 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
                 m.water_ok,
                 m.insecticide_ok,
                 m.flow,
-                c.name as client_name
+                m.client_id,
+                m.installer_id,
+                c.name as client_name,
+                c.telegram_chat_id
             FROM machines m
             LEFT JOIN clients c ON m.client_id = c.id
         `;
