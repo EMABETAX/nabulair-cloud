@@ -476,32 +476,12 @@
             <div id="alertsList"></div>
         </div>
 
-        <!-- QR Section (Installatore) -->
-        <div class="qr-section" id="qrSection">
-            <h2 style="margin-bottom:15px;">📲 Attivazione Cliente</h2>
-            <p style="opacity:0.7; margin-bottom:15px;">Seleziona una macchina e genera il QR Code per il cliente. Il cliente scansiona e preme START su Telegram.</p>
-            <div class="form-row" style="max-width:400px;">
-                <select id="qrMachineSelect" style="background:rgba(0,0,0,0.3);">
-                    <option value="">-- Seleziona macchina --</option>
-                </select>
-                <button class="btn-qr" onclick="generateQR()">Genera QR</button>
-            </div>
-            <div id="qrResult" style="display:none; margin-top:20px;">
-                <div class="qr-box">
-                    <div id="qrcode"></div>
-                </div>
-                <div class="qr-link" id="qrLink"></div>
-                <p style="margin-top:10px; font-size:14px; opacity:0.8;">📱 Fai scansionare questo QR al cliente con la fotocamera del telefono</p>
-            </div>
-        </div>
-
         <!-- Admin Panel -->
         <div class="admin-panel" id="adminPanel">
             <h2 style="margin-bottom:20px;">⚙️ Pannello Amministrazione</h2>
             <div class="admin-tabs">
                 <button class="admin-tab active" onclick="switchAdminTab('clients')">👥 Clienti</button>
                 <button class="admin-tab" onclick="switchAdminTab('users')">🔑 Utenti</button>
-                <button class="admin-tab" onclick="switchAdminTab('machines')">🏭 Macchine</button>
             </div>
             
             <div class="admin-section active" id="tab-clients">
@@ -510,7 +490,7 @@
                     <input type="text" id="newClientName" placeholder="Nome cliente">
                     <input type="email" id="newClientEmail" placeholder="Email">
                     <input type="text" id="newClientPhone" placeholder="Telefono">
-                    <input type="text" id="newClientTelegram" placeholder="Chat ID Telegram">
+                    <input type="text" id="newClientTelegram" placeholder="Chat ID Telegram (opzionale)">
                 </div>
                 <button class="btn-admin" onclick="addClient()">➕ Aggiungi Cliente</button>
                 <table class="data-table" id="clientsTable">
@@ -539,54 +519,66 @@
                     <tbody></tbody>
                 </table>
             </div>
-            
-            <div class="admin-section" id="tab-machines">
-                <h3 style="margin-bottom:15px;">Assegna Macchine</h3>
-                <table class="data-table" id="assignTable">
-                    <thead><tr><th>Macchina</th><th>MAC</th><th>Cliente</th><th>Installatore</th><th></th></tr></thead>
-                    <tbody></tbody>
-                </table>
-            </div>
         </div>
 
-        <!-- Machines Table -->
+        <!-- Machines Table — flusso unificato -->
         <div class="machines-table">
+            <div style="padding:20px 20px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <h2 style="font-size:18px;">🏭 Macchine</h2>
+                <div style="font-size:12px; opacity:0.5;">Per ogni macchina: 1 Assegna cliente → 2 Genera QR → 3 Cliente attiva Telegram</div>
+            </div>
             <table>
                 <thead>
                     <tr>
-                        <th>Cliente</th>
                         <th>Macchina</th>
                         <th>Stato</th>
                         <th>IP</th>
                         <th>Ultimo Contatto</th>
-                        <th>FW</th>
                         <th>💧</th>
                         <th>🧪</th>
-                        <th>Azioni</th>
+                        <th style="min-width:340px;">Cliente / Installatore / Telegram</th>
                     </tr>
                 </thead>
                 <tbody id="machinesList">
-                    <tr><td colspan="9" style="text-align: center;">Caricamento macchine...</td></tr>
+                    <tr><td colspan="7" style="text-align: center;">Caricamento macchine...</td></tr>
                 </tbody>
             </table>
         </div>
-    </div>
-    
-    <!-- Modal Dettaglio Macchina -->
-    <div class="modal" id="machineModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modalTitle">NabulAir</h2>
-                <button class="modal-close" onclick="closeModal()">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="iframe-container">
-                    <iframe id="machineIframe" src=""></iframe>
+
+        <!-- QR Modal -->
+        <div class="modal" id="qrModal">
+            <div class="modal-content" style="max-width:420px;">
+                <div class="modal-header">
+                    <h2>📲 QR Attivazione Telegram</h2>
+                    <button class="modal-close" onclick="closeQRModal()">×</button>
+                </div>
+                <div class="modal-body" style="text-align:center;">
+                    <p id="qrModalMachineName" style="opacity:0.7; margin-bottom:15px;"></p>
+                    <div class="qr-box" style="display:inline-block;">
+                        <div id="qrcode"></div>
+                    </div>
+                    <div class="qr-link" id="qrLink" style="margin-top:15px; text-align:left;"></div>
+                    <p style="margin-top:15px; font-size:13px; opacity:0.7;">📱 Fai scansionare questo QR al cliente.<br>Telegram si apre e il cliente preme <strong>START</strong>.<br>Il Chat ID viene salvato automaticamente.</p>
                 </div>
             </div>
         </div>
-    </div>
-    
+
+        <!-- Machine detail modal -->
+        <div class="modal" id="machineModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modalTitle">NabulAir</h2>
+                    <button class="modal-close" onclick="closeModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="iframe-container">
+                        <iframe id="machineIframe" src=""></iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div><!-- /container -->
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script>
         const CLOUD_API = '/api';
@@ -658,10 +650,6 @@
                 await loadUsers();
             }
             
-            if (currentUser.role === 'installer' || currentUser.role === 'admin') {
-                document.getElementById('qrSection').classList.add('active');
-            }
-            
             loadMachines();
             loadAlerts();
         }
@@ -699,23 +687,24 @@
                     allMachines = data.machines;
                     renderMachines(data.machines);
                     updateStats(data.machines);
-                    populateQRSelect(data.machines);
-                    if (currentUser.role === 'admin') renderAssignTable(data.machines);
                 }
             } catch (error) {
                 console.error('Errore:', error);
                 document.getElementById('machinesList').innerHTML = 
-                    '<tr><td colspan="9" style="text-align: center; color: #ff5252;">❌ Errore connessione</td></tr>';
+                    '<tr><td colspan="7" style="text-align: center; color: #ff5252;">❌ Errore connessione</td></tr>';
             }
         }
 
         function renderMachines(machines) {
             const tbody = document.getElementById('machinesList');
             if (machines.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center;">📭 Nessuna macchina trovata</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">📭 Nessuna macchina trovata</td></tr>';
                 return;
             }
             
+            const isAdmin = currentUser.role === 'admin';
+            const isInstaller = currentUser.role === 'installer';
+
             tbody.innerHTML = machines.map(machine => {
                 const statusClass = machine.status === 'online' ? 'status-online' : 
                                    (machine.status === 'warning' ? 'status-warning' : 'status-offline');
@@ -724,17 +713,55 @@
                 const lastSeen = machine.last_seen ? new Date(machine.last_seen).toLocaleString() : 'Mai';
                 const waterIcon = machine.water_ok === false ? '❌' : '✅';
                 const insIcon = machine.insecticide_ok === false ? '❌' : '✅';
-                
-                let actions = '';
-                if (currentUser.role === 'installer' || currentUser.role === 'admin') {
-                    actions = `
-                        <div class="machine-actions">
-                            <button class="btn-small btn-qr-small" onclick="showQRForMachine(${machine.id})">📲 QR</button>
-                            ${currentUser.role === 'admin' ? `<button class="btn-small btn-assign-small" onclick="showAssignModal(${machine.id})">⚙️</button>` : ''}
+
+                // Colonna unificata cliente/installatore/telegram
+                let workflowCell = '';
+                if (isAdmin || isInstaller) {
+                    const clientSelect = allClients.map(c =>
+                        `<option value="${c.id}" ${machine.client_id == c.id ? 'selected' : ''}>${escapeHtml(c.name)}</option>`
+                    ).join('');
+                    const installerSelect = allUsers.filter(u => u.role === 'installer').map(u =>
+                        `<option value="${u.id}" ${machine.installer_id == u.id ? 'selected' : ''}>${escapeHtml(u.username)}</option>`
+                    ).join('');
+
+                    const telegramStatus = machine.telegram_chat_id
+                        ? `<span style="color:#00e676; font-size:11px;">✅ Telegram attivo</span>`
+                        : `<span style="color:#ff9800; font-size:11px;">⏳ In attesa attivazione</span>`;
+
+                    const qrDisabled = !machine.client_id ? 'disabled title="Assegna prima un cliente"' : '';
+                    const qrStyle = !machine.client_id 
+                        ? 'opacity:0.4; cursor:not-allowed;' 
+                        : 'cursor:pointer;';
+
+                    workflowCell = `
+                        <div style="display:flex; flex-direction:column; gap:8px;">
+                            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                                ${isAdmin ? `
+                                <select id="wf-client-${machine.id}" onchange="onClientChange(${machine.id})"
+                                    style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); padding:5px 8px; border-radius:8px; color:white; font-size:12px; flex:1; min-width:130px;">
+                                    <option value="">— Cliente —</option>
+                                    ${clientSelect}
+                                </select>
+                                <select id="wf-installer-${machine.id}"
+                                    style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); padding:5px 8px; border-radius:8px; color:white; font-size:12px; flex:1; min-width:130px;">
+                                    <option value="">— Installatore —</option>
+                                    ${installerSelect}
+                                </select>
+                                <button onclick="assignMachine(${machine.id})" 
+                                    style="background:rgba(0,212,255,0.2); color:#00d4ff; border:1px solid rgba(0,212,255,0.3); padding:5px 12px; border-radius:8px; font-size:12px; cursor:pointer; white-space:nowrap;"
+                                    id="assign-btn-${machine.id}">💾 Salva</button>
+                                ` : ''}
+                                <button onclick="openQRModal(${machine.id}, '${escapeHtml(machine.machine_name || machine.mac_address)}')" ${qrDisabled}
+                                    style="background:rgba(0,230,118,0.2); color:#00e676; border:1px solid rgba(0,230,118,0.3); padding:5px 12px; border-radius:8px; font-size:12px; ${qrStyle} white-space:nowrap;">
+                                    📲 QR
+                                </button>
+                            </div>
+                            <div style="font-size:11px; opacity:0.6;">${escapeHtml(machine.client_name || '— nessun cliente —')} &nbsp;·&nbsp; ${telegramStatus}</div>
                         </div>
                     `;
                 } else {
-                    actions = `
+                    // Cliente: solo bottone entra
+                    workflowCell = `
                         <button class="btn-enter" onclick="openMachine(${machine.id}, '${escapeHtml(machine.machine_name || 'Macchina')}', '${machine.sta_ip || machine.mac_address}')">
                             ▶️ ENTRARE
                         </button>
@@ -743,8 +770,10 @@
                 
                 return `
                     <tr>
-                        <td>${escapeHtml(machine.client_name || '—')}</td>
-                        <td><strong>${escapeHtml(machine.machine_name || '—')}</strong><br><span style="font-size: 11px; opacity: 0.6;">${machine.mac_address}</span></td>
+                        <td>
+                            <strong>${escapeHtml(machine.machine_name || '—')}</strong><br>
+                            <span style="font-size:11px; opacity:0.5;">${machine.mac_address}</span>
+                        </td>
                         <td>
                             <span class="status-badge ${statusClass}">
                                 ${machine.status === 'online' ? '<span class="online-dot"></span>' : ''}
@@ -753,14 +782,77 @@
                         </td>
                         <td><span class="last-seen">${machine.sta_ip || '—'}</span></td>
                         <td><span class="last-seen">${lastSeen}</span></td>
-                        <td>v${machine.firmware_version || '1.0'}</td>
                         <td style="text-align:center;">${waterIcon}</td>
                         <td style="text-align:center;">${insIcon}</td>
-                        <td>${actions}</td>
+                        <td>${workflowCell}</td>
                     </tr>
                 `;
             }).join('');
         }
+
+        function onClientChange(machineId) {
+            // Abilita/disabilita bottone QR in base alla selezione cliente
+            const clientId = document.getElementById(`wf-client-${machineId}`).value;
+            const qrBtn = document.querySelector(`button[onclick="openQRModal(${machineId}, '${document.querySelector(`#wf-client-${machineId}`)?.closest('tr')?.querySelector('strong')?.textContent || ''}')"]`);
+            // Aggiorna visivamente — la vera abilitazione avviene dopo il salvataggio
+        }
+
+        async function assignMachine(id) {
+            const clientSel = document.getElementById(`wf-client-${id}`);
+            const installerSel = document.getElementById(`wf-installer-${id}`);
+            const btn = document.getElementById(`assign-btn-${id}`);
+            
+            const clientId = clientSel ? clientSel.value : null;
+            const installerId = installerSel ? installerSel.value : null;
+
+            btn.textContent = '⏳';
+            btn.disabled = true;
+
+            const res = await apiPut(`/machines/${id}/assign`, {
+                client_id: clientId || null,
+                installer_id: installerId || null
+            });
+
+            if (res.success) {
+                btn.textContent = '✅';
+                setTimeout(() => { btn.textContent = '💾 Salva'; btn.disabled = false; }, 1500);
+                await loadMachines(); // ricarica per aggiornare stato QR
+            } else {
+                btn.textContent = '❌ Errore';
+                setTimeout(() => { btn.textContent = '💾 Salva'; btn.disabled = false; }, 2000);
+            }
+        }
+
+        // ========== QR MODAL ==========
+        async function openQRModal(machineId, machineName) {
+            const res = await apiPost(`/machines/${machineId}/qr`, {});
+            if (!res.success) {
+                alert(res.message || 'Errore generazione QR');
+                return;
+            }
+
+            document.getElementById('qrModalMachineName').textContent = '🏭 ' + machineName;
+            document.getElementById('qrLink').textContent = res.telegram_link;
+
+            const qrDiv = document.getElementById('qrcode');
+            qrDiv.innerHTML = '';
+            new QRCode(qrDiv, {
+                text: res.telegram_link,
+                width: 220,
+                height: 220,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.M
+            });
+
+            document.getElementById('qrModal').classList.add('active');
+        }
+
+        function closeQRModal() {
+            document.getElementById('qrModal').classList.remove('active');
+            document.getElementById('qrcode').innerHTML = '';
+        }
+
 
         function updateStats(machines) {
             const total = machines.length;
@@ -772,45 +864,6 @@
             document.getElementById('onlineMachines').innerHTML = `🟢 Online: ${online}`;
             document.getElementById('offlineMachines').innerHTML = `🔴 Offline: ${offline}`;
             document.getElementById('activeAlerts').innerHTML = `🚨 Allarmi: ${alerts}`;
-        }
-
-        // ========== QR SYSTEM ==========
-        function populateQRSelect(machines) {
-            const sel = document.getElementById('qrMachineSelect');
-            sel.innerHTML = '<option value="">-- Seleziona macchina --</option>' +
-                machines.map(m => `<option value="${m.id}">${escapeHtml(m.machine_name || m.mac_address)}</option>`).join('');
-        }
-
-        async function generateQR() {
-            const machineId = document.getElementById('qrMachineSelect').value;
-            if (!machineId) return alert('Seleziona una macchina');
-            
-            const res = await apiPost(`/machines/${machineId}/qr`, {});
-            if (res.success) {
-                const resultDiv = document.getElementById('qrResult');
-                resultDiv.style.display = 'block';
-                document.getElementById('qrLink').textContent = res.telegram_link;
-                
-                // Genera QR code
-                const qrDiv = document.getElementById('qrcode');
-                qrDiv.innerHTML = '';
-                new QRCode(qrDiv, {
-                    text: res.telegram_link,
-                    width: 200,
-                    height: 200,
-                    colorDark: '#000000',
-                    colorLight: '#ffffff',
-                    correctLevel: QRCode.CorrectLevel.M
-                });
-            } else {
-                alert(res.message || 'Errore generazione QR');
-            }
-        }
-
-        function showQRForMachine(machineId) {
-            document.getElementById('qrMachineSelect').value = machineId;
-            generateQR();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         // ========== ALERTS ==========
@@ -930,45 +983,6 @@
             } else {
                 alert(res.message);
             }
-        }
-
-        function renderAssignTable(machines) {
-            const tbody = document.querySelector('#assignTable tbody');
-            tbody.innerHTML = machines.map(m => `
-                <tr>
-                    <td>${escapeHtml(m.machine_name || '—')}</td>
-                    <td>${m.mac_address}</td>
-                    <td>
-                        <select id="assign-client-${m.id}" style="background:rgba(0,0,0,0.3); border:none; padding:8px; border-radius:8px; color:white;">
-                            <option value="">-- Nessun cliente --</option>
-                            ${allClients.map(c => `<option value="${c.id}" ${m.client_id == c.id ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
-                        </select>
-                    </td>
-                    <td>
-                        <select id="assign-installer-${m.id}" style="background:rgba(0,0,0,0.3); border:none; padding:8px; border-radius:8px; color:white;">
-                            <option value="">-- Nessun installatore --</option>
-                            ${allUsers.filter(u => u.role === 'installer').map(u => `<option value="${u.id}" ${m.installer_id == u.id ? 'selected' : ''}>${escapeHtml(u.username)}</option>`).join('')}
-                        </select>
-                    </td>
-                    <td><button class="btn-admin" style="padding:5px 15px; font-size:12px;" onclick="assignMachine(${m.id})">💾 Assegna</button></td>
-                </tr>
-            `).join('');
-        }
-
-        async function assignMachine(id) {
-            const clientId = document.getElementById(`assign-client-${id}`).value;
-            const installerId = document.getElementById(`assign-installer-${id}`).value;
-            await apiPut(`/machines/${id}/assign`, { 
-                client_id: clientId || null, 
-                installer_id: installerId || null 
-            });
-            loadMachines();
-        }
-
-        function showAssignModal(id) {
-            document.getElementById('adminPanel').classList.add('active');
-            switchAdminTab('machines');
-            window.scrollTo({ top: document.getElementById('adminPanel').offsetTop, behavior: 'smooth' });
         }
 
         // ========== MODAL ==========
