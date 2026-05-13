@@ -534,6 +534,16 @@
                     🔗 Registra Webhook
                 </button>
                 <div id="webhookResult" style="margin-top:15px; display:none;"></div>
+
+                <hr style="border-color:rgba(255,255,255,0.1); margin:25px 0;">
+                <h3 style="margin-bottom:8px;">🔍 Trova Chat ID</h3>
+                <p style="opacity:0.6; font-size:13px; margin-bottom:15px;">
+                    Scrivi qualcosa al bot su Telegram, poi clicca qui per vedere chi ha scritto e il suo Chat ID.
+                </p>
+                <button class="btn-admin" onclick="loadLastMessages()" style="background:rgba(255,152,0,0.3); border:1px solid rgba(255,152,0,0.4);">
+                    📨 Vedi ultimi messaggi bot
+                </button>
+                <div id="lastMessagesResult" style="margin-top:15px;"></div>
             </div>
         </div>
 
@@ -949,6 +959,49 @@
         async function getBotToken() {
             // Non esponiamo il token nel frontend — usiamo il backend per verificare
             return null;
+        }
+
+        async function loadLastMessages() {
+            const div = document.getElementById('lastMessagesResult');
+            div.innerHTML = '<span style="opacity:0.6;">Caricamento...</span>';
+            try {
+                const data = await apiGet('/telegram/last-messages');
+                if (!data.success) {
+                    div.innerHTML = `<div style="color:#ff5252;">❌ ${data.message}</div>`;
+                    return;
+                }
+                if (data.messages.length === 0) {
+                    div.innerHTML = `<div style="opacity:0.6; font-size:13px;">Nessun messaggio trovato. Scrivi qualcosa al bot su Telegram e riprova.</div>`;
+                    return;
+                }
+                div.innerHTML = data.messages.map(m => `
+                    <div style="background:rgba(0,0,0,0.3); border-radius:10px; padding:12px; margin-bottom:8px; font-size:13px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <strong>${escapeHtml(m.name?.trim() || 'Sconosciuto')}${m.username ? ' (@'+escapeHtml(m.username)+')' : ''}</strong>
+                            <span style="opacity:0.5; font-size:11px;">${m.date || ''}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                            <span style="opacity:0.7;">💬 ${escapeHtml(m.text || '')}</span>
+                            <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                                <code style="background:rgba(0,212,255,0.15); color:#00d4ff; padding:3px 10px; border-radius:6px; font-size:12px;">${m.chat_id}</code>
+                                <button onclick="copyToClipboard('${m.chat_id}', this)" 
+                                    style="background:rgba(0,212,255,0.2); color:#00d4ff; border:none; padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer;">
+                                    📋 Copia
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch(e) {
+                div.innerHTML = `<div style="color:#ff5252;">❌ Errore: ${e.message}</div>`;
+            }
+        }
+
+        function copyToClipboard(text, btn) {
+            navigator.clipboard.writeText(text).then(() => {
+                btn.textContent = '✅ Copiato';
+                setTimeout(() => btn.textContent = '📋 Copia', 2000);
+            });
         }
 
         async function setupWebhook() {
