@@ -3,1182 +3,1120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NabulAir Cloud - Centrale Operativa</title>
+    <title>NabulAir — Centrale</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
+        :root {
+            --bg:       #0a0e1a;
+            --surface:  #111827;
+            --card:     #161d2f;
+            --border:   rgba(255,255,255,0.07);
+            --green:    #22c55e;
+            --green-dim:rgba(34,197,94,0.15);
+            --red:      #ef4444;
+            --red-dim:  rgba(239,68,68,0.15);
+            --amber:    #f59e0b;
+            --amber-dim:rgba(245,158,11,0.15);
+            --blue:     #38bdf8;
+            --blue-dim: rgba(56,189,248,0.15);
+            --accent:   #4ade80;
+            --text:     #f1f5f9;
+            --muted:    #64748b;
+            --font-display: 'Syne', sans-serif;
+            --font-body:    'DM Sans', sans-serif;
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--text);
             min-height: 100vh;
-            color: white;
         }
-        
-        .header {
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        
-        .header-content {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-        
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .logo-icon {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, #00d4ff, #7b2ff7);
-            border-radius: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-        }
-        
-        .stats-summary {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        
-        .stat-pill {
-            background: rgba(0,0,0,0.3);
-            padding: 8px 20px;
-            border-radius: 50px;
-            font-size: 14px;
-        }
-        
-        .container {
-            max-width: 1400px;
-            margin: 30px auto;
-            padding: 0 20px;
-        }
-        
-        /* Login Screen */
+
+        /* ── LOGIN ── */
         #loginScreen {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            position: fixed; inset: 0;
+            background: var(--bg);
+            display: flex; align-items: center; justify-content: center;
             z-index: 9999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
-        
-        .login-box {
+        .login-wrap {
+            width: 90%; max-width: 380px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 40px 36px;
+        }
+        .login-logo {
+            width: 52px; height: 52px;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 26px; margin: 0 auto 20px;
+        }
+        .login-wrap h2 {
+            font-family: var(--font-display);
+            font-size: 22px; font-weight: 800;
+            text-align: center; margin-bottom: 6px;
+        }
+        .login-wrap p { text-align:center; color:var(--muted); font-size:13px; margin-bottom:28px; }
+        .login-wrap input {
+            width: 100%; padding: 14px 16px;
             background: rgba(255,255,255,0.05);
-            backdrop-filter: blur(10px);
-            padding: 40px;
-            border-radius: 30px;
-            border: 1px solid rgba(255,255,255,0.1);
-            width: 90%;
-            max-width: 400px;
+            border: 1px solid var(--border);
+            border-radius: 12px; color: var(--text);
+            font-family: var(--font-body); font-size: 15px;
+            margin-bottom: 12px; outline: none;
+            transition: border 0.2s;
         }
-        
-        .login-box h2 { text-align: center; margin-bottom: 25px; }
-        .login-box input {
-            width: 100%;
-            padding: 15px;
-            margin: 10px 0;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 15px;
-            color: white;
-            font-size: 16px;
+        .login-wrap input:focus { border-color: var(--accent); }
+        .login-wrap input::placeholder { color: var(--muted); }
+        .btn-login {
+            width: 100%; padding: 14px;
+            background: var(--green);
+            border: none; border-radius: 12px;
+            color: #000; font-family: var(--font-display);
+            font-size: 15px; font-weight: 700;
+            cursor: pointer; margin-top: 4px;
+            transition: opacity 0.2s;
         }
-        .login-box input::placeholder { color: rgba(255,255,255,0.5); }
-        .login-box button {
-            width: 100%;
-            padding: 15px;
-            margin-top: 20px;
-            background: linear-gradient(135deg, #00d4ff, #7b2ff7);
-            border: none;
-            border-radius: 50px;
-            color: white;
-            font-weight: 700;
-            cursor: pointer;
-            font-size: 16px;
+        .btn-login:hover { opacity: 0.85; }
+        .login-err { color: var(--red); font-size:13px; text-align:center; margin-top:12px; display:none; }
+
+        /* ── HEADER ── */
+        #appShell { display: none; }
+        .topbar {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            height: 64px;
+            display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 100;
         }
-        .login-error {
-            color: #ff5252;
-            text-align: center;
-            margin-top: 15px;
-            font-size: 14px;
-            display: none;
-        }
-        
-        /* Alerts Section */
-        .alerts-bar {
-            background: rgba(255, 82, 82, 0.15);
-            border: 1px solid rgba(255, 82, 82, 0.3);
-            border-radius: 15px;
-            padding: 15px 20px;
-            margin-bottom: 20px;
-            display: none;
-        }
-        .alerts-bar.active { display: block; }
-        .alert-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .alert-item:last-child { border-bottom: none; }
-        .alert-resolve {
-            background: rgba(0,230,118,0.2);
-            color: #00e676;
-            border: none;
-            padding: 5px 15px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        
-        /* Admin Panel */
-        .admin-panel {
-            background: rgba(255,255,255,0.05);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 25px;
-            margin-bottom: 30px;
-            border: 1px solid rgba(255,255,255,0.1);
-            display: none;
-        }
-        .admin-panel.active { display: block; }
-        .admin-tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            padding-bottom: 10px;
-        }
-        .admin-tab {
-            background: none;
-            border: none;
-            color: rgba(255,255,255,0.6);
-            padding: 10px 20px;
-            cursor: pointer;
+        .topbar-left { display:flex; align-items:center; gap:14px; }
+        .top-logo {
+            width: 36px; height: 36px;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
             border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
         }
-        .admin-tab.active { background: rgba(0,212,255,0.2); color: #00d4ff; }
-        .admin-section { display: none; }
-        .admin-section.active { display: block; }
-        
-        .form-row {
+        .top-brand {
+            font-family: var(--font-display);
+            font-size: 17px; font-weight: 800; letter-spacing: 0.3px;
+        }
+        .top-pills { display:flex; gap:8px; flex-wrap:wrap; }
+        .pill {
+            background: var(--card);
+            border: 1px solid var(--border);
+            padding: 5px 14px; border-radius: 50px;
+            font-size: 12px; color: var(--muted);
+        }
+        .pill span { color: var(--text); font-weight: 600; }
+        .topbar-right { display:flex; align-items:center; gap:10px; }
+        .user-chip {
+            display: flex; align-items: center; gap: 8px;
+            background: var(--card); border: 1px solid var(--border);
+            padding: 6px 14px; border-radius: 50px; font-size: 13px;
+        }
+        .role-badge {
+            font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+            padding: 2px 8px; border-radius: 50px;
+            text-transform: uppercase;
+        }
+        .role-admin   { background: var(--blue-dim);  color: var(--blue); }
+        .role-installer { background: var(--green-dim); color: var(--green); }
+        .role-client  { background: var(--amber-dim); color: var(--amber); }
+        .btn-icon {
+            background: var(--card); border: 1px solid var(--border);
+            color: var(--muted); padding: 7px 14px;
+            border-radius: 50px; cursor: pointer; font-size: 12px;
+            transition: all 0.2s;
+        }
+        .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-logout { color: var(--red); }
+        .btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+        /* ── LAYOUT ── */
+        .layout { display:flex; min-height:calc(100vh - 64px); }
+
+        /* ── SIDEBAR (admin only) ── */
+        .sidebar {
+            width: 220px; min-width: 220px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 24px 16px;
+            display: none;
+        }
+        .sidebar.visible { display: block; }
+        .sidebar-label {
+            font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+            text-transform: uppercase; color: var(--muted);
+            padding: 0 8px; margin-bottom: 8px;
+        }
+        .nav-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px; border-radius: 10px;
+            cursor: pointer; font-size: 14px; color: var(--muted);
+            transition: all 0.15s; margin-bottom: 2px;
+            border: none; background: none; width: 100%; text-align: left;
+        }
+        .nav-item:hover { background: var(--card); color: var(--text); }
+        .nav-item.active { background: var(--green-dim); color: var(--green); font-weight: 600; }
+        .nav-icon { font-size: 16px; }
+        .sidebar-divider { border:none; border-top:1px solid var(--border); margin: 16px 0; }
+
+        /* ── MAIN ── */
+        .main { flex: 1; padding: 28px 32px; overflow-x: hidden; }
+        @media (max-width: 768px) { .main { padding: 16px; } }
+
+        /* ── SECTION PAGES ── */
+        .section-page { display: none; }
+        .section-page.active { display: block; }
+
+        .page-title {
+            font-family: var(--font-display);
+            font-size: 22px; font-weight: 800; margin-bottom: 6px;
+        }
+        .page-sub { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+
+        /* ── ALERTS BAR ── */
+        .alerts-wrap { display:none; }
+        .alerts-wrap.has-alerts { display:block; margin-bottom:24px; }
+        .alert-row {
+            background: var(--red-dim);
+            border: 1px solid rgba(239,68,68,0.3);
+            border-radius: 12px; padding: 14px 18px;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 8px; font-size: 14px;
+        }
+        .btn-resolve {
+            background: var(--green-dim); color: var(--green);
+            border: 1px solid rgba(34,197,94,0.3);
+            padding: 5px 14px; border-radius: 20px;
+            cursor: pointer; font-size: 12px; white-space: nowrap;
+        }
+
+        /* ── MACHINE CARDS ── */
+        .cards-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
         }
-        .form-row input, .form-row select {
-            padding: 12px;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 10px;
-            color: white;
-            font-size: 14px;
+        .machine-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px; padding: 22px;
+            transition: border-color 0.2s;
         }
-        .btn-admin {
-            padding: 10px 25px;
-            background: linear-gradient(135deg, #00d4ff, #7b2ff7);
-            border: none;
-            border-radius: 25px;
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
+        .machine-card:hover { border-color: rgba(255,255,255,0.14); }
+        .machine-card.has-alert { border-color: rgba(239,68,68,0.4); }
+
+        .card-head {
+            display: flex; justify-content: space-between;
+            align-items: flex-start; margin-bottom: 18px;
         }
+        .card-name {
+            font-family: var(--font-display);
+            font-size: 16px; font-weight: 700;
+        }
+        .card-mac { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: monospace; }
+        .status-dot-wrap { display:flex; align-items:center; gap:6px; }
+        .sdot {
+            width: 9px; height: 9px; border-radius: 50%;
+            background: var(--muted);
+        }
+        .sdot.online { background: var(--green); box-shadow: 0 0 6px var(--green); animation: blink 2s infinite; }
+        .sdot.offline { background: var(--red); }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        .status-txt { font-size: 12px; font-weight: 600; color: var(--muted); }
+        .status-txt.online { color: var(--green); }
+        .status-txt.offline { color: var(--red); }
+
+        .card-sensors {
+            display: flex; gap: 10px; margin-bottom: 18px;
+        }
+        .sensor-chip {
+            flex: 1; padding: 10px 12px; border-radius: 12px;
+            display: flex; align-items: center; gap: 8px;
+            font-size: 12px; font-weight: 600;
+        }
+        .sensor-ok   { background: var(--green-dim); color: var(--green); }
+        .sensor-err  { background: var(--red-dim);   color: var(--red);   }
+        .sensor-icon { font-size: 16px; }
+
+        /* ── WORKFLOW STEPS ── */
+        .workflow { border-top: 1px solid var(--border); padding-top: 16px; }
+        .wf-step {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 0; border-bottom: 1px solid var(--border);
+        }
+        .wf-step:last-child { border-bottom: none; padding-bottom: 0; }
+        .wf-num {
+            width: 26px; height: 26px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 700; flex-shrink: 0;
+            background: var(--surface); color: var(--muted);
+            border: 1px solid var(--border);
+        }
+        .wf-num.done { background: var(--green-dim); color: var(--green); border-color: var(--green); }
+        .wf-num.active { background: var(--amber-dim); color: var(--amber); border-color: var(--amber); }
+        .wf-label { font-size: 13px; color: var(--muted); flex:1; }
+        .wf-label.done { color: var(--text); }
+        .wf-value { font-size: 12px; color: var(--green); font-weight: 600; }
+
+        /* QR button — big and obvious */
+        .btn-qr-big {
+            width: 100%; margin-top: 14px;
+            padding: 14px;
+            background: var(--green);
+            border: none; border-radius: 12px;
+            color: #000; font-family: var(--font-display);
+            font-size: 15px; font-weight: 700;
+            cursor: pointer; display: flex; align-items: center;
+            justify-content: center; gap: 8px;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+        .btn-qr-big:hover { opacity: 0.88; }
+        .btn-qr-big:active { transform: scale(0.98); }
+        .btn-qr-big:disabled {
+            background: var(--surface); color: var(--muted);
+            cursor: not-allowed; opacity: 1;
+        }
+        .btn-qr-big.telegram-ok {
+            background: var(--green-dim); color: var(--green);
+            border: 1px solid rgba(34,197,94,0.3);
+        }
+
+        .btn-enter-big {
+            width: 100%; margin-top: 14px;
+            padding: 14px;
+            background: var(--blue-dim);
+            border: 1px solid rgba(56,189,248,0.3);
+            border-radius: 12px;
+            color: var(--blue); font-family: var(--font-display);
+            font-size: 15px; font-weight: 700;
+            cursor: pointer; display: flex; align-items: center;
+            justify-content: center; gap: 8px;
+            transition: opacity 0.2s;
+        }
+        .btn-enter-big:hover { opacity: 0.8; }
+
+        /* ── ADMIN FORMS ── */
+        .form-card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 20px; padding: 24px; margin-bottom: 24px;
+        }
+        .form-card h3 {
+            font-family: var(--font-display); font-size: 16px; font-weight: 700;
+            margin-bottom: 18px;
+        }
+        .form-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px; margin-bottom: 14px;
+        }
+        .form-grid input, .form-grid select {
+            padding: 11px 14px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border); border-radius: 10px;
+            color: var(--text); font-family: var(--font-body); font-size: 14px;
+            outline: none; transition: border 0.2s;
+        }
+        .form-grid input:focus, .form-grid select:focus { border-color: var(--accent); }
+        .form-grid input::placeholder { color: var(--muted); }
+        .form-grid select option { background: var(--card); }
+        .btn-add {
+            padding: 10px 22px;
+            background: var(--green); color: #000;
+            border: none; border-radius: 50px;
+            font-family: var(--font-display); font-size: 13px; font-weight: 700;
+            cursor: pointer; transition: opacity 0.2s;
+        }
+        .btn-add:hover { opacity: 0.85; }
+
+        /* Installers table */
         .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-            font-size: 14px;
-        }
-        .data-table th, .data-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            width: 100%; border-collapse: collapse;
+            margin-top: 16px; font-size: 14px;
         }
         .data-table th {
+            text-align: left; padding: 12px 16px;
             background: rgba(0,0,0,0.2);
-            font-weight: 600;
+            color: var(--muted); font-size: 11px;
+            text-transform: uppercase; letter-spacing: 1px; font-weight: 600;
         }
-        
-        /* QR Section */
-        .qr-section {
+        .data-table td {
+            padding: 13px 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+        .data-table tr:last-child td { border-bottom: none; }
+        .td-mono { font-family: monospace; font-size: 12px; color: var(--muted); }
+
+        /* Assign machines inline */
+        .assign-row {
+            display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+        }
+        .assign-row select {
+            padding: 7px 10px;
             background: rgba(255,255,255,0.05);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 25px;
-            margin-bottom: 30px;
-            border: 1px solid rgba(255,255,255,0.1);
-            display: none;
+            border: 1px solid var(--border); border-radius: 8px;
+            color: var(--text); font-size: 13px; outline: none;
+            flex: 1; min-width: 130px;
         }
-        .qr-section.active { display: block; }
-        .qr-box {
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
-            display: inline-block;
-            margin: 15px 0;
+        .btn-save-sm {
+            padding: 7px 16px;
+            background: var(--blue-dim); color: var(--blue);
+            border: 1px solid rgba(56,189,248,0.3);
+            border-radius: 20px; font-size: 12px; font-weight: 600;
+            cursor: pointer; white-space: nowrap;
         }
-        .qr-link {
-            background: rgba(0,0,0,0.3);
-            padding: 12px 20px;
-            border-radius: 10px;
-            font-family: monospace;
-            font-size: 14px;
-            word-break: break-all;
-            margin-top: 10px;
+        .btn-save-sm:hover { opacity: 0.8; }
+
+        /* ── QR MODAL ── */
+        .modal-bg {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(6px);
+            z-index: 1000; align-items: center; justify-content: center;
         }
-        .btn-qr {
-            background: linear-gradient(135deg, #00e676, #00b0ff);
-            border: none;
-            padding: 12px 25px;
-            border-radius: 25px;
-            color: white;
-            font-weight: 700;
-            cursor: pointer;
-            font-size: 14px;
+        .modal-bg.open { display: flex; }
+        .modal-box {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 28px; padding: 36px 32px;
+            width: 90%; max-width: 400px; text-align: center;
+            position: relative;
         }
-        
-        /* Tabella Macchine */
-        .machines-table {
-            background: rgba(255,255,255,0.05);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.1);
+        .modal-close-btn {
+            position: absolute; top: 16px; right: 18px;
+            background: none; border: none; color: var(--muted);
+            font-size: 22px; cursor: pointer; line-height: 1;
         }
-        
-        table { width: 100%; border-collapse: collapse; }
-        th {
-            text-align: left;
-            padding: 20px;
-            background: rgba(0,0,0,0.3);
-            font-weight: 600;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+        .modal-close-btn:hover { color: var(--text); }
+        .modal-box h3 {
+            font-family: var(--font-display); font-size: 18px; font-weight: 800;
+            margin-bottom: 6px;
         }
-        td {
-            padding: 15px 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+        .modal-machine-name { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+        .qr-wrap {
+            background: white; padding: 20px; border-radius: 16px;
+            display: inline-block; margin-bottom: 20px;
         }
-        tr:hover { background: rgba(255,255,255,0.03); }
-        
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 5px 12px;
-            border-radius: 50px;
-            font-size: 12px;
-            font-weight: 600;
+        .qr-steps {
+            background: var(--surface); border-radius: 14px;
+            padding: 16px 18px; text-align: left;
         }
-        .status-online { background: rgba(0,230,118,0.2); color: #00e676; }
-        .status-offline { background: rgba(255,82,82,0.2); color: #ff5252; }
-        .status-warning { background: rgba(255,152,0,0.2); color: #ff9800; }
-        
-        .btn-enter {
-            background: linear-gradient(135deg, #00d4ff, #7b2ff7);
-            border: none;
-            padding: 8px 20px;
-            border-radius: 25px;
-            color: white;
-            cursor: pointer;
-            font-weight: 600;
-            transition: transform 0.2s;
+        .qr-step-item {
+            display: flex; align-items: flex-start; gap: 10px;
+            margin-bottom: 10px; font-size: 13px;
         }
-        .btn-enter:hover { transform: scale(1.05); }
-        
-        .online-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #00e676;
-            animation: pulse 2s infinite;
+        .qr-step-item:last-child { margin-bottom: 0; }
+        .qstep-n {
+            width: 22px; height: 22px; border-radius: 50%;
+            background: var(--green-dim); color: var(--green);
+            font-size: 11px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; margin-top: 1px;
         }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+
+        /* ── MACHINE MODAL (iframe) ── */
+        #machineModal.modal-bg .modal-box {
+            max-width: 1100px; width: 95%; padding: 0; overflow: hidden;
         }
-        
-        .last-seen { font-size: 12px; font-family: monospace; }
-        
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9);
-            backdrop-filter: blur(5px);
-            z-index: 1000;
+        .machine-modal-head {
+            padding: 18px 22px; border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
         }
-        .modal.active { display: flex; }
-        .modal-content {
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
-            border-radius: 30px;
-            width: 90%;
-            max-width: 1200px;
-            max-height: 90vh;
-            overflow-y: auto;
-            margin: auto;
-            border: 1px solid rgba(0,212,255,0.3);
+        .machine-modal-head h3 { font-family: var(--font-display); font-size: 16px; font-weight: 700; }
+        .iframe-wrap { height: 70vh; }
+        .iframe-wrap iframe { width:100%; height:100%; border:none; background: white; }
+
+        /* ── TELEGRAM WEBHOOK ── */
+        .webhook-box {
+            background: var(--surface); border-radius: 14px;
+            padding: 16px 18px; margin-bottom: 18px;
         }
-        .modal-header {
-            padding: 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .webhook-url { font-family: monospace; font-size: 13px; color: var(--blue); margin-top: 6px; }
+        .result-ok  { background: var(--green-dim); border:1px solid rgba(34,197,94,0.3); border-radius:10px; padding:14px; font-size:13px; color:var(--green); }
+        .result-err { background: var(--red-dim);   border:1px solid rgba(239,68,68,0.3);  border-radius:10px; padding:14px; font-size:13px; color:var(--red); }
+
+        /* ── EMPTY STATE ── */
+        .empty-state {
+            grid-column: 1/-1;
+            text-align: center; padding: 60px 20px;
+            color: var(--muted);
         }
-        .modal-close {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 28px;
-            cursor: pointer;
-        }
-        .modal-body { padding: 20px; }
-        .iframe-container {
-            width: 100%;
-            height: 70vh;
-            border-radius: 15px;
-            overflow: hidden;
-        }
-        iframe { width: 100%; height: 100%; border: none; background: white; }
-        
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            font-size: 14px;
-        }
-        .logout-btn {
-            background: rgba(255,82,82,0.2);
-            color: #ff5252;
-            border: 1px solid rgba(255,82,82,0.3);
-            padding: 6px 16px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        .admin-btn {
-            background: rgba(0,212,255,0.2);
-            color: #00d4ff;
-            border: 1px solid rgba(0,212,255,0.3);
-            padding: 6px 16px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        
-        .machine-actions {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        .btn-small {
-            padding: 5px 12px;
-            border-radius: 15px;
-            border: none;
-            font-size: 11px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-        .btn-qr-small {
-            background: rgba(0,230,118,0.2);
-            color: #00e676;
-        }
-        .btn-assign-small {
-            background: rgba(255,152,0,0.2);
-            color: #ff9800;
-        }
-        
-        @media (max-width: 768px) {
-            th, td { padding: 10px; font-size: 12px; }
-            .btn-enter { padding: 6px 12px; font-size: 11px; }
-            .header-content { flex-direction: column; align-items: flex-start; }
-        }
-        
-        .refresh-btn {
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
-            padding: 8px 20px;
-            border-radius: 25px;
-            color: white;
-            cursor: pointer;
+        .empty-state .big { font-size: 48px; margin-bottom: 14px; }
+        .empty-state p { font-size: 15px; }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 640px) {
+            .sidebar { display: none !important; }
+            .main { padding: 14px; }
+            .top-pills { display: none; }
+            .topbar { padding: 0 14px; }
         }
     </style>
 </head>
 <body>
-    <!-- Login Screen -->
-    <div id="loginScreen">
-        <div class="login-box">
-            <div style="text-align:center; margin-bottom:30px;">
-                <div style="width:60px; height:60px; background:linear-gradient(135deg, #00d4ff, #7b2ff7); border-radius:20px; display:flex; align-items:center; justify-content:center; font-size:32px; margin:0 auto 15px;">🌿</div>
-                <h2>NabulAir Cloud</h2>
-                <p style="font-size:12px; opacity:0.7;">Centrale Operativa</p>
+
+<!-- ═══════════ LOGIN ═══════════ -->
+<div id="loginScreen">
+    <div class="login-wrap">
+        <div class="login-logo">🌿</div>
+        <h2>NabulAir</h2>
+        <p>Centrale Operativa</p>
+        <input type="text" id="loginUser" placeholder="Username" autocomplete="username">
+        <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter') doLogin()">
+        <button class="btn-login" onclick="doLogin()">Accedi</button>
+        <div class="login-err" id="loginError"></div>
+    </div>
+</div>
+
+<!-- ═══════════ APP SHELL ═══════════ -->
+<div id="appShell">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+        <div class="topbar-left">
+            <div class="top-logo">🌿</div>
+            <span class="top-brand">NabulAir</span>
+            <div class="top-pills" id="topPills"></div>
+        </div>
+        <div class="topbar-right">
+            <div class="user-chip">
+                <span id="topUsername">—</span>
+                <span class="role-badge" id="topRoleBadge"></span>
             </div>
-            <input type="text" id="loginUser" placeholder="Username">
-            <input type="password" id="loginPass" placeholder="Password">
-            <button onclick="doLogin()">Accedi</button>
-            <div class="login-error" id="loginError"></div>
+            <button class="btn-icon" onclick="refreshAll()">↺ Aggiorna</button>
+            <button class="btn-icon btn-logout" onclick="logout()">Esci</button>
+        </div>
+    </header>
+
+    <div class="layout">
+
+        <!-- SIDEBAR (admin only) -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-label">Menu</div>
+
+            <button class="nav-item active" onclick="showSection('machines')" id="nav-machines">
+                <span class="nav-icon">🏭</span> Impianti
+            </button>
+            <button class="nav-item" onclick="showSection('installers')" id="nav-installers">
+                <span class="nav-icon">🔧</span> Installatori
+            </button>
+            <button class="nav-item" onclick="showSection('clients')" id="nav-clients">
+                <span class="nav-icon">👥</span> Clienti
+            </button>
+
+            <hr class="sidebar-divider">
+            <div class="sidebar-label">Sistema</div>
+
+            <button class="nav-item" onclick="showSection('telegram')" id="nav-telegram">
+                <span class="nav-icon">📱</span> Telegram Bot
+            </button>
+        </nav>
+
+        <!-- MAIN CONTENT -->
+        <main class="main">
+
+            <!-- ALERTS -->
+            <div class="alerts-wrap" id="alertsWrap">
+                <div id="alertsList"></div>
+            </div>
+
+            <!-- ═══ SECTION: MACHINES ═══ -->
+            <section class="section-page active" id="section-machines">
+                <div class="page-title" id="machinesTitle">🏭 Impianti</div>
+                <div class="page-sub" id="machinesSub">Tutti gli impianti NabulAir</div>
+
+                <div class="cards-grid" id="cardsGrid">
+                    <div class="empty-state">
+                        <div class="big">⏳</div>
+                        <p>Caricamento impianti...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══ SECTION: INSTALLATORI (admin only) ═══ -->
+            <section class="section-page" id="section-installers">
+                <div class="page-title">🔧 Installatori</div>
+                <div class="page-sub">Crea le credenziali per i tuoi installatori</div>
+
+                <div class="form-card">
+                    <h3>➕ Nuovo Installatore</h3>
+                    <div class="form-grid">
+                        <input type="text"     id="instUsername"  placeholder="Nome utente (es. mario)">
+                        <input type="password" id="instPassword"  placeholder="Password">
+                    </div>
+                    <button class="btn-add" onclick="addInstaller()">Crea Installatore</button>
+                </div>
+
+                <div class="form-card">
+                    <h3>📋 Installatori registrati</h3>
+                    <table class="data-table" id="installersTable">
+                        <thead>
+                            <tr>
+                                <th>Nome utente</th>
+                                <th>Impianti assegnati</th>
+                            </tr>
+                        </thead>
+                        <tbody id="installersTbody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ═══ SECTION: CLIENTI (admin only) ═══ -->
+            <section class="section-page" id="section-clients">
+                <div class="page-title">👥 Clienti</div>
+                <div class="page-sub">Gestisci l'anagrafica dei clienti finali</div>
+
+                <div class="form-card">
+                    <h3>➕ Nuovo Cliente</h3>
+                    <div class="form-grid">
+                        <input type="text"  id="clientName"  placeholder="Nome e cognome">
+                        <input type="email" id="clientEmail" placeholder="Email">
+                        <input type="tel"   id="clientPhone" placeholder="Telefono">
+                    </div>
+                    <button class="btn-add" onclick="addClient()">Aggiungi Cliente</button>
+                </div>
+
+                <div class="form-card">
+                    <h3>📋 Clienti registrati</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Nome</th><th>Email</th><th>Telefono</th><th>Telegram</th></tr>
+                        </thead>
+                        <tbody id="clientsTbody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ═══ SECTION: TELEGRAM (admin only) ═══ -->
+            <section class="section-page" id="section-telegram">
+                <div class="page-title">📱 Telegram Bot</div>
+                <div class="page-sub">Configura il webhook — va fatto una sola volta dopo ogni deploy</div>
+
+                <div class="form-card" style="max-width:520px;">
+                    <div class="webhook-box">
+                        <div style="font-size:12px; color:var(--muted);">URL webhook attuale</div>
+                        <div class="webhook-url" id="webhookUrl">Caricamento...</div>
+                    </div>
+                    <button class="btn-add" onclick="setupWebhook()" id="webhookBtn">🔗 Registra Webhook</button>
+                    <div id="webhookResult" style="margin-top:14px;"></div>
+                </div>
+            </section>
+
+        </main>
+    </div><!-- /layout -->
+</div><!-- /appShell -->
+
+<!-- ═══════════ QR MODAL ═══════════ -->
+<div class="modal-bg" id="qrModal">
+    <div class="modal-box">
+        <button class="modal-close-btn" onclick="closeQR()">×</button>
+        <h3>📲 Attiva notifiche Telegram</h3>
+        <div class="modal-machine-name" id="qrMachineName"></div>
+        <div class="qr-wrap">
+            <div id="qrCanvas"></div>
+        </div>
+        <div class="qr-steps">
+            <div class="qr-step-item">
+                <div class="qstep-n">1</div>
+                <div>Mostra questo QR code al cliente</div>
+            </div>
+            <div class="qr-step-item">
+                <div class="qstep-n">2</div>
+                <div>Il cliente lo scansiona con la fotocamera del telefono</div>
+            </div>
+            <div class="qr-step-item">
+                <div class="qstep-n">3</div>
+                <div>Si apre Telegram — il cliente preme <strong>START</strong></div>
+            </div>
+            <div class="qr-step-item">
+                <div class="qstep-n">4</div>
+                <div>✅ Da quel momento riceve gli allarmi automaticamente</div>
+            </div>
         </div>
     </div>
+</div>
 
-    <div class="header" id="mainHeader" style="display:none;">
-        <div class="header-content">
-            <div class="logo">
-                <div class="logo-icon">🌿</div>
-                <div>
-                    <h1>NabulAir Cloud</h1>
-                    <p style="font-size: 12px; opacity: 0.7;">Centrale Operativa Nazionale</p>
-                </div>
-            </div>
-            <div class="stats-summary">
-                <div class="stat-pill" id="totalMachines">📊 Totale: --</div>
-                <div class="stat-pill" id="onlineMachines">🟢 Online: --</div>
-                <div class="stat-pill" id="offlineMachines">🔴 Offline: --</div>
-                <div class="stat-pill" id="activeAlerts">🚨 Allarmi: --</div>
-                <button class="refresh-btn" onclick="loadMachines()">🔄 Aggiorna</button>
-                <div class="user-info">
-                    <span id="userName">--</span>
-                    <span id="userRole" style="opacity:0.6; font-size:12px;">--</span>
-                    <button class="admin-btn" id="adminBtn" style="display:none;" onclick="toggleAdmin()">⚙️ Admin</button>
-                    <button class="logout-btn" onclick="logout()">Esci</button>
-                </div>
-            </div>
+<!-- ═══════════ MACHINE MODAL (iframe) ═══════════ -->
+<div class="modal-bg" id="machineModal">
+    <div class="modal-box" style="max-width:1100px; width:95%; padding:0; overflow:hidden;">
+        <div class="machine-modal-head">
+            <h3 id="machineModalTitle">NabulAir</h3>
+            <button class="modal-close-btn" style="position:static;" onclick="closeMachine()">×</button>
+        </div>
+        <div class="iframe-wrap">
+            <iframe id="machineIframe" src=""></iframe>
         </div>
     </div>
-    
-    <div class="container" id="mainContainer" style="display:none;">
-        <!-- Alerts -->
-        <div class="alerts-bar" id="alertsBar">
-            <h3 style="margin-bottom:10px; font-size:16px;">🚨 Allarmi Attivi</h3>
-            <div id="alertsList"></div>
-        </div>
+</div>
 
-        <!-- Admin Panel -->
-        <div class="admin-panel" id="adminPanel">
-            <h2 style="margin-bottom:20px;">⚙️ Pannello Amministrazione</h2>
-            <div class="admin-tabs">
-                <button class="admin-tab active" onclick="switchAdminTab('clients')">👥 Clienti</button>
-                <button class="admin-tab" onclick="switchAdminTab('users')">🔑 Utenti</button>
-                <button class="admin-tab" onclick="switchAdminTab('telegram')">📱 Telegram</button>
-            </div>
-            
-            <div class="admin-section active" id="tab-clients">
-                <h3 style="margin-bottom:15px;">Gestione Clienti</h3>
-                <div class="form-row">
-                    <input type="text" id="newClientName" placeholder="Nome cliente">
-                    <input type="email" id="newClientEmail" placeholder="Email">
-                    <input type="text" id="newClientPhone" placeholder="Telefono">
-                    <input type="text" id="newClientTelegram" placeholder="Chat ID Telegram (opzionale)">
-                </div>
-                <button class="btn-admin" onclick="addClient()">➕ Aggiungi Cliente</button>
-                <table class="data-table" id="clientsTable">
-                    <thead><tr><th>Nome</th><th>Email</th><th>Telefono</th><th>Telegram Chat ID</th><th></th></tr></thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-            
-            <div class="admin-section" id="tab-users">
-                <h3 style="margin-bottom:15px;">Gestione Utenti</h3>
-                <div class="form-row">
-                    <input type="text" id="newUserName" placeholder="Username">
-                    <input type="password" id="newUserPass" placeholder="Password">
-                    <select id="newUserRole">
-                        <option value="client">Cliente</option>
-                        <option value="installer">Installatore</option>
-                        <option value="admin">Admin</option>
-                    </select>
-                    <select id="newUserClient">
-                        <option value="">-- Nessun cliente --</option>
-                    </select>
-                </div>
-                <button class="btn-admin" onclick="addUser()">➕ Crea Utente</button>
-                <table class="data-table" id="usersTable">
-                    <thead><tr><th>Username</th><th>Ruolo</th><th>Cliente</th></tr></thead>
-                    <tbody></tbody>
-                </table>
-            </div>
+<script>
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+const API = '/api';
+let token       = localStorage.getItem('nabulair_token');
+let currentUser = JSON.parse(localStorage.getItem('nabulair_user') || 'null');
+let allMachines = [];
+let allClients  = [];
+let allUsers    = [];
 
-            <div class="admin-section" id="tab-telegram">
-                <h3 style="margin-bottom:8px;">📱 Configurazione Bot Telegram</h3>
-                <p style="opacity:0.6; font-size:13px; margin-bottom:20px;">
-                    Il webhook collega il bot Telegram al tuo server Railway. Va registrato una volta sola dopo ogni nuovo deploy.
-                </p>
-                <div style="background:rgba(0,0,0,0.3); border-radius:12px; padding:15px; margin-bottom:20px; font-size:13px;">
-                    <div style="margin-bottom:6px; opacity:0.6;">URL webhook attuale:</div>
-                    <div id="webhookCurrentUrl" style="font-family:monospace; color:#00d4ff;">Caricamento...</div>
-                </div>
-                <button class="btn-admin" onclick="setupWebhook()" id="webhookBtn">
-                    🔗 Registra Webhook
-                </button>
-                <div id="webhookResult" style="margin-top:15px; display:none;"></div>
-
-                <hr style="border-color:rgba(255,255,255,0.1); margin:25px 0;">
-                <h3 style="margin-bottom:8px;">🧪 Test Notifica</h3>
-                <p style="opacity:0.6; font-size:13px; margin-bottom:15px;">
-                    Invia un messaggio di test Telegram per verificare che tutto funzioni.
-                </p>
-                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-                    <select id="testMachineSelect" style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); padding:8px 12px; border-radius:8px; color:white; font-size:13px;">
-                        <option value="">— Seleziona macchina —</option>
-                    </select>
-                    <button onclick="sendTestAlert('water')" style="background:rgba(0,180,255,0.2); color:#00b4ff; border:1px solid rgba(0,180,255,0.3); padding:8px 15px; border-radius:8px; font-size:13px; cursor:pointer;">
-                        💧 Test acqua
-                    </button>
-                    <button onclick="sendTestAlert('insecticide')" style="background:rgba(255,152,0,0.2); color:#ff9800; border:1px solid rgba(255,152,0,0.3); padding:8px 15px; border-radius:8px; font-size:13px; cursor:pointer;">
-                        🧪 Test insetticida
-                    </button>
-                </div>
-                <div id="testAlertResult" style="margin-top:12px;"></div>
-                <p style="opacity:0.6; font-size:13px; margin-bottom:15px;">
-                    Scrivi qualcosa al bot su Telegram, poi clicca qui per vedere chi ha scritto e il suo Chat ID.
-                </p>
-                <button class="btn-admin" onclick="loadLastMessages()" style="background:rgba(255,152,0,0.3); border:1px solid rgba(255,152,0,0.4);">
-                    📨 Vedi ultimi messaggi bot
-                </button>
-                <div id="lastMessagesResult" style="margin-top:15px;"></div>
-            </div>
-        </div>
-
-        <!-- Machines Table — flusso unificato -->
-        <div class="machines-table">
-            <div style="padding:20px 20px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                <h2 style="font-size:18px;">🏭 Macchine</h2>
-                <div style="font-size:12px; opacity:0.5;">Per ogni macchina: 1 Assegna cliente → 2 Genera QR → 3 Cliente attiva Telegram</div>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Macchina</th>
-                        <th>Stato</th>
-                        <th>IP</th>
-                        <th>Ultimo Contatto</th>
-                        <th>💧</th>
-                        <th>🧪</th>
-                        <th style="min-width:340px;">Cliente / Installatore / Telegram</th>
-                    </tr>
-                </thead>
-                <tbody id="machinesList">
-                    <tr><td colspan="7" style="text-align: center;">Caricamento macchine...</td></tr>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- QR Modal -->
-        <div class="modal" id="qrModal">
-            <div class="modal-content" style="max-width:420px;">
-                <div class="modal-header">
-                    <h2>📲 QR Attivazione Telegram</h2>
-                    <button class="modal-close" onclick="closeQRModal()">×</button>
-                </div>
-                <div class="modal-body" style="text-align:center;">
-                    <p id="qrModalMachineName" style="opacity:0.7; margin-bottom:15px;"></p>
-                    <div class="qr-box" style="display:inline-block;">
-                        <div id="qrcode"></div>
-                    </div>
-                    <div class="qr-link" id="qrLink" style="margin-top:15px; text-align:left;"></div>
-                    <p style="margin-top:15px; font-size:13px; opacity:0.7;">📱 Fai scansionare questo QR al cliente.<br>Telegram si apre e il cliente preme <strong>START</strong>.<br>Il Chat ID viene salvato automaticamente.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Machine detail modal -->
-        <div class="modal" id="machineModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 id="modalTitle">NabulAir</h2>
-                    <button class="modal-close" onclick="closeModal()">×</button>
-                </div>
-                <div class="modal-body">
-                    <div class="iframe-container">
-                        <iframe id="machineIframe" src=""></iframe>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div><!-- /container -->
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script>
-        const CLOUD_API = '/api';
-        let authToken = localStorage.getItem('nabulair_token');
-        let currentUser = JSON.parse(localStorage.getItem('nabulair_user') || 'null');
-        let allMachines = [];
-        let allClients = [];
-        let allUsers = [];
-
-        // ========== AUTH ==========
-        function showLogin() {
-            document.getElementById('loginScreen').style.display = 'flex';
-            document.getElementById('mainHeader').style.display = 'none';
-            document.getElementById('mainContainer').style.display = 'none';
-        }
-
-        function hideLogin() {
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('mainHeader').style.display = 'block';
-            document.getElementById('mainContainer').style.display = 'block';
-        }
-
-        async function doLogin() {
-            const username = document.getElementById('loginUser').value;
-            const password = document.getElementById('loginPass').value;
-            const err = document.getElementById('loginError');
-            
-            try {
-                const res = await fetch(`${CLOUD_API}/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                const data = await res.json();
-                
-                if (data.success) {
-                    authToken = data.token;
-                    currentUser = data.user;
-                    localStorage.setItem('nabulair_token', authToken);
-                    localStorage.setItem('nabulair_user', JSON.stringify(currentUser));
-                    hideLogin();
-                    initDashboard();
-                } else {
-                    err.textContent = data.message || 'Credenziali non valide';
-                    err.style.display = 'block';
-                }
-            } catch (e) {
-                err.textContent = 'Errore di connessione al server';
-                err.style.display = 'block';
-            }
-        }
-
-        function logout() {
-            localStorage.removeItem('nabulair_token');
-            localStorage.removeItem('nabulair_user');
-            location.reload();
-        }
-
-        // ========== DASHBOARD ==========
-        async function initDashboard() {
-            if (!currentUser) return;
-            
-            document.getElementById('userName').textContent = currentUser.username;
-            document.getElementById('userRole').textContent = currentUser.role.toUpperCase();
-            
-            if (currentUser.role === 'admin') {
-                document.getElementById('adminBtn').style.display = 'inline-block';
-                await loadClients();
-                await loadUsers();
-            }
-            
-            loadMachines();
-            loadAlerts();
-        }
-
-        async function apiGet(endpoint) {
-            const res = await fetch(`${CLOUD_API}${endpoint}`, {
-                headers: { 'Authorization': `Bearer ${authToken}` }
-            });
-            return res.json();
-        }
-
-        async function apiPost(endpoint, body) {
-            const res = await fetch(`${CLOUD_API}${endpoint}`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
-            return res.json();
-        }
-
-        async function apiPut(endpoint, body) {
-            const res = await fetch(`${CLOUD_API}${endpoint}`, {
-                method: 'PUT',
-                headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
-            return res.json();
-        }
-
-        // ========== MACHINES ==========
-        async function loadMachines() {
-            try {
-                const data = await apiGet('/machines');
-                if (data.success) {
-                    allMachines = data.machines;
-                    renderMachines(data.machines);
-                    updateStats(data.machines);
-                }
-            } catch (error) {
-                console.error('Errore:', error);
-                document.getElementById('machinesList').innerHTML = 
-                    '<tr><td colspan="7" style="text-align: center; color: #ff5252;">❌ Errore connessione</td></tr>';
-            }
-        }
-
-        function renderMachines(machines) {
-            const tbody = document.getElementById('machinesList');
-            if (machines.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">📭 Nessuna macchina trovata</td></tr>';
-                return;
-            }
-            
-            const isAdmin = currentUser.role === 'admin';
-            const isInstaller = currentUser.role === 'installer';
-
-            tbody.innerHTML = machines.map(machine => {
-                const statusClass = machine.status === 'online' ? 'status-online' : 
-                                   (machine.status === 'warning' ? 'status-warning' : 'status-offline');
-                const statusText = machine.status === 'online' ? 'Online' : 
-                                  (machine.status === 'warning' ? '⚠️ Attenzione' : 'Offline');
-                const lastSeen = machine.last_seen ? new Date(machine.last_seen).toLocaleString() : 'Mai';
-                const waterIcon = machine.water_ok === false ? '❌' : '✅';
-                const insIcon = machine.insecticide_ok === false ? '❌' : '✅';
-
-                // Colonna unificata cliente/installatore/telegram
-                let workflowCell = '';
-                if (isAdmin || isInstaller) {
-                    const clientSelect = allClients.map(c =>
-                        `<option value="${c.id}" ${machine.client_id == c.id ? 'selected' : ''}>${escapeHtml(c.name)}</option>`
-                    ).join('');
-                    const installerSelect = allUsers.filter(u => u.role === 'installer').map(u =>
-                        `<option value="${u.id}" ${machine.installer_id == u.id ? 'selected' : ''}>${escapeHtml(u.username)}</option>`
-                    ).join('');
-
-                    const telegramStatus = machine.telegram_chat_id
-                        ? `<span style="color:#00e676; font-size:11px;">✅ Telegram attivo</span>`
-                        : `<span style="color:#ff9800; font-size:11px;">⏳ In attesa attivazione</span>`;
-
-                    const qrDisabled = !machine.client_id ? 'disabled title="Assegna prima un cliente"' : '';
-                    const qrStyle = !machine.client_id 
-                        ? 'opacity:0.4; cursor:not-allowed;' 
-                        : 'cursor:pointer;';
-
-                    workflowCell = `
-                        <div style="display:flex; flex-direction:column; gap:8px;">
-                            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-                                ${isAdmin ? `
-                                <select id="wf-client-${machine.id}" onchange="onClientChange(${machine.id})"
-                                    style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); padding:5px 8px; border-radius:8px; color:white; font-size:12px; flex:1; min-width:130px;">
-                                    <option value="">— Cliente —</option>
-                                    ${clientSelect}
-                                </select>
-                                <select id="wf-installer-${machine.id}"
-                                    style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); padding:5px 8px; border-radius:8px; color:white; font-size:12px; flex:1; min-width:130px;">
-                                    <option value="">— Installatore —</option>
-                                    ${installerSelect}
-                                </select>
-                                <button onclick="assignMachine(${machine.id})" 
-                                    style="background:rgba(0,212,255,0.2); color:#00d4ff; border:1px solid rgba(0,212,255,0.3); padding:5px 12px; border-radius:8px; font-size:12px; cursor:pointer; white-space:nowrap;"
-                                    id="assign-btn-${machine.id}">💾 Salva</button>
-                                ` : ''}
-                                <button onclick="openQRModal(${machine.id}, '${escapeHtml(machine.machine_name || machine.mac_address)}')" ${qrDisabled}
-                                    style="background:rgba(0,230,118,0.2); color:#00e676; border:1px solid rgba(0,230,118,0.3); padding:5px 12px; border-radius:8px; font-size:12px; ${qrStyle} white-space:nowrap;">
-                                    📲 QR
-                                </button>
-                            </div>
-                            <div style="font-size:11px; opacity:0.6;">${escapeHtml(machine.client_name || '— nessun cliente —')} &nbsp;·&nbsp; ${telegramStatus}</div>
-                        </div>
-                    `;
-                } else {
-                    // Cliente: solo bottone entra
-                    workflowCell = `
-                        <button class="btn-enter" onclick="openMachine(${machine.id}, '${escapeHtml(machine.machine_name || 'Macchina')}', '${machine.sta_ip || machine.mac_address}')">
-                            ▶️ ENTRARE
-                        </button>
-                    `;
-                }
-                
-                return `
-                    <tr>
-                        <td>
-                            <strong>${escapeHtml(machine.machine_name || '—')}</strong><br>
-                            <span style="font-size:11px; opacity:0.5;">${machine.mac_address}</span>
-                        </td>
-                        <td>
-                            <span class="status-badge ${statusClass}">
-                                ${machine.status === 'online' ? '<span class="online-dot"></span>' : ''}
-                                ${statusText}
-                            </span>
-                        </td>
-                        <td><span class="last-seen">${machine.sta_ip || '—'}</span></td>
-                        <td><span class="last-seen">${lastSeen}</span></td>
-                        <td style="text-align:center;">${waterIcon}</td>
-                        <td style="text-align:center;">${insIcon}</td>
-                        <td>${workflowCell}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        function onClientChange(machineId) {
-            // Abilita/disabilita bottone QR in base alla selezione cliente
-            const clientId = document.getElementById(`wf-client-${machineId}`).value;
-            const qrBtn = document.querySelector(`button[onclick="openQRModal(${machineId}, '${document.querySelector(`#wf-client-${machineId}`)?.closest('tr')?.querySelector('strong')?.textContent || ''}')"]`);
-            // Aggiorna visivamente — la vera abilitazione avviene dopo il salvataggio
-        }
-
-        async function assignMachine(id) {
-            const clientSel = document.getElementById(`wf-client-${id}`);
-            const installerSel = document.getElementById(`wf-installer-${id}`);
-            const btn = document.getElementById(`assign-btn-${id}`);
-            
-            const clientId = clientSel ? clientSel.value : null;
-            const installerId = installerSel ? installerSel.value : null;
-
-            btn.textContent = '⏳';
-            btn.disabled = true;
-
-            const res = await apiPut(`/machines/${id}/assign`, {
-                client_id: clientId || null,
-                installer_id: installerId || null
-            });
-
-            if (res.success) {
-                btn.textContent = '✅';
-                setTimeout(() => { btn.textContent = '💾 Salva'; btn.disabled = false; }, 1500);
-                await loadMachines(); // ricarica per aggiornare stato QR
-            } else {
-                btn.textContent = '❌ Errore';
-                setTimeout(() => { btn.textContent = '💾 Salva'; btn.disabled = false; }, 2000);
-            }
-        }
-
-        // ========== QR MODAL ==========
-        async function openQRModal(machineId, machineName) {
-            const res = await apiPost(`/machines/${machineId}/qr`, {});
-            if (!res.success) {
-                alert(res.message || 'Errore generazione QR');
-                return;
-            }
-
-            document.getElementById('qrModalMachineName').textContent = '🏭 ' + machineName;
-            document.getElementById('qrLink').textContent = res.telegram_link;
-
-            const qrDiv = document.getElementById('qrcode');
-            qrDiv.innerHTML = '';
-            new QRCode(qrDiv, {
-                text: res.telegram_link,
-                width: 220,
-                height: 220,
-                colorDark: '#000000',
-                colorLight: '#ffffff',
-                correctLevel: QRCode.CorrectLevel.M
-            });
-
-            document.getElementById('qrModal').classList.add('active');
-        }
-
-        function closeQRModal() {
-            document.getElementById('qrModal').classList.remove('active');
-            document.getElementById('qrcode').innerHTML = '';
-        }
-
-
-        function updateStats(machines) {
-            const total = machines.length;
-            const online = machines.filter(m => m.status === 'online').length;
-            const offline = machines.filter(m => m.status === 'offline').length;
-            const alerts = machines.filter(m => m.water_ok === false || m.insecticide_ok === false).length;
-            
-            document.getElementById('totalMachines').innerHTML = `📊 Totale: ${total}`;
-            document.getElementById('onlineMachines').innerHTML = `🟢 Online: ${online}`;
-            document.getElementById('offlineMachines').innerHTML = `🔴 Offline: ${offline}`;
-            document.getElementById('activeAlerts').innerHTML = `🚨 Allarmi: ${alerts}`;
-        }
-
-        // ========== ALERTS ==========
-        async function loadAlerts() {
-            try {
-                const data = await apiGet('/alerts');
-                if (data.success && data.alerts.length > 0) {
-                    const bar = document.getElementById('alertsBar');
-                    bar.classList.add('active');
-                    document.getElementById('alertsList').innerHTML = data.alerts.map(a => `
-                        <div class="alert-item">
-                            <div>
-                                <strong>${escapeHtml(a.machine_name)}</strong> — ${escapeHtml(a.message)}
-                                <div style="font-size:12px; opacity:0.6; margin-top:4px;">${new Date(a.created_at).toLocaleString()}</div>
-                            </div>
-                            <button class="alert-resolve" onclick="resolveAlert(${a.id})">✓ Risolvi</button>
-                        </div>
-                    `).join('');
-                } else {
-                    document.getElementById('alertsBar').classList.remove('active');
-                }
-            } catch (e) { console.error(e); }
-        }
-
-        async function resolveAlert(id) {
-            await apiPost(`/alerts/${id}/resolve`, {});
-            loadAlerts();
-            loadMachines();
-        }
-
-        // ========== ADMIN ==========
-        function toggleAdmin() {
-            const panel = document.getElementById('adminPanel');
-            panel.classList.toggle('active');
-        }
-
-        function switchAdminTab(tab) {
-            document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
-            // Seleziona il tab corrispondente al nome
-            document.querySelectorAll('.admin-tab').forEach(t => {
-                if (t.getAttribute('onclick') && t.getAttribute('onclick').includes(`'${tab}'`)) {
-                    t.classList.add('active');
-                }
-            });
-            document.getElementById(`tab-${tab}`).classList.add('active');
-            if (tab === 'telegram') {
-                loadWebhookStatus();
-                // Popola select macchine per test
-                const sel = document.getElementById('testMachineSelect');
-                sel.innerHTML = '<option value="">— Seleziona macchina —</option>' +
-                    allMachines.map(m => `<option value="${m.id}">${escapeHtml(m.machine_name || m.mac_address)} — ${escapeHtml(m.client_name || 'nessun cliente')}</option>`).join('');
-            }
-        }
-
-        async function loadWebhookStatus() {
-            try {
-                const res = await fetch(`https://api.telegram.org/bot${await getBotToken()}/getWebhookInfo`);
-                const data = await res.json();
-                const urlEl = document.getElementById('webhookCurrentUrl');
-                if (data.ok && data.result.url) {
-                    urlEl.textContent = data.result.url;
-                    urlEl.style.color = '#00e676';
-                } else {
-                    urlEl.textContent = 'Nessun webhook configurato';
-                    urlEl.style.color = '#ff9800';
-                }
-            } catch(e) {
-                document.getElementById('webhookCurrentUrl').textContent = 'Impossibile verificare';
-            }
-        }
-
-        async function getBotToken() {
-            // Non esponiamo il token nel frontend — usiamo il backend per verificare
-            return null;
-        }
-
-        async function sendTestAlert(type) {
-            const machineId = document.getElementById('testMachineSelect').value;
-            const resultDiv = document.getElementById('testAlertResult');
-            if (!machineId) { resultDiv.innerHTML = '<span style="color:#ff9800;">Seleziona prima una macchina</span>'; return; }
-            resultDiv.innerHTML = '<span style="opacity:0.6;">Invio in corso...</span>';
-            const res = await apiPost('/telegram/test-alert', { machine_id: machineId, type });
-            if (res.success) {
-                resultDiv.innerHTML = `<span style="color:#00e676;">✅ ${res.message}</span>`;
-            } else {
-                resultDiv.innerHTML = `<span style="color:#ff5252;">❌ ${res.message}</span>`;
-            }
-        }
-
-        async function loadLastMessages() {
-            const div = document.getElementById('lastMessagesResult');
-            div.innerHTML = '<span style="opacity:0.6;">Caricamento...</span>';
-            try {
-                const data = await apiGet('/telegram/last-messages');
-                if (!data.success) {
-                    div.innerHTML = `<div style="color:#ff5252;">❌ ${data.message}</div>`;
-                    return;
-                }
-                if (data.messages.length === 0) {
-                    div.innerHTML = `<div style="opacity:0.6; font-size:13px;">Nessun messaggio trovato. Scrivi qualcosa al bot su Telegram e riprova.</div>`;
-                    return;
-                }
-                div.innerHTML = data.messages.map(m => `
-                    <div style="background:rgba(0,0,0,0.3); border-radius:10px; padding:12px; margin-bottom:8px; font-size:13px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                            <strong>${escapeHtml(m.name?.trim() || 'Sconosciuto')}${m.username ? ' (@'+escapeHtml(m.username)+')' : ''}</strong>
-                            <span style="opacity:0.5; font-size:11px;">${m.date || ''}</span>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-                            <span style="opacity:0.7;">💬 ${escapeHtml(m.text || '')}</span>
-                            <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-                                <code style="background:rgba(0,212,255,0.15); color:#00d4ff; padding:3px 10px; border-radius:6px; font-size:12px;">${m.chat_id}</code>
-                                <button onclick="copyToClipboard('${m.chat_id}', this)" 
-                                    style="background:rgba(0,212,255,0.2); color:#00d4ff; border:none; padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer;">
-                                    📋 Copia
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-            } catch(e) {
-                div.innerHTML = `<div style="color:#ff5252;">❌ Errore: ${e.message}</div>`;
-            }
-        }
-
-        function copyToClipboard(text, btn) {
-            navigator.clipboard.writeText(text).then(() => {
-                btn.textContent = '✅ Copiato';
-                setTimeout(() => btn.textContent = '📋 Copia', 2000);
-            });
-        }
-
-        async function setupWebhook() {
-            const btn = document.getElementById('webhookBtn');
-            const resultDiv = document.getElementById('webhookResult');
-            btn.textContent = '⏳ Registrazione...';
-            btn.disabled = true;
-
-            // Calcola automaticamente l'URL dal dominio corrente
-            const webhookUrl = window.location.origin + '/api/telegram/webhook';
-
-            try {
-                const res = await apiPost('/telegram/setup-webhook', { webhook_url: webhookUrl });
-                resultDiv.style.display = 'block';
-                if (res.success) {
-                    resultDiv.innerHTML = `
-                        <div style="background:rgba(0,230,118,0.15); border:1px solid rgba(0,230,118,0.3); border-radius:10px; padding:15px;">
-                            ✅ <strong>Webhook registrato con successo!</strong><br>
-                            <span style="font-size:12px; opacity:0.8; font-family:monospace;">${webhookUrl}</span><br><br>
-                            <span style="font-size:13px;">Ora il bot risponde ai messaggi. Prova a scrivere <strong>/chatid</strong> nella chat del bot.</span>
-                        </div>`;
-                    btn.textContent = '✅ Registrato';
-                    loadWebhookStatus();
-                } else {
-                    resultDiv.innerHTML = `<div style="background:rgba(255,82,82,0.15); border:1px solid rgba(255,82,82,0.3); border-radius:10px; padding:15px;">❌ Errore: ${res.message}</div>`;
-                    btn.textContent = '🔗 Riprova';
-                    btn.disabled = false;
-                }
-            } catch(e) {
-                resultDiv.innerHTML = `<div style="background:rgba(255,82,82,0.15); border:1px solid rgba(255,82,82,0.3); border-radius:10px; padding:15px;">❌ Errore di connessione</div>`;
-                btn.textContent = '🔗 Riprova';
-                btn.disabled = false;
-            }
-        }
-
-        async function loadClients() {
-            const data = await apiGet('/clients');
-            if (data.success) {
-                allClients = data.clients;
-                const tbody = document.querySelector('#clientsTable tbody');
-                tbody.innerHTML = data.clients.map(c => `
-                    <tr>
-                        <td>${escapeHtml(c.name)}</td>
-                        <td>${escapeHtml(c.email || '')}</td>
-                        <td>${escapeHtml(c.phone || '')}</td>
-                        <td><input type="text" value="${escapeHtml(c.telegram_chat_id || '')}" onchange="updateClient(${c.id}, this.value)" style="background:rgba(0,0,0,0.3); border:none; padding:5px 10px; border-radius:8px; color:white; width:150px;"></td>
-                        <td><button class="btn-admin" style="padding:5px 15px; font-size:12px;" onclick="saveClientTelegram(${c.id}, this)">💾 Salva</button></td>
-                    </tr>
-                `).join('');
-                
-                const sel = document.getElementById('newUserClient');
-                sel.innerHTML = '<option value="">-- Nessun cliente --</option>' + 
-                    data.clients.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
-            }
-        }
-
-        async function addClient() {
-            const body = {
-                name: document.getElementById('newClientName').value,
-                email: document.getElementById('newClientEmail').value,
-                phone: document.getElementById('newClientPhone').value,
-                telegram_chat_id: document.getElementById('newClientTelegram').value
-            };
-            if (!body.name) return alert('Nome obbligatorio');
-            await apiPost('/clients', body);
-            loadClients();
-        }
-
-        async function saveClientTelegram(id, btn) {
-            const input = btn.parentElement.previousElementSibling.querySelector('input');
-            await apiPut(`/clients/${id}`, { telegram_chat_id: input.value });
-            btn.textContent = '✅ Salvato';
-            setTimeout(() => btn.textContent = '💾 Salva', 2000);
-        }
-
-        async function loadUsers() {
-            const data = await apiGet('/users');
-            if (data.success) {
-                allUsers = data.users;
-                const tbody = document.querySelector('#usersTable tbody');
-                tbody.innerHTML = data.users.map(u => `
-                    <tr>
-                        <td>${escapeHtml(u.username)}</td>
-                        <td>${u.role}</td>
-                        <td>${escapeHtml(u.client_name || '—')}</td>
-                    </tr>
-                `).join('');
-            }
-        }
-
-        async function addUser() {
-            const body = {
-                username: document.getElementById('newUserName').value,
-                password: document.getElementById('newUserPass').value,
-                role: document.getElementById('newUserRole').value,
-                client_id: document.getElementById('newUserClient').value || null
-            };
-            if (!body.username || !body.password) return alert('Username e password obbligatori');
-            const res = await apiPost('/users', body);
-            if (res.success) {
-                loadUsers();
-                document.getElementById('newUserName').value = '';
-                document.getElementById('newUserPass').value = '';
-            } else {
-                alert(res.message);
-            }
-        }
-
-        // ========== MODAL ==========
-        function openMachine(id, name, ip) {
-            const modal = document.getElementById('machineModal');
-            const iframe = document.getElementById('machineIframe');
-            document.getElementById('modalTitle').innerHTML = `🌿 ${name}`;
-            iframe.src = `/remote.html?ip=${ip}`;
-            modal.classList.add('active');
-        }
-
-        function closeModal() {
-            document.getElementById('machineModal').classList.remove('active');
-            document.getElementById('machineIframe').src = '';
-        }
-
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // ========== INIT ==========
-        if (authToken && currentUser) {
-            hideLogin();
-            initDashboard();
+// ═══════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════
+async function doLogin() {
+    const u = document.getElementById('loginUser').value.trim();
+    const p = document.getElementById('loginPass').value;
+    const err = document.getElementById('loginError');
+    err.style.display = 'none';
+    if (!u || !p) { err.textContent = 'Inserisci username e password'; err.style.display='block'; return; }
+    try {
+        const res  = await fetch(`${API}/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:u, password:p}) });
+        const data = await res.json();
+        if (data.success) {
+            token = data.token;
+            currentUser = data.user;
+            localStorage.setItem('nabulair_token', token);
+            localStorage.setItem('nabulair_user', JSON.stringify(currentUser));
+            bootApp();
         } else {
-            showLogin();
+            err.textContent = data.message || 'Credenziali non valide';
+            err.style.display = 'block';
+        }
+    } catch(e) {
+        err.textContent = 'Impossibile contattare il server';
+        err.style.display = 'block';
+    }
+}
+
+function logout() {
+    localStorage.removeItem('nabulair_token');
+    localStorage.removeItem('nabulair_user');
+    location.reload();
+}
+
+// ═══════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════
+function bootApp() {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appShell').style.display    = 'block';
+
+    const role = currentUser.role;
+    document.getElementById('topUsername').textContent   = currentUser.username;
+    const badge = document.getElementById('topRoleBadge');
+    badge.textContent  = role === 'admin' ? 'Admin' : role === 'installer' ? 'Installatore' : 'Cliente';
+    badge.className    = `role-badge role-${role}`;
+
+    if (role === 'admin') {
+        document.getElementById('sidebar').classList.add('visible');
+        loadClients();
+        loadUsers();
+    }
+
+    // Personalizza titolo sezione macchine per installatore
+    if (role === 'installer') {
+        document.getElementById('machinesTitle').textContent = '🏭 I Tuoi Impianti';
+        document.getElementById('machinesSub').textContent   = 'Impianti assegnati a te';
+    }
+
+    loadMachines();
+    loadAlerts();
+    updateTopPills();
+}
+
+function updateTopPills() {
+    if (currentUser.role !== 'admin') return;
+    // pills aggiornate dopo load
+}
+
+// ═══════════════════════════════════════════════
+// NAVIGATION (admin sidebar)
+// ═══════════════════════════════════════════════
+function showSection(name) {
+    document.querySelectorAll('.section-page').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('section-' + name)?.classList.add('active');
+    document.getElementById('nav-' + name)?.classList.add('active');
+    if (name === 'telegram') loadWebhookStatus();
+    if (name === 'installers') renderInstallers();
+    if (name === 'clients') renderClientsTable();
+}
+
+// ═══════════════════════════════════════════════
+// API HELPERS
+// ═══════════════════════════════════════════════
+async function api(method, endpoint, body) {
+    const opts = { method, headers: { 'Authorization': `Bearer ${token}` } };
+    if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+    const res = await fetch(API + endpoint, opts);
+    return res.json();
+}
+const apiGet  = ep       => api('GET',  ep);
+const apiPost = (ep, b)  => api('POST', ep, b);
+const apiPut  = (ep, b)  => api('PUT',  ep, b);
+
+// ═══════════════════════════════════════════════
+// ALERTS
+// ═══════════════════════════════════════════════
+async function loadAlerts() {
+    try {
+        const data = await apiGet('/alerts');
+        const wrap = document.getElementById('alertsWrap');
+        const list = document.getElementById('alertsList');
+        if (data.success && data.alerts.length > 0) {
+            wrap.classList.add('has-alerts');
+            list.innerHTML = data.alerts.map(a => `
+                <div class="alert-row">
+                    <span>🚨 <strong>${esc(a.machine_name || '—')}</strong> — ${esc(a.message)}</span>
+                    <button class="btn-resolve" onclick="resolveAlert(${a.id})">✓ Risolto</button>
+                </div>`).join('');
+        } else {
+            wrap.classList.remove('has-alerts');
+        }
+    } catch(e) {}
+}
+
+async function resolveAlert(id) {
+    await apiPost(`/alerts/${id}/resolve`, {});
+    loadAlerts();
+}
+
+// ═══════════════════════════════════════════════
+// MACHINES
+// ═══════════════════════════════════════════════
+async function loadMachines() {
+    try {
+        const data = await apiGet('/machines');
+        if (data.success) {
+            allMachines = data.machines;
+            renderCards(data.machines);
+            renderTopPills(data.machines);
+        }
+    } catch(e) {
+        document.getElementById('cardsGrid').innerHTML =
+            '<div class="empty-state"><div class="big">❌</div><p>Errore di connessione</p></div>';
+    }
+}
+
+function renderTopPills(machines) {
+    if (currentUser.role !== 'admin') return;
+    const online  = machines.filter(m => m.status === 'online').length;
+    const offline = machines.filter(m => m.status !== 'online').length;
+    const alerts  = machines.filter(m => m.water_ok === false || m.insecticide_ok === false).length;
+    document.getElementById('topPills').innerHTML = `
+        <div class="pill">Totale <span>${machines.length}</span></div>
+        <div class="pill">🟢 Online <span>${online}</span></div>
+        ${offline > 0 ? `<div class="pill">🔴 Offline <span>${offline}</span></div>` : ''}
+        ${alerts  > 0 ? `<div class="pill">🚨 Allarmi <span>${alerts}</span></div>`  : ''}
+    `;
+}
+
+function renderCards(machines) {
+    const grid = document.getElementById('cardsGrid');
+    if (!machines.length) {
+        grid.innerHTML = '<div class="empty-state"><div class="big">📭</div><p>Nessun impianto trovato</p></div>';
+        return;
+    }
+
+    const isAdmin     = currentUser.role === 'admin';
+    const isInstaller = currentUser.role === 'installer';
+
+    grid.innerHTML = machines.map(m => {
+        const online  = m.status === 'online';
+        const waterOk = m.water_ok !== false;
+        const insOk   = m.insecticide_ok !== false;
+        const hasAlert = !waterOk || !insOk;
+
+        // ── Step stato workflow ──
+        const step1done = !!m.client_id;  // cliente assegnato
+        const step2done = !!m.telegram_chat_id; // telegram attivo
+
+        // Bottone QR / stato Telegram
+        let qrBtn = '';
+        if (isAdmin || isInstaller) {
+            if (step2done) {
+                qrBtn = `<button class="btn-qr-big telegram-ok" onclick="openQR(${m.id},'${esc(m.machine_name||m.mac_address)}')">
+                    ✅ Telegram attivo — Rigenera QR
+                </button>`;
+            } else if (step1done) {
+                qrBtn = `<button class="btn-qr-big" onclick="openQR(${m.id},'${esc(m.machine_name||m.mac_address)}')">
+                    📲 Invia notifiche Telegram al cliente
+                </button>`;
+            } else {
+                qrBtn = `<button class="btn-qr-big" disabled>
+                    🔒 Prima assegna un cliente
+                </button>`;
+            }
         }
 
-        setInterval(() => {
-            if (authToken) {
-                loadMachines();
-                loadAlerts();
-            }
-        }, 30000);
-    </script>
+        // Bottone entra (per cliente o admin/installer)
+        const enterBtn = (isAdmin || isInstaller)
+            ? `<button class="btn-enter-big" onclick="openMachine(${m.id},'${esc(m.machine_name||'Macchina')}','${m.sta_ip||m.mac_address}')">
+                ▶ Entra nel pannello
+               </button>`
+            : `<button class="btn-enter-big" onclick="openMachine(${m.id},'${esc(m.machine_name||'Macchina')}','${m.sta_ip||m.mac_address}')">
+                ▶ Apri pannello di controllo
+               </button>`;
+
+        // Assign block (solo admin)
+        let assignBlock = '';
+        if (isAdmin) {
+            const clientOpts = allClients.map(c =>
+                `<option value="${c.id}" ${m.client_id==c.id?'selected':''}>${esc(c.name)}</option>`).join('');
+            const instOpts = allUsers.filter(u=>u.role==='installer').map(u =>
+                `<option value="${u.id}" ${m.installer_id==u.id?'selected':''}>${esc(u.username)}</option>`).join('');
+            assignBlock = `
+                <div class="wf-step">
+                    <div class="wf-num ${step1done?'done':'active'}">1</div>
+                    <div class="wf-label ${step1done?'done':''}">Assegna cliente e installatore</div>
+                </div>
+                <div style="padding:8px 0 10px 38px; display:flex; flex-direction:column; gap:8px;">
+                    <div class="assign-row">
+                        <select id="sel-client-${m.id}">
+                            <option value="">— Seleziona cliente —</option>
+                            ${clientOpts}
+                        </select>
+                        <select id="sel-inst-${m.id}">
+                            <option value="">— Installatore —</option>
+                            ${instOpts}
+                        </select>
+                        <button class="btn-save-sm" id="save-btn-${m.id}" onclick="saveAssign(${m.id})">💾 Salva</button>
+                    </div>
+                </div>`;
+        } else {
+            // Installatore: vede solo lo stato
+            assignBlock = `
+                <div class="wf-step">
+                    <div class="wf-num ${step1done?'done':'active'}">1</div>
+                    <div class="wf-label ${step1done?'done':''}">
+                        ${step1done ? `Cliente: <strong>${esc(m.client_name||'—')}</strong>` : 'In attesa di cliente'}
+                    </div>
+                </div>`;
+        }
+
+        return `
+        <div class="machine-card ${hasAlert?'has-alert':''}">
+            <div class="card-head">
+                <div>
+                    <div class="card-name">${esc(m.machine_name||'Impianto')}</div>
+                    <div class="card-mac">${m.mac_address}</div>
+                </div>
+                <div class="status-dot-wrap">
+                    <div class="sdot ${online?'online':'offline'}"></div>
+                    <span class="status-txt ${online?'online':'offline'}">${online?'Online':'Offline'}</span>
+                </div>
+            </div>
+
+            <div class="card-sensors">
+                <div class="sensor-chip ${waterOk?'sensor-ok':'sensor-err'}">
+                    <span class="sensor-icon">💧</span>
+                    <span>${waterOk?'Acqua OK':'Acqua ❌'}</span>
+                </div>
+                <div class="sensor-chip ${insOk?'sensor-ok':'sensor-err'}">
+                    <span class="sensor-icon">🧪</span>
+                    <span>${insOk?'Insetticida OK':'Insetticida ❌'}</span>
+                </div>
+            </div>
+
+            <div class="workflow">
+                ${assignBlock}
+                <div class="wf-step">
+                    <div class="wf-num ${step2done?'done':(step1done?'active':'')}">2</div>
+                    <div class="wf-label ${step2done?'done':''}">
+                        ${step2done ? 'Telegram attivo ✅' : 'Telegram non ancora attivato'}
+                    </div>
+                </div>
+            </div>
+
+            ${qrBtn}
+            ${enterBtn}
+        </div>`;
+    }).join('');
+}
+
+// ═══════════════════════════════════════════════
+// ASSIGN
+// ═══════════════════════════════════════════════
+async function saveAssign(machineId) {
+    const clientId   = document.getElementById(`sel-client-${machineId}`)?.value || null;
+    const installerId= document.getElementById(`sel-inst-${machineId}`)?.value   || null;
+    const btn        = document.getElementById(`save-btn-${machineId}`);
+    btn.textContent  = '⏳'; btn.disabled = true;
+    const res = await apiPut(`/machines/${machineId}/assign`, { client_id: clientId||null, installer_id: installerId||null });
+    if (res.success) {
+        btn.textContent = '✅';
+        setTimeout(async () => { btn.textContent = '💾 Salva'; btn.disabled = false; await loadMachines(); }, 1200);
+    } else {
+        btn.textContent = '❌'; setTimeout(() => { btn.textContent = '💾 Salva'; btn.disabled = false; }, 2000);
+    }
+}
+
+// ═══════════════════════════════════════════════
+// QR
+// ═══════════════════════════════════════════════
+async function openQR(machineId, machineName) {
+    const res = await apiPost(`/machines/${machineId}/qr`, {});
+    if (!res.success) { alert(res.message || 'Errore generazione QR'); return; }
+    document.getElementById('qrMachineName').textContent = '🏭 ' + machineName;
+    const canvas = document.getElementById('qrCanvas');
+    canvas.innerHTML = '';
+    new QRCode(canvas, { text: res.telegram_link, width: 220, height: 220, colorDark:'#000', colorLight:'#fff', correctLevel: QRCode.CorrectLevel.M });
+    document.getElementById('qrModal').classList.add('open');
+}
+function closeQR() {
+    document.getElementById('qrModal').classList.remove('open');
+    document.getElementById('qrCanvas').innerHTML = '';
+}
+
+// ═══════════════════════════════════════════════
+// MACHINE IFRAME
+// ═══════════════════════════════════════════════
+function openMachine(id, name, ip) {
+    document.getElementById('machineModalTitle').textContent = '🌿 ' + name;
+    document.getElementById('machineIframe').src = `/remote.html?ip=${ip}`;
+    document.getElementById('machineModal').classList.add('open');
+}
+function closeMachine() {
+    document.getElementById('machineModal').classList.remove('open');
+    document.getElementById('machineIframe').src = '';
+}
+
+// ═══════════════════════════════════════════════
+// CLIENTS (admin)
+// ═══════════════════════════════════════════════
+async function loadClients() {
+    const data = await apiGet('/clients');
+    if (data.success) {
+        allClients = data.clients;
+        renderClientsTable();
+    }
+}
+function renderClientsTable() {
+    const tbody = document.getElementById('clientsTbody');
+    if (!tbody) return;
+    tbody.innerHTML = allClients.map(c => `
+        <tr>
+            <td>${esc(c.name)}</td>
+            <td class="td-mono">${esc(c.email||'—')}</td>
+            <td class="td-mono">${esc(c.phone||'—')}</td>
+            <td>${c.telegram_chat_id ? `<span style="color:var(--green); font-size:12px;">✅ ${esc(c.telegram_chat_id)}</span>` : '<span style="color:var(--muted); font-size:12px;">—</span>'}</td>
+        </tr>`).join('');
+}
+async function addClient() {
+    const name  = document.getElementById('clientName').value.trim();
+    const email = document.getElementById('clientEmail').value.trim();
+    const phone = document.getElementById('clientPhone').value.trim();
+    if (!name) return alert('Il nome è obbligatorio');
+    await apiPost('/clients', { name, email, phone });
+    document.getElementById('clientName').value = '';
+    document.getElementById('clientEmail').value = '';
+    document.getElementById('clientPhone').value = '';
+    await loadClients();
+}
+
+// ═══════════════════════════════════════════════
+// USERS / INSTALLERS (admin)
+// ═══════════════════════════════════════════════
+async function loadUsers() {
+    const data = await apiGet('/users');
+    if (data.success) {
+        allUsers = data.users;
+        renderInstallers();
+    }
+}
+function renderInstallers() {
+    const tbody = document.getElementById('installersTbody');
+    if (!tbody) return;
+    const installers = allUsers.filter(u => u.role === 'installer');
+    if (!installers.length) {
+        tbody.innerHTML = '<tr><td colspan="2" style="color:var(--muted); text-align:center; padding:20px;">Nessun installatore ancora</td></tr>';
+        return;
+    }
+    tbody.innerHTML = installers.map(u => {
+        const count = allMachines.filter(m => m.installer_id == u.id).length;
+        return `<tr>
+            <td><strong>${esc(u.username)}</strong></td>
+            <td>${count > 0 ? `${count} impianto${count>1?'i':''}` : '<span style="color:var(--muted)">—</span>'}</td>
+        </tr>`;
+    }).join('');
+}
+async function addInstaller() {
+    const username = document.getElementById('instUsername').value.trim();
+    const password = document.getElementById('instPassword').value;
+    if (!username || !password) return alert('Username e password sono obbligatori');
+    if (password.length < 6) return alert('La password deve essere di almeno 6 caratteri');
+    const res = await apiPost('/users', { username, password, role: 'installer' });
+    if (res.success) {
+        document.getElementById('instUsername').value = '';
+        document.getElementById('instPassword').value = '';
+        await loadUsers();
+        alert(`✅ Installatore "${username}" creato! Credenziali: ${username} / (password impostata)`);
+    } else {
+        alert(res.message || 'Errore nella creazione');
+    }
+}
+
+// ═══════════════════════════════════════════════
+// TELEGRAM WEBHOOK
+// ═══════════════════════════════════════════════
+async function loadWebhookStatus() {
+    try {
+        const res = await apiGet('/telegram/webhook-status');
+        const el  = document.getElementById('webhookUrl');
+        if (res.url) { el.textContent = res.url; el.style.color = 'var(--green)'; }
+        else { el.textContent = 'Nessun webhook configurato'; el.style.color = 'var(--amber)'; }
+    } catch(e) {
+        document.getElementById('webhookUrl').textContent = 'Impossibile verificare';
+    }
+}
+async function setupWebhook() {
+    const btn    = document.getElementById('webhookBtn');
+    const result = document.getElementById('webhookResult');
+    btn.textContent = '⏳ Registrazione...'; btn.disabled = true;
+    const webhookUrl = window.location.origin + '/api/telegram/webhook';
+    try {
+        const res = await apiPost('/telegram/setup-webhook', { webhook_url: webhookUrl });
+        result.innerHTML = res.success
+            ? `<div class="result-ok">✅ Webhook registrato: <code>${webhookUrl}</code></div>`
+            : `<div class="result-err">❌ ${res.message}</div>`;
+        if (res.success) { btn.textContent = '✅ Registrato'; loadWebhookStatus(); }
+        else { btn.textContent = '🔗 Riprova'; btn.disabled = false; }
+    } catch(e) {
+        result.innerHTML = '<div class="result-err">❌ Errore di connessione</div>';
+        btn.textContent = '🔗 Riprova'; btn.disabled = false;
+    }
+}
+
+// ═══════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════
+function esc(text) {
+    if (!text) return '';
+    const d = document.createElement('div');
+    d.textContent = text; return d.innerHTML;
+}
+function refreshAll() { loadMachines(); loadAlerts(); }
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+if (token && currentUser) {
+    bootApp();
+} else {
+    document.getElementById('loginScreen').style.display = 'flex';
+}
+
+// Refresh automatico ogni 30s
+setInterval(() => { if (token) { loadMachines(); loadAlerts(); } }, 30000);
+</script>
 </body>
 </html>
