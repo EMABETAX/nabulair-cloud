@@ -54,7 +54,6 @@ if (!DATABASE_URL) {
 // ============================================
 // DATABASE CONNECTION - CONFIGURAZIONE SENZA SSL PER RAILWAY
 // ============================================
-// Rimuovi ?sslmode=require dalla connection string se presente
 let cleanDatabaseUrl = DATABASE_URL;
 if (cleanDatabaseUrl.includes('?sslmode=require')) {
     cleanDatabaseUrl = cleanDatabaseUrl.replace('?sslmode=require', '');
@@ -67,9 +66,7 @@ if (cleanDatabaseUrl.includes('?sslmode=no-verify')) {
 
 const pool = new Pool({
     connectionString: cleanDatabaseUrl,
-    // Disabilita completamente SSL per connessioni interne Railway
     ssl: false,
-    // Configurazione del pool per gestire le disconnessioni
     max: 20,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
@@ -77,14 +74,10 @@ const pool = new Pool({
     keepAliveInitialDelayMillis: 10000
 });
 
-// Gestione errori del pool
 pool.on('error', (err) => {
     console.error('❌ Errore inaspettato nel pool PostgreSQL:', err.message);
 });
 
-// ============================================
-// FUNZIONE PER VERIFICARE E RIPRISTINARE CONNESSIONE DB
-// ============================================
 async function ensureDbConnection() {
     try {
         await pool.query('SELECT 1');
@@ -96,30 +89,20 @@ async function ensureDbConnection() {
     }
 }
 
-// ============================================
-// QUERY CON RETRY AUTOMATICO
-// ============================================
 async function queryWithRetry(query, params, maxRetries = 3) {
     for (let i = 0; i < maxRetries; i++) {
         try {
             return await pool.query(query, params);
         } catch (error) {
             console.error(`Tentativo ${i + 1} fallito:`, error.message);
-            
             if (i === maxRetries - 1) throw error;
-            
-            // Attendi prima di riprovare (backoff esponenziale)
             await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
         }
     }
 }
 
-// ============================================
-// INIZIALIZZA DATABASE (Tabelle e trigger)
-// ============================================
 async function initDatabase() {
     try {
-        // Crea tabella alerts se non esiste
         await pool.query(`
             CREATE TABLE IF NOT EXISTS alerts (
                 id SERIAL PRIMARY KEY,
@@ -132,29 +115,24 @@ async function initDatabase() {
             )
         `);
         
-        // Aggiungi colonne water_ok e insecticide_ok a machines se non esistono
         await pool.query(`
             ALTER TABLE machines ADD COLUMN IF NOT EXISTS water_ok BOOLEAN DEFAULT TRUE;
             ALTER TABLE machines ADD COLUMN IF NOT EXISTS insecticide_ok BOOLEAN DEFAULT TRUE;
             ALTER TABLE machines ADD COLUMN IF NOT EXISTS flow FLOAT DEFAULT 0;
         `).catch(e => console.log('Colonne machines già esistenti'));
 
-        // Aggiungi telegram_chat_id a clients
         await pool.query(`
             ALTER TABLE clients ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(50);
         `).catch(e => console.log('Colonna telegram_chat_id già esistente'));
 
-        // Aggiungi client_id a users per collegare utente cliente al record cliente
         await pool.query(`
             ALTER TABLE users ADD COLUMN IF NOT EXISTS client_id INTEGER REFERENCES clients(id);
         `).catch(e => console.log('Colonna client_id su users già esistente'));
 
-        // Aggiungi installer_id a machines per assegnare l'installatore
         await pool.query(`
             ALTER TABLE machines ADD COLUMN IF NOT EXISTS installer_id INTEGER REFERENCES users(id);
         `).catch(e => console.log('Colonna installer_id su machines già esistente'));
 
-        // Tabella comandi (coda comandi admin → ESP32)
         await pool.query(`
             CREATE TABLE IF NOT EXISTS commands (
                 id SERIAL PRIMARY KEY,
@@ -174,7 +152,6 @@ async function initDatabase() {
     }
 }
 
-// Connessione iniziale
 pool.connect(async (err) => {
     if (err) {
         console.error('❌ Errore DB iniziale:', err.message);
@@ -218,11 +195,8 @@ async function sendTelegramMessage(chatId, text) {
     }
 }
 
-// ============================================
-// TELEGRAM WEBHOOK — riceve i messaggi dal bot
-// ============================================
 app.post('/api/telegram/webhook', async (req, res) => {
-    res.sendStatus(200); // Risponde subito a Telegram
+    res.sendStatus(200);
 
     try {
         const update = req.body;
@@ -233,7 +207,6 @@ app.post('/api/telegram/webhook', async (req, res) => {
         const text = message.text || '';
         const firstName = message.chat.first_name || '';
 
-        // Comando /start con payload macchina: /start machine_123
         if (text.startsWith('/start machine_')) {
             const machineId = parseInt(text.replace('/start machine_', '').trim());
 
@@ -242,7 +215,6 @@ app.post('/api/telegram/webhook', async (req, res) => {
                 return;
             }
 
-            // Trova la macchina e aggiorna il client con questo chat_id
             const machineResult = await queryWithRetry(
                 'SELECT id, machine_name, client_id FROM machines WHERE id = $1',
                 [machineId]
@@ -264,7 +236,6 @@ app.post('/api/telegram/webhook', async (req, res) => {
                 return;
             }
 
-            // Salva il telegram_chat_id sul cliente
             await queryWithRetry(
                 'UPDATE clients SET telegram_chat_id = $1 WHERE id = $2',
                 [chatId, machine.client_id]
@@ -284,7 +255,6 @@ app.post('/api/telegram/webhook', async (req, res) => {
             console.log(`✅ Cliente ID ${machine.client_id} attivato su Telegram: ${chatId}`);
 
         } else if (text === '/start') {
-            // /start senza payload — risponde con le istruzioni
             await sendTelegramMessage(chatId,
                 `👋 Benvenuto su <b>NabulAir</b>!\n\n` +
                 `Per attivare le notifiche, scansiona il QR Code che ti ha fornito il tuo installatore.\n\n` +
@@ -292,7 +262,6 @@ app.post('/api/telegram/webhook', async (req, res) => {
             );
 
         } else if (text === '/chatid') {
-            // Comando utile per scoprire il proprio chat id manualmente
             await sendTelegramMessage(chatId,
                 `📋 Il tuo Chat ID è:\n<code>${chatId}</code>\n\nComunicalo al tuo installatore.`
             );
@@ -320,14 +289,18 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
-const requireAdmin = (req, res, next) => {
-    if (req.user.role !== 'admin') {
-        return res.status(403).json({ success: false, message: 'Accesso negato: richiesto ruolo admin' });
-    }
-    next();
-};
+// MIDDLEWARE PER RUOLI (NUOVO)
+function requireRole(...roles) {
+    return (req, res, next) => {
+        if (!roles.includes(req.user.role)) {
+            return res.status(403).json({ success: false, message: 'Accesso negato: richiesto ruolo ' + roles.join(' o ') });
+        }
+        next();
+    };
+}
 
-// Registra il webhook su Telegram (chiamare una volta sola dopo il deploy)
+const requireAdmin = requireRole('admin');
+
 app.post('/api/telegram/setup-webhook', authenticateToken, requireAdmin, async (req, res) => {
     const { webhook_url } = req.body;
     if (!webhook_url) {
@@ -349,9 +322,6 @@ app.post('/api/telegram/setup-webhook', authenticateToken, requireAdmin, async (
     }
 });
 
-// ============================================
-// TELEGRAM WEBHOOK STATUS
-// ============================================
 app.get('/api/telegram/webhook-status', authenticateToken, requireAdmin, async (req, res) => {
     if (!TELEGRAM_BOT_TOKEN) {
         return res.json({ success: false, url: null, message: 'TELEGRAM_BOT_TOKEN non configurato' });
@@ -370,7 +340,7 @@ app.get('/api/telegram/webhook-status', authenticateToken, requireAdmin, async (
 });
 
 // ============================================
-// API SETUP (primo avvio — crea admin)
+// API SETUP
 // ============================================
 app.post('/api/setup', async (req, res) => {
     try {
@@ -442,15 +412,12 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// ============================================
-// API ME (utente corrente)
-// ============================================
 app.get('/api/me', authenticateToken, (req, res) => {
     res.json({ success: true, user: req.user });
 });
 
 // ============================================
-// API MACCHINE (protetta + filtrata per ruolo)
+// API MACCHINE
 // ============================================
 app.get('/api/machines', authenticateToken, async (req, res) => {
     try {
@@ -497,7 +464,7 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
 });
 
 // ============================================
-// API ALLARMI ATTIVI (protetta + filtrata)
+// API ALLARMI
 // ============================================
 app.get('/api/alerts', authenticateToken, async (req, res) => {
     try {
@@ -530,9 +497,6 @@ app.get('/api/alerts', authenticateToken, async (req, res) => {
     }
 });
 
-// ============================================
-// API RISOLVI ALLARME
-// ============================================
 app.post('/api/alerts/:id/resolve', authenticateToken, async (req, res) => {
     const { id } = req.params;
     
@@ -548,9 +512,6 @@ app.post('/api/alerts/:id/resolve', authenticateToken, async (req, res) => {
     }
 });
 
-// ============================================
-// API DETTAGLIO MACCHINA
-// ============================================
 app.get('/api/machine/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     
@@ -575,22 +536,80 @@ app.get('/api/machine/:id', authenticateToken, async (req, res) => {
 });
 
 // ============================================
-// API CLIENTI (solo admin)
+// API CLIENTI (MODIFICATA - Admin e Installer)
 // ============================================
-app.get('/api/clients', authenticateToken, requireAdmin, async (req, res) => {
+
+// GET - Admin vede tutti, Installer vede solo i suoi clienti
+app.get('/api/clients', authenticateToken, async (req, res) => {
     try {
-        const result = await queryWithRetry('SELECT * FROM clients ORDER BY name');
+        let query = 'SELECT * FROM clients';
+        let params = [];
+        
+        if (req.user.role === 'installer') {
+            query = `
+                SELECT DISTINCT c.* 
+                FROM clients c
+                JOIN machines m ON m.client_id = c.id
+                WHERE m.installer_id = $1
+                ORDER BY c.name
+            `;
+            params.push(req.user.id);
+        } else if (req.user.role === 'admin') {
+            query = 'SELECT * FROM clients ORDER BY name';
+        } else if (req.user.role === 'client') {
+            query = 'SELECT * FROM clients WHERE id = $1';
+            params.push(req.user.client_id);
+        } else {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+        
+        const result = await queryWithRetry(query, params);
         res.json({ success: true, clients: result.rows });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 });
 
-app.put('/api/clients/:id', authenticateToken, requireAdmin, async (req, res) => {
+// POST - Admin e Installer possono creare clienti
+app.post('/api/clients', authenticateToken, requireRole('admin', 'installer'), async (req, res) => {
+    const { name, email, phone, address, telegram_chat_id } = req.body;
+    if (!name) {
+        return res.status(400).json({ success: false, message: 'Il nome è obbligatorio' });
+    }
+    try {
+        const result = await queryWithRetry(
+            `INSERT INTO clients (name, email, phone, address, telegram_chat_id) 
+             VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+            [name, email || null, phone || null, address || null, telegram_chat_id || null]
+        );
+        res.json({ success: true, client: result.rows[0] });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// PUT - Admin può modificare tutti, Installer solo i suoi clienti
+app.put('/api/clients/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { telegram_chat_id, name, email, phone, address } = req.body;
+    
     try {
-        // Costruisce la query aggiornando solo i campi presenti nella richiesta
+        // Verifica permessi per installer
+        if (req.user.role === 'installer') {
+            const checkResult = await queryWithRetry(
+                `SELECT c.id FROM clients c
+                 JOIN machines m ON m.client_id = c.id
+                 WHERE c.id = $1 AND m.installer_id = $2
+                 LIMIT 1`,
+                [id, req.user.id]
+            );
+            if (checkResult.rows.length === 0) {
+                return res.status(403).json({ success: false, message: 'Puoi modificare solo i clienti associati ai tuoi impianti' });
+            }
+        } else if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+        
         const fields = [];
         const values = [];
         let idx = 1;
@@ -614,14 +633,23 @@ app.put('/api/clients/:id', authenticateToken, requireAdmin, async (req, res) =>
     }
 });
 
-app.post('/api/clients', authenticateToken, requireAdmin, async (req, res) => {
-    const { name, email, phone, address, telegram_chat_id } = req.body;
+// DELETE - Solo admin (per sicurezza)
+app.delete('/api/clients/:id', authenticateToken, requireAdmin, async (req, res) => {
+    const { id } = req.params;
     try {
-        const result = await queryWithRetry(
-            `INSERT INTO clients (name, email, phone, address, telegram_chat_id) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-            [name, email, phone, address, telegram_chat_id || null]
+        const checkResult = await queryWithRetry(
+            'SELECT id FROM machines WHERE client_id = $1 LIMIT 1',
+            [id]
         );
-        res.json({ success: true, client: result.rows[0] });
+        if (checkResult.rows.length > 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Impossibile eliminare: cliente associato a uno o più impianti' 
+            });
+        }
+        
+        await queryWithRetry('DELETE FROM clients WHERE id = $1', [id]);
+        res.json({ success: true, message: 'Cliente eliminato' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -662,16 +690,39 @@ app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // ============================================
-// API ASSEGNAZIONE MACCHINA (solo admin)
+// API ASSEGNAZIONE MACCHINA (MODIFICATA)
 // ============================================
-app.put('/api/machines/:id/assign', authenticateToken, requireAdmin, async (req, res) => {
+app.put('/api/machines/:id/assign', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { client_id, installer_id } = req.body;
+    
     try {
-        await queryWithRetry(
-            'UPDATE machines SET client_id = $1, installer_id = $2 WHERE id = $3',
-            [client_id || null, installer_id || null, id]
+        const machineCheck = await queryWithRetry(
+            'SELECT installer_id FROM machines WHERE id = $1',
+            [id]
         );
+        
+        if (machineCheck.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Macchina non trovata' });
+        }
+        
+        if (req.user.role === 'installer') {
+            if (machineCheck.rows[0].installer_id !== req.user.id) {
+                return res.status(403).json({ success: false, message: 'Puoi assegnare solo i tuoi impianti' });
+            }
+            await queryWithRetry(
+                'UPDATE machines SET client_id = $1 WHERE id = $2',
+                [client_id || null, id]
+            );
+        } else if (req.user.role === 'admin') {
+            await queryWithRetry(
+                'UPDATE machines SET client_id = $1, installer_id = $2 WHERE id = $3',
+                [client_id || null, installer_id || null, id]
+            );
+        } else {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+        
         res.json({ success: true, message: 'Macchina aggiornata' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -679,21 +730,20 @@ app.put('/api/machines/:id/assign', authenticateToken, requireAdmin, async (req,
 });
 
 // ============================================
-// API QR CODE TELEGRAM (installatore o admin)
+// API QR CODE TELEGRAM (MODIFICATA)
 // ============================================
 app.post('/api/machines/:id/qr', authenticateToken, async (req, res) => {
     const { id } = req.params;
 
-    // Solo installer e admin possono generare QR
     if (req.user.role !== 'admin' && req.user.role !== 'installer') {
         return res.status(403).json({ success: false, message: 'Accesso negato' });
     }
 
     try {
-        const result = await queryWithRetry(
-            'SELECT id, machine_name, mac_address FROM machines WHERE id = $1',
-            [id]
-        );
+        let machineQuery = 'SELECT id, machine_name, mac_address, installer_id FROM machines WHERE id = $1';
+        let params = [id];
+        
+        const result = await queryWithRetry(machineQuery, params);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Macchina non trovata' });
@@ -701,11 +751,15 @@ app.post('/api/machines/:id/qr', authenticateToken, async (req, res) => {
 
         const machine = result.rows[0];
 
+        // Verifica che l'installatore possa accedere a questa macchina
+        if (req.user.role === 'installer' && machine.installer_id !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'Non hai accesso a questa macchina' });
+        }
+
         if (!TELEGRAM_BOT_TOKEN) {
             return res.status(500).json({ success: false, message: 'Bot Telegram non configurato' });
         }
 
-        // Ricava il nome del bot dal token
         let botUsername = 'NabulAirBot';
         try {
             const botRes = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getMe`);
@@ -715,7 +769,6 @@ app.post('/api/machines/:id/qr', authenticateToken, async (req, res) => {
             console.warn('Impossibile recuperare username bot:', e.message);
         }
 
-        // Il payload include l'ID macchina (start parameter)
         const startPayload = `machine_${machine.id}`;
         const telegramLink = `https://t.me/${botUsername}?start=${startPayload}`;
 
@@ -732,7 +785,7 @@ app.post('/api/machines/:id/qr', authenticateToken, async (req, res) => {
 });
 
 // ============================================
-// API REGISTRAZIONE ESP32 (pubblica) - CON RETRY
+// API REGISTRAZIONE ESP32
 // ============================================
 app.post('/api/register', async (req, res) => {
     const { mac_address, ip, version, machine_name } = req.body;
@@ -769,7 +822,7 @@ app.post('/api/register', async (req, res) => {
 });
 
 // ============================================
-// API PING ESP32 (con stato allarmi + Telegram)
+// API PING ESP32
 // ============================================
 app.post('/api/ping', async (req, res) => {
     const { mac_address, ip, water_ok, insecticide_ok, flow, status } = req.body;
@@ -779,7 +832,6 @@ app.post('/api/ping', async (req, res) => {
     }
     
     try {
-        // Aggiorna macchina con i nuovi stati
         await queryWithRetry(
             `UPDATE machines 
              SET last_seen = NOW(), 
@@ -792,7 +844,6 @@ app.post('/api/ping', async (req, res) => {
             [ip, status || 'online', water_ok, insecticide_ok, flow, mac_address]
         );
         
-        // Ottieni machine_id e dati cliente
         const machineResult = await queryWithRetry(
             'SELECT id, machine_name, client_id FROM machines WHERE mac_address = $1',
             [mac_address]
@@ -802,7 +853,6 @@ app.post('/api/ping', async (req, res) => {
         const machine_id = machine?.id;
         
         if (machine_id) {
-            // Recupera dati cliente per Telegram
             let clientInfo = null;
             if (machine.client_id) {
                 const clientResult = await queryWithRetry(
@@ -812,7 +862,6 @@ app.post('/api/ping', async (req, res) => {
                 clientInfo = clientResult.rows[0];
             }
             
-            // Gestione allarme insetticida
             if (insecticide_ok === false) {
                 const existing = await queryWithRetry(
                     `SELECT id FROM alerts WHERE machine_id = $1 AND type = 'insecticide' AND status = 'active'`,
@@ -844,7 +893,6 @@ app.post('/api/ping', async (req, res) => {
                 );
             }
             
-            // Gestione allarme acqua
             if (water_ok === false) {
                 const existing = await queryWithRetry(
                     `SELECT id FROM alerts WHERE machine_id = $1 AND type = 'water' AND status = 'active'`,
@@ -877,7 +925,6 @@ app.post('/api/ping', async (req, res) => {
             }
         }
         
-        // ── Cerca comando pendente per questa macchina ──
         let command = null;
         if (machine_id) {
             const cmdResult = await queryWithRetry(
@@ -888,7 +935,6 @@ app.post('/api/ping', async (req, res) => {
             );
             if (cmdResult.rows.length > 0) {
                 const cmd = cmdResult.rows[0];
-                // Marca come inviato (l'ESP32 lo ha ricevuto)
                 await queryWithRetry(
                     `UPDATE commands SET status = 'sent' WHERE id = $1`,
                     [cmd.id]
@@ -907,10 +953,8 @@ app.post('/api/ping', async (req, res) => {
 });
 
 // ============================================
-// COMANDI ESP32 — CODA COMANDI
+// COMANDI ESP32
 // ============================================
-
-// Admin/installer invia un comando a una macchina
 app.post('/api/machines/:id/command', authenticateToken, async (req, res) => {
     const machineId = parseInt(req.params.id);
     const { type, payload } = req.body;
@@ -920,7 +964,6 @@ app.post('/api/machines/:id/command', authenticateToken, async (req, res) => {
         return res.status(400).json({ success: false, message: `Tipo comando non valido. Validi: ${ALLOWED_TYPES.join(', ')}` });
     }
 
-    // Verifica che la macchina esista e che l'utente abbia accesso
     try {
         const machineResult = await queryWithRetry(
             'SELECT id, machine_name, installer_id FROM machines WHERE id = $1',
@@ -932,12 +975,10 @@ app.post('/api/machines/:id/command', authenticateToken, async (req, res) => {
 
         const machine = machineResult.rows[0];
 
-        // Installatore può inviare comandi solo alle sue macchine
         if (req.user.role === 'installer' && machine.installer_id !== req.user.id) {
             return res.status(403).json({ success: false, message: 'Accesso negato' });
         }
 
-        // Inserisce comando in coda (cancella eventuali pending dello stesso tipo)
         await queryWithRetry(
             `UPDATE commands SET status = 'cancelled'
              WHERE machine_id = $1 AND type = $2 AND status = 'pending'`,
@@ -959,7 +1000,6 @@ app.post('/api/machines/:id/command', authenticateToken, async (req, res) => {
     }
 });
 
-// ESP32 conferma esecuzione comando
 app.post('/api/command/:id/confirm', async (req, res) => {
     const cmdId = parseInt(req.params.id);
     const { success, message } = req.body;
@@ -976,7 +1016,6 @@ app.post('/api/command/:id/confirm', async (req, res) => {
     }
 });
 
-// Storico comandi di una macchina (admin/installer)
 app.get('/api/machines/:id/commands', authenticateToken, async (req, res) => {
     const machineId = parseInt(req.params.id);
     try {
@@ -995,7 +1034,7 @@ app.get('/api/machines/:id/commands', authenticateToken, async (req, res) => {
 });
 
 // ============================================
-// HEALTH CHECK MIGLIORATO
+// HEALTH CHECK
 // ============================================
 app.get('/health', async (req, res) => {
     let dbConnected = false;
@@ -1020,16 +1059,13 @@ app.get('/health', async (req, res) => {
     });
 });
 
-// ============================================
-// ROOT ENDPOINT
-// ============================================
 app.get('/', (req, res) => {
     res.json({ 
         message: 'NabulAir Cloud API', 
-        version: '2.4',
+        version: '2.5',
         status: 'online',
         ssl_db: false,
-        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry'],
+        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry', 'Installer can create clients'],
         endpoints: [
             'GET /',
             'GET /health',
@@ -1040,25 +1076,24 @@ app.get('/', (req, res) => {
             'GET /api/me',
             'GET /api/machines (protected)',
             'GET /api/alerts (protected)',
-            'GET /api/clients (admin)',
+            'GET /api/clients (admin + installer filtered)',
+            'POST /api/clients (admin + installer)',
+            'PUT /api/clients/:id (admin + installer filtered)',
+            'DELETE /api/clients/:id (admin only)',
             'POST /api/users (admin)',
-            'PUT /api/machines/:id/assign (admin)',
+            'PUT /api/machines/:id/assign (admin + installer filtered)',
             'POST /api/register',
             'POST /api/ping'
         ]
     });
 });
 
-// EMERGENZA: Reset password admin. RIMUOVI DOPO AVER ENTRATO!
 app.post('/api/reset', async (req, res) => {
     const hash = await bcrypt.hash(req.body.password || 'admin', 10);
     await queryWithRetry("UPDATE users SET password_hash = $1 WHERE username = 'admin'", [hash]);
     res.json({success: true, message: 'Password resettata. Rimuovi questo endpoint!'});
 });
 
-// ============================================
-// AVVIO SERVER
-// ============================================
 app.listen(PORT, () => {
     console.log(`✅ NabulAir Cloud avviato su porta ${PORT}`);
     console.log(`🔐 JWT_SECRET: ${JWT_SECRET ? '✅ Configurato' : '❌ MANCANTE'}`);
