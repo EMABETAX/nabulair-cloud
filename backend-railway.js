@@ -9,12 +9,11 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
 // ============================================
-// FILE STATICI (HTML, CSS, JS)
+// FILE STATICI
 // ============================================
 app.use(express.static(__dirname));
 
@@ -52,7 +51,7 @@ if (!DATABASE_URL) {
 }
 
 // ============================================
-// DATABASE CONNECTION - CONFIGURAZIONE SENZA SSL PER RAILWAY
+// DATABASE CONNECTION
 // ============================================
 let cleanDatabaseUrl = DATABASE_URL;
 if (cleanDatabaseUrl.includes('?sslmode=require')) {
@@ -123,7 +122,8 @@ async function initDatabase() {
 
         await pool.query(`
             ALTER TABLE clients ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(50);
-        `).catch(e => console.log('Colonna telegram_chat_id già esistente'));
+            ALTER TABLE clients ADD COLUMN IF NOT EXISTS created_by_installer_id INTEGER REFERENCES users(id);
+        `).catch(e => console.log('Colonne clients già esistenti'));
 
         await pool.query(`
             ALTER TABLE users ADD COLUMN IF NOT EXISTS client_id INTEGER REFERENCES clients(id);
@@ -289,7 +289,6 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
-// MIDDLEWARE PER RUOLI (NUOVO)
 function requireRole(...roles) {
     return (req, res, next) => {
         if (!roles.includes(req.user.role)) {
@@ -301,7 +300,10 @@ function requireRole(...roles) {
 
 const requireAdmin = requireRole('admin');
 
-app.post('/api/telegram/setup-webhook', authenticateToken, requireAdmin, async (req, res) => {
+// ============================================
+// API TELEGRAM WEBHOOK (Admin + Installer)
+// ============================================
+app.post('/api/telegram/setup-webhook', authenticateToken, requireRole('admin', 'installer'), async (req, res) => {
     const { webhook_url } = req.body;
     if (!webhook_url) {
         return res.status(400).json({ success: false, message: 'webhook_url obbligatorio' });
@@ -322,7 +324,7 @@ app.post('/api/telegram/setup-webhook', authenticateToken, requireAdmin, async (
     }
 });
 
-app.get('/api/telegram/webhook-status', authenticateToken, requireAdmin, async (req, res) => {
+app.get('/api/telegram/webhook-status', authenticateToken, requireRole('admin', 'installer'), async (req, res) => {
     if (!TELEGRAM_BOT_TOKEN) {
         return res.json({ success: false, url: null, message: 'TELEGRAM_BOT_TOKEN non configurato' });
     }
@@ -536,26 +538,26 @@ app.get('/api/machine/:id', authenticateToken, async (req, res) => {
 });
 
 // ============================================
-// API CLIENTI (MODIFICATA - Admin e Installer)
+// API CLIENTI
 // ============================================
 
-// GET - Admin vede tutti, Installer vede solo i suoi clienti
+// GET - Admin vede tutti, Installer vede TUTTI i clienti che ha creato lui + quelli associati
 app.get('/api/clients', authenticateToken, async (req, res) => {
     try {
-        let query = 'SELECT * FROM clients';
+        let query = '';
         let params = [];
         
-        if (req.user.role === 'installer') {
+        if (req.user.role === 'admin') {
+            query = 'SELECT * FROM clients ORDER BY name';
+        } else if (req.user.role === 'installer') {
             query = `
                 SELECT DISTINCT c.* 
                 FROM clients c
-                JOIN machines m ON m.client_id = c.id
-                WHERE m.installer_id = $1
+                LEFT JOIN machines m ON m.client_id = c.id
+                WHERE c.created_by_installer_id = $1 OR m.installer_id = $1
                 ORDER BY c.name
             `;
             params.push(req.user.id);
-        } else if (req.user.role === 'admin') {
-            query = 'SELECT * FROM clients ORDER BY name';
         } else if (req.user.role === 'client') {
             query = 'SELECT * FROM clients WHERE id = $1';
             params.push(req.user.client_id);
@@ -577,10 +579,15 @@ app.post('/api/clients', authenticateToken, requireRole('admin', 'installer'), a
         return res.status(400).json({ success: false, message: 'Il nome è obbligatorio' });
     }
     try {
+        let created_by_installer_id = null;
+        if (req.user.role === 'installer') {
+            created_by_installer_id = req.user.id;
+        }
+        
         const result = await queryWithRetry(
-            `INSERT INTO clients (name, email, phone, address, telegram_chat_id) 
-             VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-            [name, email || null, phone || null, address || null, telegram_chat_id || null]
+            `INSERT INTO clients (name, email, phone, address, telegram_chat_id, created_by_installer_id) 
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+            [name, email || null, phone || null, address || null, telegram_chat_id || null, created_by_installer_id]
         );
         res.json({ success: true, client: result.rows[0] });
     } catch (error) {
@@ -594,17 +601,13 @@ app.put('/api/clients/:id', authenticateToken, async (req, res) => {
     const { telegram_chat_id, name, email, phone, address } = req.body;
     
     try {
-        // Verifica permessi per installer
         if (req.user.role === 'installer') {
             const checkResult = await queryWithRetry(
-                `SELECT c.id FROM clients c
-                 JOIN machines m ON m.client_id = c.id
-                 WHERE c.id = $1 AND m.installer_id = $2
-                 LIMIT 1`,
+                `SELECT id FROM clients WHERE id = $1 AND created_by_installer_id = $2`,
                 [id, req.user.id]
             );
             if (checkResult.rows.length === 0) {
-                return res.status(403).json({ success: false, message: 'Puoi modificare solo i clienti associati ai tuoi impianti' });
+                return res.status(403).json({ success: false, message: 'Puoi modificare solo i clienti che hai creato tu' });
             }
         } else if (req.user.role !== 'admin') {
             return res.status(403).json({ success: false, message: 'Accesso negato' });
@@ -633,7 +636,7 @@ app.put('/api/clients/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// DELETE - Solo admin (per sicurezza)
+// DELETE - Solo admin
 app.delete('/api/clients/:id', authenticateToken, requireAdmin, async (req, res) => {
     const { id } = req.params;
     try {
@@ -690,7 +693,7 @@ app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // ============================================
-// API ASSEGNAZIONE MACCHINA (MODIFICATA)
+// API ASSEGNAZIONE MACCHINA
 // ============================================
 app.put('/api/machines/:id/assign', authenticateToken, async (req, res) => {
     const { id } = req.params;
@@ -730,7 +733,7 @@ app.put('/api/machines/:id/assign', authenticateToken, async (req, res) => {
 });
 
 // ============================================
-// API QR CODE TELEGRAM (MODIFICATA)
+// API QR CODE TELEGRAM
 // ============================================
 app.post('/api/machines/:id/qr', authenticateToken, async (req, res) => {
     const { id } = req.params;
@@ -751,7 +754,6 @@ app.post('/api/machines/:id/qr', authenticateToken, async (req, res) => {
 
         const machine = result.rows[0];
 
-        // Verifica che l'installatore possa accedere a questa macchina
         if (req.user.role === 'installer' && machine.installer_id !== req.user.id) {
             return res.status(403).json({ success: false, message: 'Non hai accesso a questa macchina' });
         }
@@ -1062,10 +1064,10 @@ app.get('/health', async (req, res) => {
 app.get('/', (req, res) => {
     res.json({ 
         message: 'NabulAir Cloud API', 
-        version: '2.5',
+        version: '2.6',
         status: 'online',
         ssl_db: false,
-        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry', 'Installer can create clients'],
+        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry', 'Installer can create and see clients', 'Installer can configure Telegram'],
         endpoints: [
             'GET /',
             'GET /health',
@@ -1076,12 +1078,12 @@ app.get('/', (req, res) => {
             'GET /api/me',
             'GET /api/machines (protected)',
             'GET /api/alerts (protected)',
-            'GET /api/clients (admin + installer filtered)',
+            'GET /api/clients (admin + installer)',
             'POST /api/clients (admin + installer)',
-            'PUT /api/clients/:id (admin + installer filtered)',
+            'PUT /api/clients/:id (admin + installer)',
             'DELETE /api/clients/:id (admin only)',
             'POST /api/users (admin)',
-            'PUT /api/machines/:id/assign (admin + installer filtered)',
+            'PUT /api/machines/:id/assign (admin + installer)',
             'POST /api/register',
             'POST /api/ping'
         ]
