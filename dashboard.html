@@ -876,6 +876,14 @@ async function api(method, endpoint, body) {
     const opts = { method, headers: { 'Authorization': `Bearer ${token}` } };
     if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
     const res = await fetch(API + endpoint, opts);
+    
+    // ← FIX: intercetta 401 (token scaduto) e forza logout automatico
+    if (res.status === 401) {
+        console.warn('Token scaduto — logout forzato');
+        logout();
+        return { success: false, message: 'Sessione scaduta' };
+    }
+    
     return res.json();
 }
 const apiGet  = ep       => api('GET',  ep);
@@ -1118,27 +1126,21 @@ function openDetail(id) {
     // Colonna destra: comandi
     let right = '';
     if (!isClient) {
+        // ← FIX: comandi allineati ai tipi supportati dal backend
         right = `
         <div class="detail-section">
             <h4>🛠 Comandi remoti</h4>
             <div class="cmd-grid">
-                <button class="btn-cmd btn-cmd-programs" onclick="sendMachineCmd(${m.id},'programs')">📅 Aggiorna programmi</button>
-                <button class="btn-cmd btn-cmd-cycle" onclick="sendMachineCmd(${m.id},'cycle')">▶ Avvia ciclo</button>
+                <button class="btn-cmd btn-cmd-programs" onclick="alert('Funzione in sviluppo: configura i programmi dall\\'app locale dell\\'impianto')">📅 Programmi (app locale)</button>
                 <button class="btn-cmd btn-cmd-reboot" onclick="sendMachineCmd(${m.id},'reboot')">🔄 Riavvia</button>
                 <button class="btn-cmd btn-cmd-ota" onclick="toggleOtaPanel(${m.id})">⬆️ OTA Firmware</button>
-                <button class="btn-cmd btn-cmd-consumption" onclick="toggleConsumptionPanel(${m.id})">📊 Consumi</button>
             </div>
             <div class="cmd-status" id="cmd-status-${m.id}"></div>
 
             <div class="ota-panel" id="ota-panel-${m.id}">
                 <label style="font-size:12px; color:var(--muted);">URL firmware (.bin)</label>
                 <input type="text" id="ota-url-${m.id}" placeholder="https://.../firmware.bin">
-                <button class="btn-cmd btn-cmd-ota" style="width:100%" onclick="sendMachineCmd(${m.id},'ota')">🚀 Avvia aggiornamento</button>
-            </div>
-
-            <div class="consumption-panel" id="consumption-panel-${m.id}">
-                <div style="font-size:12px; color:var(--muted); margin-bottom:8px;">Ultimi cicli registrati</div>
-                <div id="consumption-content-${m.id}">Caricamento...</div>
+                <button class="btn-cmd btn-cmd-ota" style="width:100%" onclick="sendMachineCmd(${m.id},'ota_firmware')">🚀 Avvia aggiornamento</button>
             </div>
         </div>
         `;
@@ -1190,19 +1192,18 @@ async function sendMachineCmd(machineId, cmd) {
     statusEl.textContent = '⏳ Invio comando...';
     statusEl.className = 'cmd-status wait';
 
-    let payload = { command: cmd };
-    if (cmd === 'ota') {
+    let payload = {};
+    if (cmd === 'ota_firmware') {
         const url = document.getElementById(`ota-url-${machineId}`)?.value.trim();
         if (!url) { statusEl.textContent = '❌ Inserisci URL firmware'; statusEl.className='cmd-status err'; return; }
         payload.url = url;
     }
 
     try {
-        const res = await apiPost(`/machines/${machineId}/command`, payload);
+        const res = await apiPost(`/machines/${machineId}/command`, { type: cmd, payload });
         if (res.success) {
             statusEl.textContent = '✅ Comando inviato';
             statusEl.className = 'cmd-status ok';
-            if (cmd === 'consumption') renderConsumption(machineId, res.data || []);
         } else {
             statusEl.textContent = '❌ ' + (res.message || 'Errore');
             statusEl.className = 'cmd-status err';
@@ -1216,38 +1217,6 @@ async function sendMachineCmd(machineId, cmd) {
 function toggleOtaPanel(id) {
     const p = document.getElementById(`ota-panel-${id}`);
     p.classList.toggle('open');
-    document.getElementById(`consumption-panel-${id}`).classList.remove('open');
-}
-
-function toggleConsumptionPanel(id) {
-    const p = document.getElementById(`consumption-panel-${id}`);
-    const isOpen = p.classList.contains('open');
-    p.classList.toggle('open');
-    document.getElementById(`ota-panel-${id}`).classList.remove('open');
-    if (!isOpen) {
-        sendMachineCmd(id, 'consumption');
-    }
-}
-
-function renderConsumption(machineId, data) {
-    const el = document.getElementById(`consumption-content-${machineId}`);
-    if (!data || !data.length) {
-        el.innerHTML = '<div style="color:var(--muted); font-size:13px;">Nessun dato disponibile</div>';
-        return;
-    }
-    el.innerHTML = `
-        <table class="consumption-table">
-            <thead><tr><th>Data</th><th>Durata</th><th>Litri</th><th>ml inset.</th></tr></thead>
-            <tbody>
-                ${data.map(row => `<tr>
-                    <td>${esc(row.date||'—')}</td>
-                    <td>${esc(row.duration||'—')}</td>
-                    <td>${esc(row.liters!=null?row.liters+' L':'—')}</td>
-                    <td>${esc(row.insecticide!=null?row.insecticide+' ml':'—')}</td>
-                </tr>`).join('')}
-            </tbody>
-        </table>
-    `;
 }
 
 // ═══════════════════════════════════════════════
@@ -1289,22 +1258,16 @@ function renderClientsTable() {
     const isAdmin = currentUser.role === 'admin';
     const isInstaller = currentUser.role === 'installer';
     
+    // ← FIX: <table> sostituito con <tr> — struttura tabella ripristinata
     tbody.innerHTML = allClients.map(c => {
         let actions = '';
-        // Admin: può fare tutto
-        if (isAdmin) {
-            actions = `
-                <button class="btn-row btn-row-edit" onclick="editClient(${c.id})">✎ Modifica</button>
-                <button class="btn-row btn-row-del" onclick="deleteClient(${c.id})">🗑 Elimina</button>
-            `;
-        } else if (isInstaller) {
-            // Installer: può modificare ed eliminare i propri clienti
+        if (isAdmin || isInstaller) {
             actions = `
                 <button class="btn-row btn-row-edit" onclick="editClient(${c.id})">✎ Modifica</button>
                 <button class="btn-row btn-row-del" onclick="deleteClient(${c.id})">🗑 Elimina</button>
             `;
         }
-        return `<table>
+        return `<tr>
             <td><strong>${esc(c.name)}</strong></td>
             <td class="td-mono">${esc(c.email||'—')}</td>
             <td class="td-mono">${esc(c.phone||'—')}</td>
