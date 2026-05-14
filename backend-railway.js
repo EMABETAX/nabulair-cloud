@@ -153,7 +153,21 @@ async function initDatabase() {
         await pool.query(`
             ALTER TABLE machines ADD COLUMN IF NOT EXISTS installer_id INTEGER REFERENCES users(id);
         `).catch(e => console.log('Colonna installer_id su machines già esistente'));
-        
+
+        // Tabella comandi (coda comandi admin → ESP32)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS commands (
+                id SERIAL PRIMARY KEY,
+                machine_id INTEGER REFERENCES machines(id) ON DELETE CASCADE,
+                type VARCHAR(50) NOT NULL,
+                payload JSONB,
+                status VARCHAR(20) DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                executed_at TIMESTAMP NULL,
+                created_by INTEGER REFERENCES users(id)
+            )
+        `);
+
         console.log('✅ Database inizializzato correttamente');
     } catch (err) {
         console.error('❌ Errore init database:', err.message);
@@ -863,11 +877,120 @@ app.post('/api/ping', async (req, res) => {
             }
         }
         
-        res.json({ success: true });
+        // ── Cerca comando pendente per questa macchina ──
+        let command = null;
+        if (machine_id) {
+            const cmdResult = await queryWithRetry(
+                `SELECT id, type, payload FROM commands
+                 WHERE machine_id = $1 AND status = 'pending'
+                 ORDER BY created_at ASC LIMIT 1`,
+                [machine_id]
+            );
+            if (cmdResult.rows.length > 0) {
+                const cmd = cmdResult.rows[0];
+                // Marca come inviato (l'ESP32 lo ha ricevuto)
+                await queryWithRetry(
+                    `UPDATE commands SET status = 'sent' WHERE id = $1`,
+                    [cmd.id]
+                );
+                command = { id: cmd.id, type: cmd.type, payload: cmd.payload };
+                console.log(`📤 Comando inviato a macchina ${machine_id}: ${cmd.type}`);
+            }
+        }
+
+        res.json({ success: true, command });
         
     } catch (error) {
         console.error('Errore ping:', error.message);
-        res.json({ success: false });
+        res.json({ success: false, command: null });
+    }
+});
+
+// ============================================
+// COMANDI ESP32 — CODA COMANDI
+// ============================================
+
+// Admin/installer invia un comando a una macchina
+app.post('/api/machines/:id/command', authenticateToken, async (req, res) => {
+    const machineId = parseInt(req.params.id);
+    const { type, payload } = req.body;
+
+    const ALLOWED_TYPES = ['update_programs', 'ota_firmware', 'ota_littlefs', 'reboot'];
+    if (!type || !ALLOWED_TYPES.includes(type)) {
+        return res.status(400).json({ success: false, message: `Tipo comando non valido. Validi: ${ALLOWED_TYPES.join(', ')}` });
+    }
+
+    // Verifica che la macchina esista e che l'utente abbia accesso
+    try {
+        const machineResult = await queryWithRetry(
+            'SELECT id, machine_name, installer_id FROM machines WHERE id = $1',
+            [machineId]
+        );
+        if (machineResult.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Macchina non trovata' });
+        }
+
+        const machine = machineResult.rows[0];
+
+        // Installatore può inviare comandi solo alle sue macchine
+        if (req.user.role === 'installer' && machine.installer_id !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+
+        // Inserisce comando in coda (cancella eventuali pending dello stesso tipo)
+        await queryWithRetry(
+            `UPDATE commands SET status = 'cancelled'
+             WHERE machine_id = $1 AND type = $2 AND status = 'pending'`,
+            [machineId, type]
+        );
+
+        const result = await queryWithRetry(
+            `INSERT INTO commands (machine_id, type, payload, created_by)
+             VALUES ($1, $2, $3, $4) RETURNING id`,
+            [machineId, type, payload ? JSON.stringify(payload) : null, req.user.id]
+        );
+
+        console.log(`📥 Comando ${type} in coda per macchina ${machineId} (ID cmd: ${result.rows[0].id})`);
+        res.json({ success: true, command_id: result.rows[0].id, message: `Comando ${type} in coda — verrà eseguito al prossimo ping (max 60s)` });
+
+    } catch (error) {
+        console.error('Errore comando:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ESP32 conferma esecuzione comando
+app.post('/api/command/:id/confirm', async (req, res) => {
+    const cmdId = parseInt(req.params.id);
+    const { success, message } = req.body;
+    try {
+        await queryWithRetry(
+            `UPDATE commands SET status = $1, executed_at = NOW()
+             WHERE id = $2`,
+            [success ? 'executed' : 'failed', cmdId]
+        );
+        console.log(`✅ Comando ${cmdId} ${success ? 'eseguito' : 'fallito'}: ${message || ''}`);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false });
+    }
+});
+
+// Storico comandi di una macchina (admin/installer)
+app.get('/api/machines/:id/commands', authenticateToken, async (req, res) => {
+    const machineId = parseInt(req.params.id);
+    try {
+        const result = await queryWithRetry(
+            `SELECT c.id, c.type, c.status, c.created_at, c.executed_at, u.username as sent_by
+             FROM commands c
+             LEFT JOIN users u ON c.created_by = u.id
+             WHERE c.machine_id = $1
+             ORDER BY c.created_at DESC LIMIT 20`,
+            [machineId]
+        );
+        res.json({ success: true, commands: result.rows });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
 });
 
