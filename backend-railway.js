@@ -703,6 +703,46 @@ app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
     }
 });
 
+app.put('/api/users/:id', authenticateToken, requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { username, password } = req.body;
+    try {
+        const fields = [];
+        const values = [];
+        let idx = 1;
+        if (username !== undefined) { fields.push(`username = $${idx++}`); values.push(username.toLowerCase()); }
+        if (password !== undefined && password.length > 0) {
+            const hash = await bcrypt.hash(password, 10);
+            fields.push(`password_hash = $${idx++}`);
+            values.push(hash);
+        }
+        if (fields.length === 0) {
+            return res.status(400).json({ success: false, message: 'Nessun campo da aggiornare' });
+        }
+        values.push(id);
+        await queryWithRetry(
+            `UPDATE users SET ${fields.join(', ')} WHERE id = $${idx}`,
+            values
+        );
+        res.json({ success: true, message: 'Utente aggiornato' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.delete('/api/users/:id', authenticateToken, requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+        if (parseInt(id) === req.user.id) {
+            return res.status(400).json({ success: false, message: 'Non puoi eliminare il tuo account' });
+        }
+        await queryWithRetry('DELETE FROM users WHERE id = $1', [id]);
+        res.json({ success: true, message: 'Utente eliminato' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // ============================================
 // API ASSEGNAZIONE MACCHINA
 // ============================================
