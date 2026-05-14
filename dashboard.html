@@ -37,7 +37,7 @@
             min-height: 100vh;
         }
 
-        /* LOGIN */
+        /* ── LOGIN ── */
         #loginScreen {
             position: fixed; inset: 0;
             background: var(--bg);
@@ -87,7 +87,7 @@
         .btn-login:hover { opacity: 0.85; }
         .login-err { color: var(--red); font-size:13px; text-align:center; margin-top:12px; display:none; }
 
-        /* HEADER */
+        /* ── HEADER ── */
         #appShell { display: none; }
         .topbar {
             background: var(--surface);
@@ -141,10 +141,10 @@
         .btn-logout { color: var(--red); }
         .btn-logout:hover { border-color: var(--red); color: var(--red); }
 
-        /* LAYOUT */
+        /* ── LAYOUT ── */
         .layout { display:flex; min-height:calc(100vh - 64px); }
 
-        /* SIDEBAR */
+        /* ── SIDEBAR ── */
         .sidebar {
             width: 220px; min-width: 220px;
             background: var(--surface);
@@ -170,11 +170,11 @@
         .nav-icon { font-size: 16px; }
         .sidebar-divider { border:none; border-top:1px solid var(--border); margin: 16px 0; }
 
-        /* MAIN */
+        /* ── MAIN ── */
         .main { flex: 1; padding: 28px 32px; overflow-x: hidden; }
         @media (max-width: 768px) { .main { padding: 16px; } }
 
-        /* SECTIONS */
+        /* ── SECTION PAGES ── */
         .section-page { display: none; }
         .section-page.active { display: block; }
 
@@ -184,7 +184,7 @@
         }
         .page-sub { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
 
-        /* ALERTS */
+        /* ── ALERTS BAR ── */
         .alerts-wrap { display:none; }
         .alerts-wrap.has-alerts { display:block; margin-bottom:24px; }
         .alert-row {
@@ -201,112 +201,74 @@
             cursor: pointer; font-size: 12px; white-space: nowrap;
         }
 
-        /* MACHINE CARDS */
-        .cards-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 16px;
+        /* ── FILTERS ── */
+        .filters-bar {
+            display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;
+            align-items: center;
         }
-        .machine-card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 20px; padding: 22px;
-            transition: border-color 0.2s;
+        .filters-bar input, .filters-bar select {
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border); border-radius: 10px;
+            color: var(--text); font-family: var(--font-body); font-size: 14px;
+            outline: none; min-width: 180px;
         }
-        .machine-card:hover { border-color: rgba(255,255,255,0.14); }
-        .machine-card.has-alert { border-color: rgba(239,68,68,0.4); }
+        .filters-bar input:focus, .filters-bar select:focus { border-color: var(--accent); }
+        .filters-bar input::placeholder { color: var(--muted); }
+        .filters-bar select option { background: var(--card); }
 
-        .card-head {
-            display: flex; justify-content: space-between;
-            align-items: flex-start; margin-bottom: 18px;
+        /* ── DATA TABLE ── */
+        .data-table-wrap { overflow-x: auto; }
+        .data-table {
+            width: 100%; border-collapse: collapse;
+            font-size: 14px; background: var(--card);
+            border: 1px solid var(--border); border-radius: 16px;
+            overflow: hidden;
         }
-        .card-name {
-            font-family: var(--font-display);
-            font-size: 16px; font-weight: 700;
+        .data-table th {
+            text-align: left; padding: 14px 16px;
+            background: rgba(0,0,0,0.25);
+            color: var(--muted); font-size: 11px;
+            text-transform: uppercase; letter-spacing: 1px; font-weight: 600;
+            white-space: nowrap;
         }
-        .card-mac { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: monospace; }
-        .status-dot-wrap { display:flex; align-items:center; gap:6px; }
-        .sdot {
-            width: 9px; height: 9px; border-radius: 50%;
-            background: var(--muted);
+        .data-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px; vertical-align: middle;
         }
-        .sdot.online { background: var(--green); box-shadow: 0 0 6px var(--green); animation: blink 2s infinite; }
-        .sdot.offline { background: var(--red); }
-        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
-        .status-txt { font-size: 12px; font-weight: 600; color: var(--muted); }
-        .status-txt.online { color: var(--green); }
-        .status-txt.offline { color: var(--red); }
-
-        .card-sensors {
-            display: flex; gap: 10px; margin-bottom: 18px;
-        }
-        .sensor-chip {
-            flex: 1; padding: 10px 12px; border-radius: 12px;
-            display: flex; align-items: center; gap: 8px;
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+        .td-mono { font-family: monospace; font-size: 12px; color: var(--muted); }
+        .td-actions { display: flex; gap: 6px; }
+        .td-status {
+            display: inline-flex; align-items: center; gap: 6px;
             font-size: 12px; font-weight: 600;
         }
-        .sensor-ok   { background: var(--green-dim); color: var(--green); }
-        .sensor-err  { background: var(--red-dim);   color: var(--red);   }
-        .sensor-icon { font-size: 16px; }
+        .td-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+        }
+        .td-dot.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+        .td-dot.offline { background: var(--red); }
+        .td-dot.alert { background: var(--red); }
+        .td-sensor {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 6px;
+        }
+        .td-sensor.ok { background: var(--green-dim); color: var(--green); }
+        .td-sensor.err { background: var(--red-dim); color: var(--red); }
 
-        /* WORKFLOW */
-        .workflow { border-top: 1px solid var(--border); padding-top: 16px; }
-        .wf-step {
-            display: flex; align-items: center; gap: 12px;
-            padding: 10px 0; border-bottom: 1px solid var(--border);
+        .btn-row {
+            padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
+            cursor: pointer; border: 1px solid; transition: opacity 0.2s; white-space: nowrap;
+            background: none;
         }
-        .wf-step:last-child { border-bottom: none; padding-bottom: 0; }
-        .wf-num {
-            width: 26px; height: 26px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 11px; font-weight: 700; flex-shrink: 0;
-            background: var(--surface); color: var(--muted);
-            border: 1px solid var(--border);
-        }
-        .wf-num.done { background: var(--green-dim); color: var(--green); border-color: var(--green); }
-        .wf-num.active { background: var(--amber-dim); color: var(--amber); border-color: var(--amber); }
-        .wf-label { font-size: 13px; color: var(--muted); flex:1; }
-        .wf-label.done { color: var(--text); }
-        .wf-value { font-size: 12px; color: var(--green); font-weight: 600; }
+        .btn-row-view { color: var(--blue); border-color: rgba(56,189,248,0.3); background: var(--blue-dim); }
+        .btn-row-edit { color: var(--amber); border-color: rgba(245,158,11,0.3); background: var(--amber-dim); }
+        .btn-row-del  { color: var(--red);  border-color: rgba(239,68,68,0.3);  background: var(--red-dim); }
+        .btn-row:hover { opacity: 0.75; }
 
-        /* BUTTONS */
-        .btn-qr-big {
-            width: 100%; margin-top: 14px;
-            padding: 14px;
-            background: var(--green);
-            border: none; border-radius: 12px;
-            color: #000; font-family: var(--font-display);
-            font-size: 15px; font-weight: 700;
-            cursor: pointer; display: flex; align-items: center;
-            justify-content: center; gap: 8px;
-            transition: opacity 0.2s, transform 0.1s;
-        }
-        .btn-qr-big:hover { opacity: 0.88; }
-        .btn-qr-big:active { transform: scale(0.98); }
-        .btn-qr-big:disabled {
-            background: var(--surface); color: var(--muted);
-            cursor: not-allowed; opacity: 1;
-        }
-        .btn-qr-big.telegram-ok {
-            background: var(--green-dim); color: var(--green);
-            border: 1px solid rgba(34,197,94,0.3);
-        }
-
-        .btn-enter-big {
-            width: 100%; margin-top: 14px;
-            padding: 14px;
-            background: var(--blue-dim);
-            border: 1px solid rgba(56,189,248,0.3);
-            border-radius: 12px;
-            color: var(--blue); font-family: var(--font-display);
-            font-size: 15px; font-weight: 700;
-            cursor: pointer; display: flex; align-items: center;
-            justify-content: center; gap: 8px;
-            transition: opacity 0.2s;
-        }
-        .btn-enter-big:hover { opacity: 0.8; }
-
-        /* FORMS */
+        /* ── FORM CARDS ── */
         .form-card {
             background: var(--card); border: 1px solid var(--border);
             border-radius: 20px; padding: 24px; margin-bottom: 24px;
@@ -338,61 +300,18 @@
         }
         .btn-add:hover { opacity: 0.85; }
 
-        /* TABLES */
-        .data-table {
-            width: 100%; border-collapse: collapse;
-            margin-top: 16px; font-size: 14px;
-        }
-        .data-table th {
-            text-align: left; padding: 12px 16px;
-            background: rgba(0,0,0,0.2);
-            color: var(--muted); font-size: 11px;
-            text-transform: uppercase; letter-spacing: 1px; font-weight: 600;
-        }
-        .data-table td {
-            padding: 13px 16px;
-            border-bottom: 1px solid var(--border);
-            font-size: 13px;
-        }
-        .data-table tr:last-child td { border-bottom: none; }
-        .td-mono { font-family: monospace; font-size: 12px; color: var(--muted); }
-
-        /* ASSIGN ROW */
-        .assign-row {
-            display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
-        }
-        .assign-row select {
-            padding: 7px 10px;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid var(--border); border-radius: 8px;
-            color: var(--text); font-size: 13px; outline: none;
-            flex: 1; min-width: 130px;
-        }
-        .btn-save-sm {
-            padding: 7px 16px;
-            background: var(--blue-dim); color: var(--blue);
-            border: 1px solid rgba(56,189,248,0.3);
-            border-radius: 20px; font-size: 12px; font-weight: 600;
-            cursor: pointer; white-space: nowrap;
-        }
-        .btn-save-sm:hover { opacity: 0.8; }
-        .btn-delete-sm {
-            background: var(--red-dim); color: var(--red);
-            border: 1px solid rgba(239,68,68,0.3);
-        }
-        .btn-delete-sm:hover { opacity: 0.8; }
-
-        /* MODALS */
+        /* ── QR MODAL ── */
         .modal-bg {
             display: none; position: fixed; inset: 0;
             background: rgba(0,0,0,0.85); backdrop-filter: blur(6px);
             z-index: 1000; align-items: center; justify-content: center;
+            padding: 20px;
         }
         .modal-bg.open { display: flex; }
         .modal-box {
             background: var(--card); border: 1px solid var(--border);
             border-radius: 28px; padding: 36px 32px;
-            width: 90%; max-width: 400px; text-align: center;
+            width: 100%; max-width: 400px; text-align: center;
             position: relative;
         }
         .modal-close-btn {
@@ -427,90 +346,210 @@
             flex-shrink: 0; margin-top: 1px;
         }
 
-        /* MACHINE MODAL */
-        #machineModal.modal-bg .modal-box {
-            max-width: 1100px; width: 95%; padding: 0; overflow: hidden;
+        /* ── DETAIL MODAL ── */
+        #detailModal .modal-box {
+            max-width: 900px; width: 100%; text-align: left; padding: 0;
+            display: flex; flex-direction: column; max-height: 90vh;
         }
-        .machine-modal-head {
-            padding: 18px 22px; border-bottom: 1px solid var(--border);
+        .detail-head {
+            padding: 22px 28px; border-bottom: 1px solid var(--border);
             display: flex; justify-content: space-between; align-items: center;
+            flex-shrink: 0;
         }
-        .machine-modal-head h3 { font-family: var(--font-display); font-size: 16px; font-weight: 700; }
-        .iframe-wrap { height: 70vh; }
-        .iframe-wrap iframe { width:100%; height:100%; border:none; background: white; }
+        .detail-head h3 { font-family: var(--font-display); font-size: 18px; font-weight: 800; }
+        .detail-body {
+            padding: 28px; overflow-y: auto;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 28px;
+        }
+        @media (max-width: 720px) { .detail-body { grid-template-columns: 1fr; } }
 
-        /* TELEGRAM WEBHOOK */
-        .webhook-box {
-            background: var(--surface); border-radius: 14px;
-            padding: 16px 18px; margin-bottom: 18px;
+        .detail-section {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 16px; padding: 20px;
         }
-        .webhook-url { font-family: monospace; font-size: 13px; color: var(--blue); margin-top: 6px; }
-        .result-ok  { background: var(--green-dim); border:1px solid rgba(34,197,94,0.3); border-radius:10px; padding:14px; font-size:13px; color:var(--green); }
-        .result-err { background: var(--red-dim);   border:1px solid rgba(239,68,68,0.3);  border-radius:10px; padding:14px; font-size:13px; color:var(--red); }
+        .detail-section h4 {
+            font-family: var(--font-display); font-size: 14px; font-weight: 700;
+            margin-bottom: 14px; color: var(--text);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .detail-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 0; border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-row .label { color: var(--muted); }
+        .detail-row .value { font-weight: 600; }
 
-        /* EMPTY STATE */
-        .empty-state {
-            grid-column: 1/-1;
-            text-align: center; padding: 60px 20px;
-            color: var(--muted);
+        .sensor-big {
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px; border-radius: 12px; margin-bottom: 10px;
+            font-size: 14px; font-weight: 600;
         }
-        .empty-state .big { font-size: 48px; margin-bottom: 14px; }
-        .empty-state p { font-size: 15px; }
+        .sensor-big.ok { background: var(--green-dim); color: var(--green); }
+        .sensor-big.err { background: var(--red-dim); color: var(--red); }
 
-        /* COMMAND PANEL */
-        .cmd-panel {
-            border-top: 1px solid var(--border);
-            margin-top: 14px; padding-top: 14px;
+        .cmd-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px; margin-bottom: 12px;
         }
-        .cmd-panel-title {
-            font-size: 11px; font-weight: 700; letter-spacing: 1px;
-            text-transform: uppercase; color: var(--muted);
-            margin-bottom: 10px;
-        }
-        .cmd-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
         .btn-cmd {
-            padding: 7px 14px; border-radius: 20px; font-size: 12px;
+            padding: 10px 14px; border-radius: 10px; font-size: 13px;
             font-weight: 600; cursor: pointer; border: 1px solid;
-            transition: opacity 0.2s; white-space: nowrap;
+            transition: opacity 0.2s; text-align: center;
+            background: none;
         }
         .btn-cmd-programs { background: var(--blue-dim); color: var(--blue); border-color: rgba(56,189,248,0.3); }
+        .btn-cmd-cycle    { background: var(--green-dim); color: var(--green); border-color: rgba(34,197,94,0.3); }
         .btn-cmd-ota      { background: var(--amber-dim); color: var(--amber); border-color: rgba(245,158,11,0.3); }
         .btn-cmd-reboot   { background: var(--red-dim); color: var(--red); border-color: rgba(239,68,68,0.3); }
+        .btn-cmd-consumption { background: rgba(168,85,247,0.15); color: #a855f7; border-color: rgba(168,85,247,0.3); }
         .btn-cmd:hover { opacity: 0.75; }
         .cmd-status {
-            font-size: 11px; color: var(--muted); min-height: 16px;
+            font-size: 12px; color: var(--muted); min-height: 18px;
             transition: color 0.3s;
         }
         .cmd-status.ok  { color: var(--green); }
         .cmd-status.err { color: var(--red); }
         .cmd-status.wait { color: var(--amber); }
 
-        /* RESPONSIVE */
+        .ota-panel, .consumption-panel {
+            margin-top: 12px; padding: 14px;
+            background: rgba(0,0,0,0.2); border-radius: 12px;
+            display: none;
+        }
+        .ota-panel.open, .consumption-panel.open { display: block; }
+        .ota-panel input {
+            width: 100%; padding: 10px 12px;
+            background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+            border-radius: 8px; color: var(--text); margin-bottom: 10px; font-size: 13px;
+        }
+        .consumption-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+        .consumption-table th, .consumption-table td { padding: 8px; text-align: left; border-bottom: 1px solid var(--border); }
+        .consumption-table th { color: var(--muted); font-size: 11px; text-transform: uppercase; }
+
+        .assign-box {
+            display: flex; flex-direction: column; gap: 10px; margin-top: 8px;
+        }
+        .assign-box select {
+            padding: 10px 12px;
+            background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+            border-radius: 10px; color: var(--text); font-size: 13px; outline: none;
+        }
+        .btn-save-sm {
+            padding: 8px 16px;
+            background: var(--blue-dim); color: var(--blue);
+            border: 1px solid rgba(56,189,248,0.3);
+            border-radius: 20px; font-size: 12px; font-weight: 600;
+            cursor: pointer; align-self: flex-start;
+        }
+        .btn-save-sm:hover { opacity: 0.8; }
+
+        .btn-qr-big {
+            width: 100%; margin-top: 10px;
+            padding: 12px;
+            background: var(--green);
+            border: none; border-radius: 12px;
+            color: #000; font-family: var(--font-display);
+            font-size: 14px; font-weight: 700;
+            cursor: pointer; display: flex; align-items: center;
+            justify-content: center; gap: 8px;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+        .btn-qr-big:hover { opacity: 0.88; }
+        .btn-qr-big:active { transform: scale(0.98); }
+        .btn-qr-big:disabled {
+            background: var(--surface); color: var(--muted);
+            cursor: not-allowed; opacity: 1;
+        }
+        .btn-qr-big.telegram-ok {
+            background: var(--green-dim); color: var(--green);
+            border: 1px solid rgba(34,197,94,0.3);
+        }
+
+        .btn-del-big {
+            width: 100%; margin-top: 10px;
+            padding: 12px;
+            background: var(--red-dim); color: var(--red);
+            border: 1px solid rgba(239,68,68,0.3); border-radius: 12px;
+            font-family: var(--font-display); font-size: 14px; font-weight: 700;
+            cursor: pointer; transition: opacity 0.2s;
+        }
+        .btn-del-big:hover { opacity: 0.8; }
+
+        /* ── EDIT MODAL ── */
+        #editModal .modal-box {
+            max-width: 420px; text-align: left; padding: 32px;
+        }
+        #editModal .modal-box h3 { margin-bottom: 20px; }
+        .edit-form { display: flex; flex-direction: column; gap: 12px; }
+        .edit-form label { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .edit-form input, .edit-form select {
+            padding: 11px 14px;
+            background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+            border-radius: 10px; color: var(--text); font-size: 14px; outline: none;
+        }
+        .edit-form input:focus, .edit-form select:focus { border-color: var(--accent); }
+        .edit-actions { display: flex; gap: 10px; margin-top: 8px; }
+        .edit-actions .btn-add { flex: 1; text-align: center; }
+        .btn-cancel {
+            padding: 10px 22px; background: transparent; color: var(--muted);
+            border: 1px solid var(--border); border-radius: 50px;
+            font-family: var(--font-display); font-size: 13px; font-weight: 700;
+            cursor: pointer; flex: 1; text-align: center;
+        }
+        .btn-cancel:hover { border-color: var(--text); color: var(--text); }
+
+        /* ── TELEGRAM WEBHOOK ── */
+        .webhook-box {
+            background: var(--surface); border-radius: 14px;
+            padding: 16px 18px; margin-bottom: 18px;
+        }
+        .webhook-url { font-family: monospace; font-size: 13px; color: var(--blue); margin-top: 6px; word-break: break-all; }
+        .result-ok  { background: var(--green-dim); border:1px solid rgba(34,197,94,0.3); border-radius:10px; padding:14px; font-size:13px; color:var(--green); }
+        .result-err { background: var(--red-dim);   border:1px solid rgba(239,68,68,0.3);  border-radius:10px; padding:14px; font-size:13px; color:var(--red); }
+
+        /* ── EMPTY STATE ── */
+        .empty-state {
+            text-align: center; padding: 60px 20px;
+            color: var(--muted);
+        }
+        .empty-state .big { font-size: 48px; margin-bottom: 14px; }
+        .empty-state p { font-size: 15px; }
+
+        /* ── RESPONSIVE ── */
         @media (max-width: 640px) {
             .sidebar { display: none !important; }
             .main { padding: 14px; }
             .top-pills { display: none; }
             .topbar { padding: 0 14px; }
+            .detail-body { grid-template-columns: 1fr; padding: 16px; }
+            .data-table th, .data-table td { padding: 10px 12px; font-size: 12px; }
+            .filters-bar input, .filters-bar select { min-width: 140px; }
         }
     </style>
+<base target="_blank">
 </head>
 <body>
 
-<!-- LOGIN SCREEN -->
+<!-- ═══════════ LOGIN ═══════════ -->
 <div id="loginScreen">
     <div class="login-wrap">
         <div class="login-logo">🌿</div>
         <h2>NabulAir</h2>
         <p>Centrale Operativa</p>
         <input type="text" id="loginUser" placeholder="Username" autocomplete="username">
-        <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()">
+        <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter') doLogin()">
         <button class="btn-login" onclick="doLogin()">Accedi</button>
         <div class="login-err" id="loginError"></div>
     </div>
 </div>
 
-<!-- APP SHELL -->
+<!-- ═══════════ APP SHELL ═══════════ -->
 <div id="appShell">
+
+    <!-- TOPBAR -->
     <header class="topbar">
         <div class="topbar-left">
             <div class="top-logo">🌿</div>
@@ -528,9 +567,11 @@
     </header>
 
     <div class="layout">
+
         <!-- SIDEBAR -->
         <nav class="sidebar" id="sidebar">
             <div class="sidebar-label">Menu</div>
+
             <button class="nav-item active" onclick="showSection('machines')" id="nav-machines">
                 <span class="nav-icon">🏭</span> Impianti
             </button>
@@ -540,8 +581,10 @@
             <button class="nav-item" onclick="showSection('clients')" id="nav-clients">
                 <span class="nav-icon">👥</span> Clienti
             </button>
+
             <hr class="sidebar-divider">
             <div class="sidebar-label">Sistema</div>
+
             <button class="nav-item" onclick="showSection('telegram')" id="nav-telegram">
                 <span class="nav-icon">📱</span> Telegram Bot
             </button>
@@ -549,67 +592,113 @@
 
         <!-- MAIN CONTENT -->
         <main class="main">
+
             <!-- ALERTS -->
             <div class="alerts-wrap" id="alertsWrap">
                 <div id="alertsList"></div>
             </div>
 
-            <!-- SECTION MACHINES -->
+            <!-- ═══ SECTION: MACHINES ═══ -->
             <section class="section-page active" id="section-machines">
                 <div class="page-title" id="machinesTitle">🏭 Impianti</div>
                 <div class="page-sub" id="machinesSub">Tutti gli impianti NabulAir</div>
-                <div class="cards-grid" id="cardsGrid">
-                    <div class="empty-state"><div class="big">⏳</div><p>Caricamento impianti...</p></div>
+
+                <div class="filters-bar" id="machineFilters">
+                    <input type="text" id="filterSearch" placeholder="🔍 Cerca nome o MAC..." oninput="filterMachines()">
+                    <select id="filterStatus" onchange="filterMachines()">
+                        <option value="">Tutti gli stati</option>
+                        <option value="online">🟢 Online</option>
+                        <option value="offline">🔴 Offline</option>
+                        <option value="alert">🚨 Allarmi</option>
+                    </select>
+                    <select id="filterClient" onchange="filterMachines()" style="display:none">
+                        <option value="">Tutti i clienti</option>
+                    </select>
+                    <select id="filterInstaller" onchange="filterMachines()" style="display:none">
+                        <option value="">Tutti gli installatori</option>
+                    </select>
+                </div>
+
+                <div class="data-table-wrap">
+                    <table class="data-table" id="machinesTable">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>MAC</th>
+                                <th>Stato</th>
+                                <th>Sensori</th>
+                                <th>Cliente</th>
+                                <th>Installatore</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody id="machinesTbody">
+                            <tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">⏳</div><p>Caricamento impianti...</p></td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </section>
 
-            <!-- SECTION INSTALLATORI (solo admin) -->
+            <!-- ═══ SECTION: INSTALLERS ═══ -->
             <section class="section-page" id="section-installers">
                 <div class="page-title">🔧 Installatori</div>
-                <div class="page-sub">Crea le credenziali per i tuoi installatori</div>
+                <div class="page-sub">Crea, modifica o rimuovi gli installatori</div>
+
                 <div class="form-card">
                     <h3>➕ Nuovo Installatore</h3>
                     <div class="form-grid">
-                        <input type="text" id="instUsername" placeholder="Nome utente (es. mario)">
-                        <input type="password" id="instPassword" placeholder="Password">
+                        <input type="text"     id="instUsername"  placeholder="Nome utente (es. mario)">
+                        <input type="password" id="instPassword"  placeholder="Password (min 6 char)">
                     </div>
                     <button class="btn-add" onclick="addInstaller()">Crea Installatore</button>
                 </div>
+
                 <div class="form-card">
                     <h3>📋 Installatori registrati</h3>
-                    <table class="data-table">
-                        <thead><tr><th>Nome utente</th><th>Impianti assegnati</th></tr></thead>
-                        <tbody id="installersTbody"></tbody>
-                    </table>
+                    <div class="data-table-wrap">
+                        <table class="data-table" id="installersTable">
+                            <thead>
+                                <tr><th>Nome utente</th><th>Impianti assegnati</th><th>Azioni</th></tr>
+                            </thead>
+                            <tbody id="installersTbody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </section>
 
-            <!-- SECTION CLIENTI (admin e installer) -->
+            <!-- ═══ SECTION: CLIENTI ═══ -->
             <section class="section-page" id="section-clients">
                 <div class="page-title">👥 Clienti</div>
-                <div class="page-sub" id="clientsSub">Gestisci l'anagrafica dei clienti finali</div>
+                <div class="page-sub">Gestisci l'anagrafica dei clienti finali</div>
+
                 <div class="form-card">
                     <h3>➕ Nuovo Cliente</h3>
                     <div class="form-grid">
-                        <input type="text" id="clientName" placeholder="Nome e cognome">
+                        <input type="text"  id="clientName"  placeholder="Nome e cognome">
                         <input type="email" id="clientEmail" placeholder="Email">
-                        <input type="tel" id="clientPhone" placeholder="Telefono">
+                        <input type="tel"   id="clientPhone" placeholder="Telefono">
                     </div>
                     <button class="btn-add" onclick="addClient()">Aggiungi Cliente</button>
                 </div>
+
                 <div class="form-card">
                     <h3>📋 Clienti registrati</h3>
-                    <table class="data-table">
-                        <thead><tr><th>Nome</th><th>Email</th><th>Telefono</th><th>Telegram</th><th style="width:60px"></th></tr></thead>
-                        <tbody id="clientsTbody"></tbody>
-                    </table>
+                    <div class="data-table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr><th>Nome</th><th>Email</th><th>Telefono</th><th>Telegram</th><th>Azioni</th></tr>
+                            </thead>
+                            <tbody id="clientsTbody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </section>
 
-            <!-- SECTION TELEGRAM (admin e installer) -->
+            <!-- ═══ SECTION: TELEGRAM ═══ -->
             <section class="section-page" id="section-telegram">
                 <div class="page-title">📱 Telegram Bot</div>
                 <div class="page-sub">Configura il webhook — va fatto una sola volta dopo ogni deploy</div>
+
                 <div class="form-card" style="max-width:520px;">
                     <div class="webhook-box">
                         <div style="font-size:12px; color:var(--muted);">URL webhook attuale</div>
@@ -619,17 +708,20 @@
                     <div id="webhookResult" style="margin-top:14px;"></div>
                 </div>
             </section>
-        </main>
-    </div>
-</div>
 
-<!-- QR MODAL -->
+        </main>
+    </div><!-- /layout -->
+</div><!-- /appShell -->
+
+<!-- ═══════════ QR MODAL ═══════════ -->
 <div class="modal-bg" id="qrModal">
     <div class="modal-box">
         <button class="modal-close-btn" onclick="closeQR()">×</button>
         <h3>📲 Attiva notifiche Telegram</h3>
         <div class="modal-machine-name" id="qrMachineName"></div>
-        <div class="qr-wrap"><div id="qrCanvas"></div></div>
+        <div class="qr-wrap">
+            <div id="qrCanvas"></div>
+        </div>
         <div class="qr-steps">
             <div class="qr-step-item"><div class="qstep-n">1</div><div>Mostra questo QR code al cliente</div></div>
             <div class="qr-step-item"><div class="qstep-n">2</div><div>Il cliente lo scansiona con la fotocamera del telefono</div></div>
@@ -639,31 +731,48 @@
     </div>
 </div>
 
-<!-- MACHINE MODAL (iframe) -->
-<div class="modal-bg" id="machineModal">
-    <div class="modal-box" style="max-width:1100px; width:95%; padding:0; overflow:hidden;">
-        <div class="machine-modal-head">
-            <h3 id="machineModalTitle">NabulAir</h3>
-            <button class="modal-close-btn" style="position:static;" onclick="closeMachine()">×</button>
+<!-- ═══════════ DETAIL MODAL ═══════════ -->
+<div class="modal-bg" id="detailModal">
+    <div class="modal-box">
+        <div class="detail-head">
+            <div>
+                <h3 id="detailTitle">🏭 Dettaglio impianto</h3>
+                <div style="color:var(--muted); font-size:13px; margin-top:2px;" id="detailSub"></div>
+            </div>
+            <button class="modal-close-btn" onclick="closeDetail()">×</button>
         </div>
-        <div class="iframe-wrap"><iframe id="machineIframe" src=""></iframe></div>
+        <div class="detail-body" id="detailBody">
+            <!-- popolato via JS -->
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ EDIT MODAL ═══════════ -->
+<div class="modal-bg" id="editModal">
+    <div class="modal-box">
+        <button class="modal-close-btn" onclick="closeEdit()">×</button>
+        <h3 id="editTitle">Modifica</h3>
+        <div class="edit-form" id="editForm">
+            <!-- popolato via JS -->
+        </div>
     </div>
 </div>
 
 <script>
-// ============================================
+// ═══════════════════════════════════════════════
 // STATE
-// ============================================
+// ═══════════════════════════════════════════════
 const API = '/api';
-let token = localStorage.getItem('nabulair_token');
+let token       = localStorage.getItem('nabulair_token');
 let currentUser = JSON.parse(localStorage.getItem('nabulair_user') || 'null');
 let allMachines = [];
-let allClients = [];
-let allUsers = [];
+let allClients  = [];
+let allUsers    = [];
+let filteredMachines = [];
 
-// ============================================
+// ═══════════════════════════════════════════════
 // AUTH
-// ============================================
+// ═══════════════════════════════════════════════
 async function doLogin() {
     const u = document.getElementById('loginUser').value.trim();
     const p = document.getElementById('loginPass').value;
@@ -671,7 +780,7 @@ async function doLogin() {
     err.style.display = 'none';
     if (!u || !p) { err.textContent = 'Inserisci username e password'; err.style.display='block'; return; }
     try {
-        const res = await fetch(`${API}/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:u, password:p}) });
+        const res  = await fetch(`${API}/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:u, password:p}) });
         const data = await res.json();
         if (data.success) {
             token = data.token;
@@ -695,52 +804,53 @@ function logout() {
     location.reload();
 }
 
-// ============================================
+// ═══════════════════════════════════════════════
 // BOOT
-// ============================================
+// ═══════════════════════════════════════════════
 function bootApp() {
     document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('appShell').style.display = 'block';
+    document.getElementById('appShell').style.display    = 'block';
 
     const role = currentUser.role;
-    document.getElementById('topUsername').textContent = currentUser.username;
+    document.getElementById('topUsername').textContent   = currentUser.username;
     const badge = document.getElementById('topRoleBadge');
-    badge.textContent = role === 'admin' ? 'Admin' : role === 'installer' ? 'Installatore' : 'Cliente';
-    badge.className = `role-badge role-${role}`;
+    badge.textContent  = role === 'admin' ? 'Admin' : role === 'installer' ? 'Installatore' : 'Cliente';
+    badge.className    = `role-badge role-${role}`;
 
-    // Sidebar configuration based on role
+    const sidebar = document.getElementById('sidebar');
     if (role === 'admin') {
-        document.getElementById('sidebar').classList.add('visible');
-        document.getElementById('nav-installers').style.display = 'flex';
-        document.getElementById('nav-clients').style.display = 'flex';
-        document.getElementById('nav-telegram').style.display = 'flex';
-        document.getElementById('clientsSub').textContent = 'Gestisci l\'anagrafica dei clienti finali';
+        sidebar.classList.add('visible');
+        loadClients();
         loadUsers();
     } else if (role === 'installer') {
-        document.getElementById('sidebar').classList.add('visible');
-        document.getElementById('nav-installers').style.display = 'none';
-        document.getElementById('nav-clients').style.display = 'flex';
-        document.getElementById('nav-telegram').style.display = 'flex';
-        document.getElementById('clientsSub').textContent = 'Gestisci i tuoi clienti (solo quelli associati ai tuoi impianti)';
-    } else {
-        document.getElementById('sidebar').classList.remove('visible');
-    }
-
-    if (role === 'installer') {
+        sidebar.classList.add('visible');
+        // Installer vede Impianti e Clienti
+        sidebar.innerHTML = `
+            <div class="sidebar-label">Menu</div>
+            <button class="nav-item active" onclick="showSection('machines')" id="nav-machines">
+                <span class="nav-icon">🏭</span> I Tuoi Impianti
+            </button>
+            <button class="nav-item" onclick="showSection('clients')" id="nav-clients">
+                <span class="nav-icon">👥</span> Clienti
+            </button>
+        `;
         document.getElementById('machinesTitle').textContent = '🏭 I Tuoi Impianti';
-        document.getElementById('machinesSub').textContent = 'Impianti assegnati a te';
+        document.getElementById('machinesSub').textContent   = 'Impianti assegnati a te';
+        loadClients();
+    } else {
+        // Cliente: nessuna sidebar, solo i suoi impianti in tabella
+        sidebar.style.display = 'none';
+        document.getElementById('machinesTitle').textContent = '🏭 I Tuoi Impianti';
+        document.getElementById('machinesSub').textContent   = 'I tuoi impianti NabulAir';
     }
 
     loadMachines();
     loadAlerts();
-    loadClients();
-    updateTopPills();
 }
 
-function updateTopPills() {
-    if (currentUser.role !== 'admin') return;
-}
-
+// ═══════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════
 function showSection(name) {
     document.querySelectorAll('.section-page').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -751,23 +861,23 @@ function showSection(name) {
     if (name === 'clients') renderClientsTable();
 }
 
-// ============================================
+// ═══════════════════════════════════════════════
 // API HELPERS
-// ============================================
+// ═══════════════════════════════════════════════
 async function api(method, endpoint, body) {
     const opts = { method, headers: { 'Authorization': `Bearer ${token}` } };
     if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
     const res = await fetch(API + endpoint, opts);
     return res.json();
 }
-const apiGet = ep => api('GET', ep);
-const apiPost = (ep, b) => api('POST', ep, b);
-const apiPut = (ep, b) => api('PUT', ep, b);
-const apiDelete = (ep) => api('DELETE', ep);
+const apiGet  = ep       => api('GET',  ep);
+const apiPost = (ep, b)  => api('POST', ep, b);
+const apiPut  = (ep, b)  => api('PUT',  ep, b);
+const apiDel  = ep       => api('DELETE', ep);
 
-// ============================================
+// ═══════════════════════════════════════════════
 // ALERTS
-// ============================================
+// ═══════════════════════════════════════════════
 async function loadAlerts() {
     try {
         const data = await apiGet('/alerts');
@@ -791,228 +901,363 @@ async function resolveAlert(id) {
     loadAlerts();
 }
 
-// ============================================
-// MACHINES
-// ============================================
+// ═══════════════════════════════════════════════
+// MACHINES — TABLE + FILTERS
+// ═══════════════════════════════════════════════
 async function loadMachines() {
     try {
         const data = await apiGet('/machines');
         if (data.success) {
             allMachines = data.machines;
-            renderCards(data.machines);
+            populateFilterDropdowns();
+            filterMachines();
             renderTopPills(data.machines);
-            if (currentUser.role === 'installer' || currentUser.role === 'admin') {
-                renderInstallers();
-            }
         }
     } catch(e) {
-        document.getElementById('cardsGrid').innerHTML = '<div class="empty-state"><div class="big">❌</div><p>Errore di connessione</p></div>';
+        document.getElementById('machinesTbody').innerHTML =
+            '<tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">❌</div><p>Errore di connessione</p></td></tr>';
     }
+}
+
+function populateFilterDropdowns() {
+    const role = currentUser.role;
+    const fClient = document.getElementById('filterClient');
+    const fInst   = document.getElementById('filterInstaller');
+
+    if (role === 'admin') {
+        fClient.style.display = 'inline-block';
+        fInst.style.display   = 'inline-block';
+        fClient.innerHTML = '<option value="">Tutti i clienti</option>' +
+            allClients.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+        fInst.innerHTML = '<option value="">Tutti gli installatori</option>' +
+            allUsers.filter(u=>u.role==='installer').map(u => `<option value="${u.id}">${esc(u.username)}</option>`).join('');
+    }
+}
+
+function filterMachines() {
+    const search = document.getElementById('filterSearch').value.toLowerCase();
+    const status = document.getElementById('filterStatus').value;
+    const clientId = document.getElementById('filterClient').value;
+    const instId   = document.getElementById('filterInstaller').value;
+
+    filteredMachines = allMachines.filter(m => {
+        const textMatch = (m.machine_name||'').toLowerCase().includes(search) || (m.mac_address||'').toLowerCase().includes(search);
+        let statusMatch = true;
+        if (status === 'online')  statusMatch = m.status === 'online';
+        if (status === 'offline') statusMatch = m.status !== 'online';
+        if (status === 'alert')   statusMatch = m.water_ok === false || m.insecticide_ok === false;
+        let clientMatch = true, instMatch = true;
+        if (clientId) clientMatch = m.client_id == clientId;
+        if (instId)   instMatch   = m.installer_id == instId;
+        return textMatch && statusMatch && clientMatch && instMatch;
+    });
+
+    renderMachinesTable(filteredMachines);
+}
+
+function renderMachinesTable(machines) {
+    const tbody = document.getElementById('machinesTbody');
+    if (!machines.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">📭</div><p>Nessun impianto trovato</p></td></tr>';
+        return;
+    }
+
+    const isAdmin     = currentUser.role === 'admin';
+    const isInstaller = currentUser.role === 'installer';
+
+    tbody.innerHTML = machines.map(m => {
+        const online  = m.status === 'online';
+        const waterOk = m.water_ok !== false;
+        const insOk   = m.insecticide_ok !== false;
+        const hasAlert = !waterOk || !insOk;
+
+        const clientName = m.client_name || (m.client_id ? allClients.find(c=>c.id==m.client_id)?.name : '') || '—';
+        const instName   = m.installer_name || (m.installer_id ? allUsers.find(u=>u.id==m.installer_id)?.username : '') || '—';
+
+        let actions = `<button class="btn-row btn-row-view" onclick="openDetail(${m.id})">👁 Dettaglio</button>`;
+        if (isAdmin) {
+            actions += ` <button class="btn-row btn-row-edit" onclick="editMachine(${m.id})">✎</button>`;
+            actions += ` <button class="btn-row btn-row-del" onclick="deleteMachine(${m.id})">🗑</button>`;
+        }
+
+        return `<tr>
+            <td><strong>${esc(m.machine_name || 'Impianto')}</strong></td>
+            <td class="td-mono">${m.mac_address || '—'}</td>
+            <td>
+                <span class="td-status">
+                    <span class="td-dot ${online?'online':'offline'}"></span>
+                    ${online?'Online':'Offline'}
+                </span>
+            </td>
+            <td>
+                <span class="td-sensor ${waterOk?'ok':'err'}">💧 ${waterOk?'OK':'❌'}</span>
+                <span class="td-sensor ${insOk?'ok':'err'}">🧪 ${insOk?'OK':'❌'}</span>
+            </td>
+            <td>${esc(clientName)}</td>
+            <td>${esc(instName)}</td>
+            <td class="td-actions">${actions}</td>
+        </tr>`;
+    }).join('');
 }
 
 function renderTopPills(machines) {
     if (currentUser.role !== 'admin') return;
-    const online = machines.filter(m => m.status === 'online').length;
+    const online  = machines.filter(m => m.status === 'online').length;
     const offline = machines.filter(m => m.status !== 'online').length;
-    const alerts = machines.filter(m => m.water_ok === false || m.insecticide_ok === false).length;
+    const alerts  = machines.filter(m => m.water_ok === false || m.insecticide_ok === false).length;
     document.getElementById('topPills').innerHTML = `
         <div class="pill">Totale <span>${machines.length}</span></div>
         <div class="pill">🟢 Online <span>${online}</span></div>
         ${offline > 0 ? `<div class="pill">🔴 Offline <span>${offline}</span></div>` : ''}
-        ${alerts > 0 ? `<div class="pill">🚨 Allarmi <span>${alerts}</span></div>` : ''}
+        ${alerts  > 0 ? `<div class="pill">🚨 Allarmi <span>${alerts}</span></div>`  : ''}
     `;
 }
 
-function renderCards(machines) {
-    const grid = document.getElementById('cardsGrid');
-    if (!machines.length) {
-        grid.innerHTML = '<div class="empty-state"><div class="big">📭</div><p>Nessun impianto trovato</p></div>';
+// ═══════════════════════════════════════════════
+// MACHINE DETAIL MODAL
+// ═══════════════════════════════════════════════
+let currentDetailId = null;
+
+function openDetail(id) {
+    const m = allMachines.find(x => x.id === id);
+    if (!m) return;
+    currentDetailId = id;
+
+    const online  = m.status === 'online';
+    const waterOk = m.water_ok !== false;
+    const insOk   = m.insecticide_ok !== false;
+    const step1done = !!m.client_id;
+    const step2done = !!m.telegram_chat_id;
+    const isAdmin     = currentUser.role === 'admin';
+    const isInstaller = currentUser.role === 'installer';
+    const isClient    = currentUser.role === 'client';
+
+    document.getElementById('detailTitle').textContent = esc(m.machine_name || 'Impianto');
+    document.getElementById('detailSub').textContent = `${m.mac_address || '—'} · IP ${m.sta_ip || '—'}`;
+
+    // Colonna sinistra: info + sensori + assegnazione
+    let left = `
+        <div class="detail-section">
+            <h4>📡 Stato</h4>
+            <div class="detail-row"><span class="label">Connessione</span><span class="value" style="color:${online?'var(--green)':'var(--red)'}">${online?'🟢 Online':'🔴 Offline'}</span></div>
+            <div class="detail-row"><span class="label">MAC</span><span class="value td-mono">${m.mac_address||'—'}</span></div>
+            <div class="detail-row"><span class="label">IP</span><span class="value td-mono">${m.sta_ip||'—'}</span></div>
+        </div>
+
+        <div class="detail-section">
+            <h4>🧪 Sensori</h4>
+            <div class="sensor-big ${waterOk?'ok':'err'}">
+                <span style="font-size:18px">💧</span>
+                <span>${waterOk?'Acqua presente':'Acqua assente — rabboccare!'}</span>
+            </div>
+            <div class="sensor-big ${insOk?'ok':'err'}">
+                <span style="font-size:18px">🧪</span>
+                <span>${insOk?'Insetticida OK':'Insetticida esaurito!'}</span>
+            </div>
+        </div>
+    `;
+
+    // Assegnazione
+    let assignSection = `<div class="detail-section"><h4>👤 Assegnazione</h4>`;
+    if (isAdmin) {
+        const clientOpts = allClients.map(c =>
+            `<option value="${c.id}" ${m.client_id==c.id?'selected':''}>${esc(c.name)}</option>`).join('');
+        const instOpts = allUsers.filter(u=>u.role==='installer').map(u =>
+            `<option value="${u.id}" ${m.installer_id==u.id?'selected':''}>${esc(u.username)}</option>`).join('');
+        assignSection += `
+            <div class="assign-box">
+                <label style="font-size:12px; color:var(--muted);">Cliente</label>
+                <select id="det-client-${m.id}"><option value="">— Nessun cliente —</option>${clientOpts}</select>
+                <label style="font-size:12px; color:var(--muted);">Installatore</label>
+                <select id="det-inst-${m.id}"><option value="">— Nessun installatore —</option>${instOpts}</select>
+                <button class="btn-save-sm" onclick="saveDetailAssign(${m.id})">💾 Salva assegnazione</button>
+            </div>
+        `;
+    } else if (isInstaller) {
+        const clientOpts = allClients.map(c =>
+            `<option value="${c.id}" ${m.client_id==c.id?'selected':''}>${esc(c.name)}</option>`).join('');
+        assignSection += `
+            <div class="assign-box">
+                <label style="font-size:12px; color:var(--muted);">Cliente assegnato</label>
+                <select id="det-client-${m.id}"><option value="">— Nessun cliente —</option>${clientOpts}</select>
+                <button class="btn-save-sm" onclick="saveDetailAssign(${m.id})">💾 Salva cliente</button>
+            </div>
+        `;
+    } else {
+        const clientName = m.client_name || allClients.find(c=>c.id==m.client_id)?.name || '—';
+        assignSection += `<div class="detail-row"><span class="label">Cliente</span><span class="value">${esc(clientName)}</span></div>`;
+    }
+    assignSection += `</div>`;
+    left += assignSection;
+
+    // Telegram
+    let telegramSection = `<div class="detail-section"><h4>📱 Telegram</h4>`;
+    if (step2done) {
+        telegramSection += `<div style="color:var(--green); font-size:13px; font-weight:600;">✅ Attivo — chat ID: ${esc(m.telegram_chat_id)}</div>`;
+        if (!isClient) {
+            telegramSection += `<button class="btn-qr-big telegram-ok" style="margin-top:12px;" onclick="openQR(${m.id},'${esc(m.machine_name||m.mac_address)}')">🔄 Rigenera QR</button>`;
+        }
+    } else if (step1done && !isClient) {
+        telegramSection += `<div style="color:var(--muted); font-size:13px;">Non ancora attivato dal cliente</div>`;
+        telegramSection += `<button class="btn-qr-big" style="margin-top:12px;" onclick="openQR(${m.id},'${esc(m.machine_name||m.mac_address)}')">📲 Genera QR Telegram</button>`;
+    } else if (!step1done && !isClient) {
+        telegramSection += `<div style="color:var(--amber); font-size:13px;">🔒 Assegna prima un cliente per attivare Telegram</div>`;
+    } else {
+        telegramSection += `<div style="color:var(--muted); font-size:13px;">—</div>`;
+    }
+    telegramSection += `</div>`;
+    left += telegramSection;
+
+    // Colonna destra: comandi
+    let right = '';
+    if (!isClient) {
+        right = `
+        <div class="detail-section">
+            <h4>🛠 Comandi remoti</h4>
+            <div class="cmd-grid">
+                <button class="btn-cmd btn-cmd-programs" onclick="sendMachineCmd(${m.id},'programs')">📅 Aggiorna programmi</button>
+                <button class="btn-cmd btn-cmd-cycle" onclick="sendMachineCmd(${m.id},'cycle')">▶ Avvia ciclo</button>
+                <button class="btn-cmd btn-cmd-reboot" onclick="sendMachineCmd(${m.id},'reboot')">🔄 Riavvia</button>
+                <button class="btn-cmd btn-cmd-ota" onclick="toggleOtaPanel(${m.id})">⬆️ OTA Firmware</button>
+                <button class="btn-cmd btn-cmd-consumption" onclick="toggleConsumptionPanel(${m.id})">📊 Consumi</button>
+            </div>
+            <div class="cmd-status" id="cmd-status-${m.id}"></div>
+
+            <div class="ota-panel" id="ota-panel-${m.id}">
+                <label style="font-size:12px; color:var(--muted);">URL firmware (.bin)</label>
+                <input type="text" id="ota-url-${m.id}" placeholder="https://.../firmware.bin">
+                <button class="btn-cmd btn-cmd-ota" style="width:100%" onclick="sendMachineCmd(${m.id},'ota')">🚀 Avvia aggiornamento</button>
+            </div>
+
+            <div class="consumption-panel" id="consumption-panel-${m.id}">
+                <div style="font-size:12px; color:var(--muted); margin-bottom:8px;">Ultimi cicli registrati</div>
+                <div id="consumption-content-${m.id}">Caricamento...</div>
+            </div>
+        </div>
+        `;
+    }
+
+    if (isAdmin) {
+        right += `
+        <div class="detail-section">
+            <h4>⚠️ Pericolo</h4>
+            <button class="btn-del-big" onclick="deleteMachine(${m.id}); closeDetail();">🗑 Elimina impianto</button>
+        </div>
+        `;
+    }
+
+    document.getElementById('detailBody').innerHTML = left + right;
+    document.getElementById('detailModal').classList.add('open');
+}
+
+function closeDetail() {
+    document.getElementById('detailModal').classList.remove('open');
+    currentDetailId = null;
+}
+
+async function saveDetailAssign(machineId) {
+    const clientId   = document.getElementById(`det-client-${machineId}`)?.value || null;
+    const installerId = document.getElementById(`det-inst-${machineId}`)?.value || null;
+    const res = await apiPut(`/machines/${machineId}/assign`, { client_id: clientId||null, installer_id: installerId||null });
+    if (res.success) {
+        await loadMachines();
+        openDetail(machineId); // refresh
+    } else {
+        alert(res.message || 'Errore salvataggio');
+    }
+}
+
+async function sendMachineCmd(machineId, cmd) {
+    const statusEl = document.getElementById(`cmd-status-${machineId}`);
+    statusEl.textContent = '⏳ Invio comando...';
+    statusEl.className = 'cmd-status wait';
+
+    let payload = { command: cmd };
+    if (cmd === 'ota') {
+        const url = document.getElementById(`ota-url-${machineId}`)?.value.trim();
+        if (!url) { statusEl.textContent = '❌ Inserisci URL firmware'; statusEl.className='cmd-status err'; return; }
+        payload.url = url;
+    }
+
+    try {
+        const res = await apiPost(`/machines/${machineId}/command`, payload);
+        if (res.success) {
+            statusEl.textContent = '✅ Comando inviato';
+            statusEl.className = 'cmd-status ok';
+            if (cmd === 'consumption') renderConsumption(machineId, res.data || []);
+        } else {
+            statusEl.textContent = '❌ ' + (res.message || 'Errore');
+            statusEl.className = 'cmd-status err';
+        }
+    } catch(e) {
+        statusEl.textContent = '❌ Errore di connessione';
+        statusEl.className = 'cmd-status err';
+    }
+}
+
+function toggleOtaPanel(id) {
+    const p = document.getElementById(`ota-panel-${id}`);
+    p.classList.toggle('open');
+    document.getElementById(`consumption-panel-${id}`).classList.remove('open');
+}
+
+function toggleConsumptionPanel(id) {
+    const p = document.getElementById(`consumption-panel-${id}`);
+    const isOpen = p.classList.contains('open');
+    p.classList.toggle('open');
+    document.getElementById(`ota-panel-${id}`).classList.remove('open');
+    if (!isOpen) {
+        sendMachineCmd(id, 'consumption');
+    }
+}
+
+function renderConsumption(machineId, data) {
+    const el = document.getElementById(`consumption-content-${machineId}`);
+    if (!data || !data.length) {
+        el.innerHTML = '<div style="color:var(--muted); font-size:13px;">Nessun dato disponibile</div>';
         return;
     }
-
-    const isAdmin = currentUser.role === 'admin';
-    const isInstaller = currentUser.role === 'installer';
-
-    grid.innerHTML = machines.map(m => {
-        const online = m.status === 'online';
-        const waterOk = m.water_ok !== false;
-        const insOk = m.insecticide_ok !== false;
-        const hasAlert = !waterOk || !insOk;
-        const step1done = !!m.client_id;
-        const step2done = !!m.telegram_chat_id;
-
-        let qrBtn = '';
-        if (isAdmin || isInstaller) {
-            if (step2done) {
-                qrBtn = `<button class="btn-qr-big telegram-ok" onclick="openQR(${m.id},'${esc(m.machine_name || m.mac_address)}')">✅ Telegram attivo — Rigenera QR</button>`;
-            } else if (step1done) {
-                qrBtn = `<button class="btn-qr-big" onclick="openQR(${m.id},'${esc(m.machine_name || m.mac_address)}')">📲 Invia notifiche Telegram al cliente</button>`;
-            } else {
-                qrBtn = `<button class="btn-qr-big" disabled>🔒 Prima assegna un cliente</button>`;
-            }
-        }
-
-        const enterBtn = `<button class="btn-enter-big" onclick="openMachine(${m.id},'${esc(m.machine_name || 'Macchina')}','${m.sta_ip || m.mac_address}')">▶ ${(isAdmin || isInstaller) ? 'Entra nel pannello' : 'Apri pannello di controllo'}</button>`;
-
-        let assignBlock = '';
-        if (isAdmin) {
-            const clientOpts = allClients.map(c => `<option value="${c.id}" ${m.client_id == c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
-            const instOpts = allUsers.filter(u => u.role === 'installer').map(u => `<option value="${u.id}" ${m.installer_id == u.id ? 'selected' : ''}>${esc(u.username)}</option>`).join('');
-            assignBlock = `
-                <div class="wf-step">
-                    <div class="wf-num ${step1done ? 'done' : 'active'}">1</div>
-                    <div class="wf-label ${step1done ? 'done' : ''}">Assegna cliente e installatore</div>
-                </div>
-                <div style="padding:8px 0 10px 38px;">
-                    <div class="assign-row">
-                        <select id="sel-client-${m.id}"><option value="">— Seleziona cliente —</option>${clientOpts}</select>
-                        <select id="sel-inst-${m.id}"><option value="">— Installatore —</option>${instOpts}</select>
-                        <button class="btn-save-sm" id="save-btn-${m.id}" onclick="saveAssign(${m.id})">💾 Salva</button>
-                    </div>
-                </div>`;
-        } else if (isInstaller) {
-            const clientOpts = allClients.map(c => `<option value="${c.id}" ${m.client_id == c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
-            assignBlock = `
-                <div class="wf-step">
-                    <div class="wf-num ${step1done ? 'done' : 'active'}">1</div>
-                    <div class="wf-label ${step1done ? 'done' : ''}">Assegna cliente</div>
-                </div>
-                <div style="padding:8px 0 10px 38px;">
-                    <div class="assign-row">
-                        <select id="sel-client-${m.id}"><option value="">— Seleziona cliente —</option>${clientOpts}</select>
-                        <button class="btn-save-sm" id="save-btn-${m.id}" onclick="saveAssignInstaller(${m.id})">💾 Salva</button>
-                    </div>
-                </div>`;
-        } else {
-            assignBlock = `
-                <div class="wf-step">
-                    <div class="wf-num ${step1done ? 'done' : 'active'}">1</div>
-                    <div class="wf-label ${step1done ? 'done' : ''}">${step1done ? `Cliente: <strong>${esc(m.client_name || '—')}</strong>` : 'In attesa di cliente'}</div>
-                </div>`;
-        }
-
-        let cmdPanel = '';
-        if (isAdmin) {
-            cmdPanel = `
-            <div class="cmd-panel">
-                <div class="cmd-panel-title">🛠 Comandi remoti</div>
-                <div class="cmd-buttons">
-                    <button class="btn-cmd btn-cmd-programs" onclick="sendPrograms(${m.id})">📅 Aggiorna programmi</button>
-                    <button class="btn-cmd btn-cmd-ota" onclick="openOtaModal(${m.id}, '${esc(m.machine_name || m.mac_address)}')">⬆️ OTA Firmware</button>
-                    <button class="btn-cmd btn-cmd-reboot" onclick="sendReboot(${m.id})">🔄 Riavvia</button>
-                </div>
-                <div class="cmd-status" id="cmd-status-${m.id}"></div>
-            </div>`;
-        }
-
-        return `
-        <div class="machine-card ${hasAlert ? 'has-alert' : ''}">
-            <div class="card-head">
-                <div>
-                    <div class="card-name">${esc(m.machine_name || 'Impianto')}</div>
-                    <div class="card-mac">${m.mac_address}</div>
-                </div>
-                <div class="status-dot-wrap">
-                    <div class="sdot ${online ? 'online' : 'offline'}"></div>
-                    <span class="status-txt ${online ? 'online' : 'offline'}">${online ? 'Online' : 'Offline'}</span>
-                </div>
-            </div>
-            <div class="card-sensors">
-                <div class="sensor-chip ${waterOk ? 'sensor-ok' : 'sensor-err'}">
-                    <span class="sensor-icon">💧</span>
-                    <span>${waterOk ? 'Acqua OK' : 'Acqua ❌'}</span>
-                </div>
-                <div class="sensor-chip ${insOk ? 'sensor-ok' : 'sensor-err'}">
-                    <span class="sensor-icon">🧪</span>
-                    <span>${insOk ? 'Insetticida OK' : 'Insetticida ❌'}</span>
-                </div>
-            </div>
-            <div class="workflow">
-                ${assignBlock}
-                <div class="wf-step">
-                    <div class="wf-num ${step2done ? 'done' : (step1done ? 'active' : '')}">2</div>
-                    <div class="wf-label ${step2done ? 'done' : ''}">${step2done ? 'Telegram attivo ✅' : 'Telegram non ancora attivato'}</div>
-                </div>
-            </div>
-            ${qrBtn}
-            ${enterBtn}
-            ${cmdPanel}
-        </div>`;
-    }).join('');
+    el.innerHTML = `
+        <table class="consumption-table">
+            <thead><tr><th>Data</th><th>Durata</th><th>Litri</th><th>ml inset.</th></tr></thead>
+            <tbody>
+                ${data.map(row => `<tr>
+                    <td>${esc(row.date||'—')}</td>
+                    <td>${esc(row.duration||'—')}</td>
+                    <td>${esc(row.liters!=null?row.liters+' L':'—')}</td>
+                    <td>${esc(row.insecticide!=null?row.insecticide+' ml':'—')}</td>
+                </tr>`).join('')}
+            </tbody>
+        </table>
+    `;
 }
 
-async function saveAssign(machineId) {
-    const clientId = document.getElementById(`sel-client-${machineId}`)?.value || null;
-    const installerId = document.getElementById(`sel-inst-${machineId}`)?.value || null;
-    const btn = document.getElementById(`save-btn-${machineId}`);
-    btn.textContent = '⏳'; btn.disabled = true;
-    const res = await apiPut(`/machines/${machineId}/assign`, { client_id: clientId || null, installer_id: installerId || null });
-    if (res.success) {
-        btn.textContent = '✅';
-        setTimeout(async () => { btn.textContent = '💾 Salva'; btn.disabled = false; await loadMachines(); await loadClients(); }, 1200);
-    } else {
-        btn.textContent = '❌'; setTimeout(() => { btn.textContent = '💾 Salva'; btn.disabled = false; }, 2000);
-    }
-}
-
-async function saveAssignInstaller(machineId) {
-    const clientId = document.getElementById(`sel-client-${machineId}`)?.value || null;
-    const btn = document.getElementById(`save-btn-${machineId}`);
-    btn.textContent = '⏳'; btn.disabled = true;
-    const res = await apiPut(`/machines/${machineId}/assign`, { client_id: clientId || null, installer_id: null });
-    if (res.success) {
-        btn.textContent = '✅';
-        setTimeout(async () => { btn.textContent = '💾 Salva'; btn.disabled = false; await loadMachines(); await loadClients(); }, 1200);
-    } else {
-        btn.textContent = '❌'; setTimeout(() => { btn.textContent = '💾 Salva'; btn.disabled = false; }, 2000);
-    }
-}
-
-// ============================================
-// QR CODE
-// ============================================
+// ═══════════════════════════════════════════════
+// QR
+// ═══════════════════════════════════════════════
 async function openQR(machineId, machineName) {
     const res = await apiPost(`/machines/${machineId}/qr`, {});
     if (!res.success) { alert(res.message || 'Errore generazione QR'); return; }
     document.getElementById('qrMachineName').textContent = '🏭 ' + machineName;
     const canvas = document.getElementById('qrCanvas');
     canvas.innerHTML = '';
-    new QRCode(canvas, { text: res.telegram_link, width: 220, height: 220, colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.M });
+    new QRCode(canvas, { text: res.telegram_link, width: 220, height: 220, colorDark:'#000', colorLight:'#fff', correctLevel: QRCode.CorrectLevel.M });
     document.getElementById('qrModal').classList.add('open');
 }
-
 function closeQR() {
     document.getElementById('qrModal').classList.remove('open');
     document.getElementById('qrCanvas').innerHTML = '';
 }
 
-// ============================================
-// MACHINE IFRAME
-// ============================================
-function openMachine(id, name, ip) {
-    document.getElementById('machineModalTitle').textContent = '🌿 ' + name;
-    document.getElementById('machineIframe').src = `/remote.html?ip=${ip}`;
-    document.getElementById('machineModal').classList.add('open');
-}
-
-function closeMachine() {
-    document.getElementById('machineModal').classList.remove('open');
-    document.getElementById('machineIframe').src = '';
-}
-
-// ============================================
-// CLIENTS (admin e installer)
-// ============================================
+// ═══════════════════════════════════════════════
+// CLIENTS CRUD
+// ═══════════════════════════════════════════════
 async function loadClients() {
-    try {
-        const data = await apiGet('/clients');
-        if (data.success) {
-            allClients = data.clients;
-            renderClientsTable();
-            await loadMachines();
-        }
-    } catch(e) {
-        console.error('Errore caricamento clienti:', e);
+    const data = await apiGet('/clients');
+    if (data.success) {
+        allClients = data.clients;
+        renderClientsTable();
+        populateFilterDropdowns();
     }
 }
 
@@ -1020,23 +1265,30 @@ function renderClientsTable() {
     const tbody = document.getElementById('clientsTbody');
     if (!tbody) return;
     if (!allClients.length) {
-        tbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted); text-align:center; padding:20px;">Nessun cliente presente</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state" style="padding:20px;">Nessun cliente registrato</td></tr>';
         return;
     }
     const isAdmin = currentUser.role === 'admin';
-    tbody.innerHTML = allClients.map(c => `
-        <tr>
+    tbody.innerHTML = allClients.map(c => {
+        let actions = '';
+        if (isAdmin || currentUser.role === 'installer') {
+            actions = `
+                <button class="btn-row btn-row-edit" onclick="editClient(${c.id})">✎ Modifica</button>
+                ${isAdmin ? `<button class="btn-row btn-row-del" onclick="deleteClient(${c.id})">🗑 Elimina</button>` : ''}
+            `;
+        }
+        return `<tr>
             <td><strong>${esc(c.name)}</strong></td>
-            <td class="td-mono">${esc(c.email || '—')}</td>
-            <td class="td-mono">${esc(c.phone || '—')}</td>
+            <td class="td-mono">${esc(c.email||'—')}</td>
+            <td class="td-mono">${esc(c.phone||'—')}</td>
             <td>${c.telegram_chat_id ? `<span style="color:var(--green); font-size:12px;">✅ ${esc(c.telegram_chat_id)}</span>` : '<span style="color:var(--muted); font-size:12px;">—</span>'}</td>
-            <td>${isAdmin ? `<button class="btn-save-sm btn-delete-sm" onclick="deleteClient(${c.id})">🗑</button>` : ''}</td>
-        </tr>
-    `).join('');
+            <td class="td-actions">${actions}</td>
+        </tr>`;
+    }).join('');
 }
 
 async function addClient() {
-    const name = document.getElementById('clientName').value.trim();
+    const name  = document.getElementById('clientName').value.trim();
     const email = document.getElementById('clientEmail').value.trim();
     const phone = document.getElementById('clientPhone').value.trim();
     if (!name) return alert('Il nome è obbligatorio');
@@ -1046,31 +1298,45 @@ async function addClient() {
         document.getElementById('clientEmail').value = '';
         document.getElementById('clientPhone').value = '';
         await loadClients();
-        alert('✅ Cliente creato con successo');
     } else {
-        alert('❌ Errore: ' + (res.message || 'Impossibile creare il cliente'));
+        alert(res.message || 'Errore');
     }
+}
+
+function editClient(id) {
+    const c = allClients.find(x => x.id === id);
+    if (!c) return;
+    openEditModal({
+        title: 'Modifica Cliente',
+        fields: [
+            { label: 'Nome', name: 'name', value: c.name, type: 'text' },
+            { label: 'Email', name: 'email', value: c.email||'', type: 'email' },
+            { label: 'Telefono', name: 'phone', value: c.phone||'', type: 'tel' }
+        ],
+        onSave: async (vals) => {
+            const res = await apiPut(`/clients/${id}`, vals);
+            if (res.success) { closeEdit(); await loadClients(); }
+            else alert(res.message || 'Errore modifica');
+        }
+    });
 }
 
 async function deleteClient(id) {
-    if (!confirm('Sei sicuro di voler eliminare questo cliente? Verrà rimosso solo se non associato ad alcun impianto.')) return;
-    const res = await apiDelete(`/clients/${id}`);
-    if (res.success) {
-        await loadClients();
-        alert('✅ Cliente eliminato');
-    } else {
-        alert('❌ ' + (res.message || 'Impossibile eliminare il cliente'));
-    }
+    if (!confirm('Eliminare definitivamente questo cliente?')) return;
+    const res = await apiDel(`/clients/${id}`);
+    if (res.success) await loadClients();
+    else alert(res.message || 'Errore eliminazione');
 }
 
-// ============================================
-// USERS / INSTALLERS (solo admin)
-// ============================================
+// ═══════════════════════════════════════════════
+// INSTALLERS CRUD
+// ═══════════════════════════════════════════════
 async function loadUsers() {
     const data = await apiGet('/users');
     if (data.success) {
         allUsers = data.users;
         renderInstallers();
+        populateFilterDropdowns();
     }
 }
 
@@ -1079,12 +1345,19 @@ function renderInstallers() {
     if (!tbody) return;
     const installers = allUsers.filter(u => u.role === 'installer');
     if (!installers.length) {
-        tbody.innerHTML = '<tr><td colspan="2" style="color:var(--muted); text-align:center; padding:20px;">Nessun installatore ancora</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3" style="color:var(--muted); text-align:center; padding:20px;">Nessun installatore ancora</td></tr>';
         return;
     }
     tbody.innerHTML = installers.map(u => {
         const count = allMachines.filter(m => m.installer_id == u.id).length;
-        return `<tr><td><strong>${esc(u.username)}</strong></td><td>${count > 0 ? `${count} impianto${count > 1 ? 'i' : ''}` : '<span style="color:var(--muted)">—</span>'}</td></tr>`;
+        return `<tr>
+            <td><strong>${esc(u.username)}</strong></td>
+            <td>${count > 0 ? `${count} impianto${count>1?'i':''}` : '<span style="color:var(--muted)">—</span>'}</td>
+            <td class="td-actions">
+                <button class="btn-row btn-row-edit" onclick="editInstaller(${u.id})">✎ Modifica</button>
+                <button class="btn-row btn-row-del" onclick="deleteInstaller(${u.id})">🗑 Elimina</button>
+            </td>
+        </tr>`;
     }).join('');
 }
 
@@ -1098,167 +1371,160 @@ async function addInstaller() {
         document.getElementById('instUsername').value = '';
         document.getElementById('instPassword').value = '';
         await loadUsers();
-        alert(`✅ Installatore "${username}" creato! Credenziali: ${username} / (password impostata)`);
+        alert(`✅ Installatore "${username}" creato!`);
     } else {
         alert(res.message || 'Errore nella creazione');
     }
 }
 
-// ============================================
-// TELEGRAM WEBHOOK (admin e installer possono vedere/registrare)
-// ============================================
+function editInstaller(id) {
+    const u = allUsers.find(x => x.id === id);
+    if (!u) return;
+    openEditModal({
+        title: 'Modifica Installatore',
+        fields: [
+            { label: 'Username', name: 'username', value: u.username, type: 'text' },
+            { label: 'Nuova password (lascia vuoto per non cambiare)', name: 'password', value: '', type: 'password' }
+        ],
+        onSave: async (vals) => {
+            const body = { username: vals.username };
+            if (vals.password) body.password = vals.password;
+            const res = await apiPut(`/users/${id}`, body);
+            if (res.success) { closeEdit(); await loadUsers(); }
+            else alert(res.message || 'Errore modifica');
+        }
+    });
+}
+
+async function deleteInstaller(id) {
+    if (!confirm('Eliminare definitivamente questo installatore?')) return;
+    const res = await apiDel(`/users/${id}`);
+    if (res.success) await loadUsers();
+    else alert(res.message || 'Errore eliminazione');
+}
+
+// ═══════════════════════════════════════════════
+// MACHINES CRUD
+// ═══════════════════════════════════════════════
+function editMachine(id) {
+    const m = allMachines.find(x => x.id === id);
+    if (!m) return;
+    openEditModal({
+        title: 'Modifica Impianto',
+        fields: [
+            { label: 'Nome impianto', name: 'machine_name', value: m.machine_name||'', type: 'text' },
+            { label: 'MAC Address', name: 'mac_address', value: m.mac_address||'', type: 'text' }
+        ],
+        onSave: async (vals) => {
+            const res = await apiPut(`/machines/${id}`, vals);
+            if (res.success) { closeEdit(); await loadMachines(); }
+            else alert(res.message || 'Errore modifica');
+        }
+    });
+}
+
+async function deleteMachine(id) {
+    if (!confirm('Eliminare definitivamente questo impianto?')) return;
+    const res = await apiDel(`/machines/${id}`);
+    if (res.success) {
+        await loadMachines();
+        closeDetail();
+    } else {
+        alert(res.message || 'Errore eliminazione');
+    }
+}
+
+// ═══════════════════════════════════════════════
+// GENERIC EDIT MODAL
+// ═══════════════════════════════════════════════
+let currentEditSave = null;
+
+function openEditModal({title, fields, onSave}) {
+    document.getElementById('editTitle').textContent = title;
+    const form = document.getElementById('editForm');
+    form.innerHTML = fields.map(f => `
+        <label>${esc(f.label)}</label>
+        <input type="${f.type||'text'}" id="edit-field-${f.name}" value="${esc(f.value||'')}">
+    `).join('') + `
+        <div class="edit-actions">
+            <button class="btn-cancel" onclick="closeEdit()">Annulla</button>
+            <button class="btn-add" onclick="submitEdit()">Salva</button>
+        </div>
+    `;
+    currentEditSave = onSave;
+    document.getElementById('editModal').classList.add('open');
+}
+
+function closeEdit() {
+    document.getElementById('editModal').classList.remove('open');
+    currentEditSave = null;
+}
+
+async function submitEdit() {
+    if (!currentEditSave) return;
+    const inputs = document.querySelectorAll('#editForm input, #editForm select');
+    const vals = {};
+    inputs.forEach(inp => {
+        if (inp.id && inp.id.startsWith('edit-field-')) {
+            const name = inp.id.replace('edit-field-', '');
+            vals[name] = inp.value.trim();
+        }
+    });
+    await currentEditSave(vals);
+}
+
+// ═══════════════════════════════════════════════
+// TELEGRAM WEBHOOK
+// ═══════════════════════════════════════════════
 async function loadWebhookStatus() {
     try {
         const res = await apiGet('/telegram/webhook-status');
-        const el = document.getElementById('webhookUrl');
-        if (res.url) {
-            el.textContent = res.url;
-            el.style.color = 'var(--green)';
-        } else {
-            el.textContent = 'Nessun webhook configurato';
-            el.style.color = 'var(--amber)';
-        }
+        const el  = document.getElementById('webhookUrl');
+        if (res.url) { el.textContent = res.url; el.style.color = 'var(--green)'; }
+        else { el.textContent = 'Nessun webhook configurato'; el.style.color = 'var(--amber)'; }
     } catch(e) {
         document.getElementById('webhookUrl').textContent = 'Impossibile verificare';
     }
 }
-
 async function setupWebhook() {
-    const btn = document.getElementById('webhookBtn');
+    const btn    = document.getElementById('webhookBtn');
     const result = document.getElementById('webhookResult');
-    btn.textContent = '⏳ Registrazione...';
-    btn.disabled = true;
+    btn.textContent = '⏳ Registrazione...'; btn.disabled = true;
     const webhookUrl = window.location.origin + '/api/telegram/webhook';
     try {
         const res = await apiPost('/telegram/setup-webhook', { webhook_url: webhookUrl });
         result.innerHTML = res.success
             ? `<div class="result-ok">✅ Webhook registrato: <code>${webhookUrl}</code></div>`
             : `<div class="result-err">❌ ${res.message}</div>`;
-        if (res.success) {
-            btn.textContent = '✅ Registrato';
-            loadWebhookStatus();
-        } else {
-            btn.textContent = '🔗 Riprova';
-            btn.disabled = false;
-        }
+        if (res.success) { btn.textContent = '✅ Registrato'; loadWebhookStatus(); }
+        else { btn.textContent = '🔗 Riprova'; btn.disabled = false; }
     } catch(e) {
         result.innerHTML = '<div class="result-err">❌ Errore di connessione</div>';
-        btn.textContent = '🔗 Riprova';
-        btn.disabled = false;
+        btn.textContent = '🔗 Riprova'; btn.disabled = false;
     }
 }
 
-// ============================================
-// COMANDI REMOTI (solo admin)
-// ============================================
-async function sendPrograms(machineId) {
-    const statusDiv = document.getElementById(`cmd-status-${machineId}`);
-    statusDiv.textContent = '⏳ Invio comando programmi...';
-    statusDiv.className = 'cmd-status wait';
-    try {
-        const res = await apiPost(`/machines/${machineId}/command`, { type: 'update_programs', payload: {} });
-        if (res.success) {
-            statusDiv.textContent = '✅ Comando programmi inviato! Verrà eseguito al prossimo ping.';
-            statusDiv.className = 'cmd-status ok';
-        } else {
-            statusDiv.textContent = '❌ Errore: ' + (res.message || 'richiesta fallita');
-            statusDiv.className = 'cmd-status err';
-        }
-    } catch(e) {
-        statusDiv.textContent = '❌ Errore di connessione';
-        statusDiv.className = 'cmd-status err';
-    }
-    setTimeout(() => {
-        if (statusDiv.textContent !== '⏳ Invio comando programmi...') statusDiv.textContent = '';
-    }, 5000);
-}
-
-async function sendReboot(machineId) {
-    const statusDiv = document.getElementById(`cmd-status-${machineId}`);
-    statusDiv.textContent = '⏳ Invio comando reboot...';
-    statusDiv.className = 'cmd-status wait';
-    try {
-        const res = await apiPost(`/machines/${machineId}/command`, { type: 'reboot', payload: {} });
-        if (res.success) {
-            statusDiv.textContent = '✅ Comando reboot inviato! La macchina si riavvierà.';
-            statusDiv.className = 'cmd-status ok';
-        } else {
-            statusDiv.textContent = '❌ Errore: ' + (res.message || 'richiesta fallita');
-            statusDiv.className = 'cmd-status err';
-        }
-    } catch(e) {
-        statusDiv.textContent = '❌ Errore di connessione';
-        statusDiv.className = 'cmd-status err';
-    }
-    setTimeout(() => {
-        if (statusDiv.textContent !== '⏳ Invio comando reboot...') statusDiv.textContent = '';
-    }, 5000);
-}
-
-function openOtaModal(machineId, machineName) {
-    const url = prompt(`Inserisci l'URL del firmware .bin per ${machineName}:\n(es. https://example.com/firmware.bin)`);
-    if (!url) return;
-    if (!url.startsWith('http')) {
-        alert('URL non valido. Deve iniziare con http:// o https://');
-        return;
-    }
-    sendOta(machineId, url);
-}
-
-async function sendOta(machineId, firmwareUrl) {
-    const statusDiv = document.getElementById(`cmd-status-${machineId}`);
-    statusDiv.textContent = '⏳ Invio comando OTA firmware...';
-    statusDiv.className = 'cmd-status wait';
-    try {
-        const res = await apiPost(`/machines/${machineId}/command`, { type: 'ota_firmware', payload: { url: firmwareUrl } });
-        if (res.success) {
-            statusDiv.textContent = '✅ Comando OTA inviato! La macchina scaricherà e aggiornerà il firmware.';
-            statusDiv.className = 'cmd-status ok';
-        } else {
-            statusDiv.textContent = '❌ Errore: ' + (res.message || 'richiesta fallita');
-            statusDiv.className = 'cmd-status err';
-        }
-    } catch(e) {
-        statusDiv.textContent = '❌ Errore di connessione';
-        statusDiv.className = 'cmd-status err';
-    }
-    setTimeout(() => {
-        if (statusDiv.textContent !== '⏳ Invio comando OTA firmware...') statusDiv.textContent = '';
-    }, 5000);
-}
-
-// ============================================
+// ═══════════════════════════════════════════════
 // UTILS
-// ============================================
+// ═══════════════════════════════════════════════
 function esc(text) {
     if (!text) return '';
     const d = document.createElement('div');
-    d.textContent = text;
-    return d.innerHTML;
+    d.textContent = text; return d.innerHTML;
 }
+function refreshAll() { loadMachines(); loadAlerts(); }
 
-function refreshAll() {
-    loadMachines();
-    loadAlerts();
-    loadClients();
-}
-
-// ============================================
+// ═══════════════════════════════════════════════
 // INIT
-// ============================================
+// ═══════════════════════════════════════════════
 if (token && currentUser) {
     bootApp();
 } else {
     document.getElementById('loginScreen').style.display = 'flex';
 }
 
-// Refresh automatico ogni 30 secondi
-setInterval(() => {
-    if (token) {
-        loadMachines();
-        loadAlerts();
-    }
-}, 30000);
+// Refresh automatico ogni 30s
+setInterval(() => { if (token) { loadMachines(); loadAlerts(); } }, 30000);
 </script>
 </body>
 </html>
