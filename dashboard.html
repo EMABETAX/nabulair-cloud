@@ -249,6 +249,7 @@
         .sensor-err  { background: var(--red-dim);   color: var(--red);   }
         .sensor-icon { font-size: 16px; }
 
+        /* WORKFLOW */
         .workflow { border-top: 1px solid var(--border); padding-top: 16px; }
         .wf-step {
             display: flex; align-items: center; gap: 12px;
@@ -268,6 +269,7 @@
         .wf-label.done { color: var(--text); }
         .wf-value { font-size: 12px; color: var(--green); font-weight: 600; }
 
+        /* BUTTONS */
         .btn-qr-big {
             width: 100%; margin-top: 14px;
             padding: 14px;
@@ -336,6 +338,7 @@
         }
         .btn-add:hover { opacity: 0.85; }
 
+        /* TABLES */
         .data-table {
             width: 100%; border-collapse: collapse;
             margin-top: 16px; font-size: 14px;
@@ -354,6 +357,7 @@
         .data-table tr:last-child td { border-bottom: none; }
         .td-mono { font-family: monospace; font-size: 12px; color: var(--muted); }
 
+        /* ASSIGN ROW */
         .assign-row {
             display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
         }
@@ -372,6 +376,11 @@
             cursor: pointer; white-space: nowrap;
         }
         .btn-save-sm:hover { opacity: 0.8; }
+        .btn-delete-sm {
+            background: var(--red-dim); color: var(--red);
+            border: 1px solid rgba(239,68,68,0.3);
+        }
+        .btn-delete-sm:hover { opacity: 0.8; }
 
         /* MODALS */
         .modal-bg {
@@ -418,6 +427,7 @@
             flex-shrink: 0; margin-top: 1px;
         }
 
+        /* MACHINE MODAL */
         #machineModal.modal-bg .modal-box {
             max-width: 1100px; width: 95%; padding: 0; overflow: hidden;
         }
@@ -429,6 +439,7 @@
         .iframe-wrap { height: 70vh; }
         .iframe-wrap iframe { width:100%; height:100%; border:none; background: white; }
 
+        /* TELEGRAM WEBHOOK */
         .webhook-box {
             background: var(--surface); border-radius: 14px;
             padding: 16px 18px; margin-bottom: 18px;
@@ -437,6 +448,7 @@
         .result-ok  { background: var(--green-dim); border:1px solid rgba(34,197,94,0.3); border-radius:10px; padding:14px; font-size:13px; color:var(--green); }
         .result-err { background: var(--red-dim);   border:1px solid rgba(239,68,68,0.3);  border-radius:10px; padding:14px; font-size:13px; color:var(--red); }
 
+        /* EMPTY STATE */
         .empty-state {
             grid-column: 1/-1;
             text-align: center; padding: 60px 20px;
@@ -445,6 +457,7 @@
         .empty-state .big { font-size: 48px; margin-bottom: 14px; }
         .empty-state p { font-size: 15px; }
 
+        /* COMMAND PANEL */
         .cmd-panel {
             border-top: 1px solid var(--border);
             margin-top: 14px; padding-top: 14px;
@@ -472,6 +485,7 @@
         .cmd-status.err { color: var(--red); }
         .cmd-status.wait { color: var(--amber); }
 
+        /* RESPONSIVE */
         @media (max-width: 640px) {
             .sidebar { display: none !important; }
             .main { padding: 14px; }
@@ -482,15 +496,14 @@
 </head>
 <body>
 
-<!-- LOGIN -->
+<!-- LOGIN SCREEN -->
 <div id="loginScreen">
     <div class="login-wrap">
         <div class="login-logo">🌿</div>
         <h2>NabulAir</h2>
         <p>Centrale Operativa</p>
         <input type="text" id="loginUser" placeholder="Username" autocomplete="username">
-        <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password"
-               onkeydown="if(event.key==='Enter') doLogin()">
+        <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()">
         <button class="btn-login" onclick="doLogin()">Accedi</button>
         <div class="login-err" id="loginError"></div>
     </div>
@@ -498,7 +511,6 @@
 
 <!-- APP SHELL -->
 <div id="appShell">
-
     <header class="topbar">
         <div class="topbar-left">
             <div class="top-logo">🌿</div>
@@ -516,7 +528,7 @@
     </header>
 
     <div class="layout">
-
+        <!-- SIDEBAR -->
         <nav class="sidebar" id="sidebar">
             <div class="sidebar-label">Menu</div>
             <button class="nav-item active" onclick="showSection('machines')" id="nav-machines">
@@ -535,8 +547,9 @@
             </button>
         </nav>
 
+        <!-- MAIN CONTENT -->
         <main class="main">
-
+            <!-- ALERTS -->
             <div class="alerts-wrap" id="alertsWrap">
                 <div id="alertsList"></div>
             </div>
@@ -546,10 +559,7 @@
                 <div class="page-title" id="machinesTitle">🏭 Impianti</div>
                 <div class="page-sub" id="machinesSub">Tutti gli impianti NabulAir</div>
                 <div class="cards-grid" id="cardsGrid">
-                    <div class="empty-state">
-                        <div class="big">⏳</div>
-                        <p>Caricamento impianti...</p>
-                    </div>
+                    <div class="empty-state"><div class="big">⏳</div><p>Caricamento impianti...</p></div>
                 </div>
             </section>
 
@@ -560,17 +570,15 @@
                 <div class="form-card">
                     <h3>➕ Nuovo Installatore</h3>
                     <div class="form-grid">
-                        <input type="text"     id="instUsername"  placeholder="Nome utente (es. mario)">
-                        <input type="password" id="instPassword"  placeholder="Password">
+                        <input type="text" id="instUsername" placeholder="Nome utente (es. mario)">
+                        <input type="password" id="instPassword" placeholder="Password">
                     </div>
                     <button class="btn-add" onclick="addInstaller()">Crea Installatore</button>
                 </div>
                 <div class="form-card">
                     <h3>📋 Installatori registrati</h3>
-                    <table class="data-table" id="installersTable">
-                        <thead>
-                            <tr><th>Nome utente</th><th>Impianti assegnati</th></tr>
-                        </thead>
+                    <table class="data-table">
+                        <thead><tr><th>Nome utente</th><th>Impianti assegnati</th></tr></thead>
                         <tbody id="installersTbody"></tbody>
                     </table>
                 </div>
@@ -583,24 +591,22 @@
                 <div class="form-card">
                     <h3>➕ Nuovo Cliente</h3>
                     <div class="form-grid">
-                        <input type="text"  id="clientName"  placeholder="Nome e cognome">
+                        <input type="text" id="clientName" placeholder="Nome e cognome">
                         <input type="email" id="clientEmail" placeholder="Email">
-                        <input type="tel"   id="clientPhone" placeholder="Telefono">
+                        <input type="tel" id="clientPhone" placeholder="Telefono">
                     </div>
                     <button class="btn-add" onclick="addClient()">Aggiungi Cliente</button>
                 </div>
                 <div class="form-card">
                     <h3>📋 Clienti registrati</h3>
                     <table class="data-table">
-                        <thead>
-                            <tr><th>Nome</th><th>Email</th><th>Telefono</th><th>Telegram</th><th style="width:60px"></th></tr>
-                        </thead>
+                        <thead><tr><th>Nome</th><th>Email</th><th>Telefono</th><th>Telegram</th><th style="width:60px"></th></tr></thead>
                         <tbody id="clientsTbody"></tbody>
                     </table>
                 </div>
             </section>
 
-            <!-- SECTION TELEGRAM (solo admin) -->
+            <!-- SECTION TELEGRAM (admin e installer) -->
             <section class="section-page" id="section-telegram">
                 <div class="page-title">📱 Telegram Bot</div>
                 <div class="page-sub">Configura il webhook — va fatto una sola volta dopo ogni deploy</div>
@@ -613,7 +619,6 @@
                     <div id="webhookResult" style="margin-top:14px;"></div>
                 </div>
             </section>
-
         </main>
     </div>
 </div>
@@ -624,9 +629,7 @@
         <button class="modal-close-btn" onclick="closeQR()">×</button>
         <h3>📲 Attiva notifiche Telegram</h3>
         <div class="modal-machine-name" id="qrMachineName"></div>
-        <div class="qr-wrap">
-            <div id="qrCanvas"></div>
-        </div>
+        <div class="qr-wrap"><div id="qrCanvas"></div></div>
         <div class="qr-steps">
             <div class="qr-step-item"><div class="qstep-n">1</div><div>Mostra questo QR code al cliente</div></div>
             <div class="qr-step-item"><div class="qstep-n">2</div><div>Il cliente lo scansiona con la fotocamera del telefono</div></div>
@@ -636,16 +639,14 @@
     </div>
 </div>
 
-<!-- MACHINE MODAL -->
+<!-- MACHINE MODAL (iframe) -->
 <div class="modal-bg" id="machineModal">
     <div class="modal-box" style="max-width:1100px; width:95%; padding:0; overflow:hidden;">
         <div class="machine-modal-head">
             <h3 id="machineModalTitle">NabulAir</h3>
             <button class="modal-close-btn" style="position:static;" onclick="closeMachine()">×</button>
         </div>
-        <div class="iframe-wrap">
-            <iframe id="machineIframe" src=""></iframe>
-        </div>
+        <div class="iframe-wrap"><iframe id="machineIframe" src=""></iframe></div>
     </div>
 </div>
 
@@ -654,11 +655,11 @@
 // STATE
 // ============================================
 const API = '/api';
-let token       = localStorage.getItem('nabulair_token');
+let token = localStorage.getItem('nabulair_token');
 let currentUser = JSON.parse(localStorage.getItem('nabulair_user') || 'null');
 let allMachines = [];
-let allClients  = [];
-let allUsers    = [];
+let allClients = [];
+let allUsers = [];
 
 // ============================================
 // AUTH
@@ -670,7 +671,7 @@ async function doLogin() {
     err.style.display = 'none';
     if (!u || !p) { err.textContent = 'Inserisci username e password'; err.style.display='block'; return; }
     try {
-        const res  = await fetch(`${API}/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:u, password:p}) });
+        const res = await fetch(`${API}/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:u, password:p}) });
         const data = await res.json();
         if (data.success) {
             token = data.token;
@@ -695,52 +696,44 @@ function logout() {
 }
 
 // ============================================
-// HELPER PER RUOLI
-// ============================================
-function canManageClients() {
-    return currentUser && (currentUser.role === 'admin' || currentUser.role === 'installer');
-}
-
-// ============================================
 // BOOT
 // ============================================
 function bootApp() {
     document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('appShell').style.display    = 'block';
+    document.getElementById('appShell').style.display = 'block';
 
     const role = currentUser.role;
-    document.getElementById('topUsername').textContent   = currentUser.username;
+    document.getElementById('topUsername').textContent = currentUser.username;
     const badge = document.getElementById('topRoleBadge');
-    badge.textContent  = role === 'admin' ? 'Admin' : role === 'installer' ? 'Installatore' : 'Cliente';
-    badge.className    = `role-badge role-${role}`;
+    badge.textContent = role === 'admin' ? 'Admin' : role === 'installer' ? 'Installatore' : 'Cliente';
+    badge.className = `role-badge role-${role}`;
 
-    // Gestione sidebar in base al ruolo
+    // Sidebar configuration based on role
     if (role === 'admin') {
         document.getElementById('sidebar').classList.add('visible');
         document.getElementById('nav-installers').style.display = 'flex';
         document.getElementById('nav-clients').style.display = 'flex';
         document.getElementById('nav-telegram').style.display = 'flex';
         document.getElementById('clientsSub').textContent = 'Gestisci l\'anagrafica dei clienti finali';
-        loadClients();
         loadUsers();
     } else if (role === 'installer') {
         document.getElementById('sidebar').classList.add('visible');
         document.getElementById('nav-installers').style.display = 'none';
-        document.getElementById('nav-telegram').style.display = 'none';
         document.getElementById('nav-clients').style.display = 'flex';
+        document.getElementById('nav-telegram').style.display = 'flex';
         document.getElementById('clientsSub').textContent = 'Gestisci i tuoi clienti (solo quelli associati ai tuoi impianti)';
-        loadClients();
     } else {
         document.getElementById('sidebar').classList.remove('visible');
     }
 
     if (role === 'installer') {
         document.getElementById('machinesTitle').textContent = '🏭 I Tuoi Impianti';
-        document.getElementById('machinesSub').textContent   = 'Impianti assegnati a te';
+        document.getElementById('machinesSub').textContent = 'Impianti assegnati a te';
     }
 
     loadMachines();
     loadAlerts();
+    loadClients();
     updateTopPills();
 }
 
@@ -767,10 +760,10 @@ async function api(method, endpoint, body) {
     const res = await fetch(API + endpoint, opts);
     return res.json();
 }
-const apiGet  = ep       => api('GET',  ep);
-const apiPost = (ep, b)  => api('POST', ep, b);
-const apiPut  = (ep, b)  => api('PUT',  ep, b);
-const apiDelete = (ep)   => api('DELETE', ep);
+const apiGet = ep => api('GET', ep);
+const apiPost = (ep, b) => api('POST', ep, b);
+const apiPut = (ep, b) => api('PUT', ep, b);
+const apiDelete = (ep) => api('DELETE', ep);
 
 // ============================================
 // ALERTS
@@ -808,23 +801,25 @@ async function loadMachines() {
             allMachines = data.machines;
             renderCards(data.machines);
             renderTopPills(data.machines);
+            if (currentUser.role === 'installer' || currentUser.role === 'admin') {
+                renderInstallers();
+            }
         }
     } catch(e) {
-        document.getElementById('cardsGrid').innerHTML =
-            '<div class="empty-state"><div class="big">❌</div><p>Errore di connessione</p></div>';
+        document.getElementById('cardsGrid').innerHTML = '<div class="empty-state"><div class="big">❌</div><p>Errore di connessione</p></div>';
     }
 }
 
 function renderTopPills(machines) {
     if (currentUser.role !== 'admin') return;
-    const online  = machines.filter(m => m.status === 'online').length;
+    const online = machines.filter(m => m.status === 'online').length;
     const offline = machines.filter(m => m.status !== 'online').length;
-    const alerts  = machines.filter(m => m.water_ok === false || m.insecticide_ok === false).length;
+    const alerts = machines.filter(m => m.water_ok === false || m.insecticide_ok === false).length;
     document.getElementById('topPills').innerHTML = `
         <div class="pill">Totale <span>${machines.length}</span></div>
         <div class="pill">🟢 Online <span>${online}</span></div>
         ${offline > 0 ? `<div class="pill">🔴 Offline <span>${offline}</span></div>` : ''}
-        ${alerts  > 0 ? `<div class="pill">🚨 Allarmi <span>${alerts}</span></div>`  : ''}
+        ${alerts > 0 ? `<div class="pill">🚨 Allarmi <span>${alerts}</span></div>` : ''}
     `;
 }
 
@@ -835,87 +830,64 @@ function renderCards(machines) {
         return;
     }
 
-    const isAdmin     = currentUser.role === 'admin';
+    const isAdmin = currentUser.role === 'admin';
     const isInstaller = currentUser.role === 'installer';
 
     grid.innerHTML = machines.map(m => {
-        const online  = m.status === 'online';
+        const online = m.status === 'online';
         const waterOk = m.water_ok !== false;
-        const insOk   = m.insecticide_ok !== false;
+        const insOk = m.insecticide_ok !== false;
         const hasAlert = !waterOk || !insOk;
-
         const step1done = !!m.client_id;
         const step2done = !!m.telegram_chat_id;
 
         let qrBtn = '';
         if (isAdmin || isInstaller) {
             if (step2done) {
-                qrBtn = `<button class="btn-qr-big telegram-ok" onclick="openQR(${m.id},'${esc(m.machine_name||m.mac_address)}')">
-                    ✅ Telegram attivo — Rigenera QR
-                </button>`;
+                qrBtn = `<button class="btn-qr-big telegram-ok" onclick="openQR(${m.id},'${esc(m.machine_name || m.mac_address)}')">✅ Telegram attivo — Rigenera QR</button>`;
             } else if (step1done) {
-                qrBtn = `<button class="btn-qr-big" onclick="openQR(${m.id},'${esc(m.machine_name||m.mac_address)}')">
-                    📲 Invia notifiche Telegram al cliente
-                </button>`;
+                qrBtn = `<button class="btn-qr-big" onclick="openQR(${m.id},'${esc(m.machine_name || m.mac_address)}')">📲 Invia notifiche Telegram al cliente</button>`;
             } else {
-                qrBtn = `<button class="btn-qr-big" disabled>
-                    🔒 Prima assegna un cliente
-                </button>`;
+                qrBtn = `<button class="btn-qr-big" disabled>🔒 Prima assegna un cliente</button>`;
             }
         }
 
-        const enterBtn = `<button class="btn-enter-big" onclick="openMachine(${m.id},'${esc(m.machine_name||'Macchina')}','${m.sta_ip||m.mac_address}')">
-            ▶ ${(isAdmin || isInstaller) ? 'Entra nel pannello' : 'Apri pannello di controllo'}
-        </button>`;
+        const enterBtn = `<button class="btn-enter-big" onclick="openMachine(${m.id},'${esc(m.machine_name || 'Macchina')}','${m.sta_ip || m.mac_address}')">▶ ${(isAdmin || isInstaller) ? 'Entra nel pannello' : 'Apri pannello di controllo'}</button>`;
 
         let assignBlock = '';
         if (isAdmin) {
-            const clientOpts = allClients.map(c =>
-                `<option value="${c.id}" ${m.client_id==c.id?'selected':''}>${esc(c.name)}</option>`).join('');
-            const instOpts = allUsers.filter(u=>u.role==='installer').map(u =>
-                `<option value="${u.id}" ${m.installer_id==u.id?'selected':''}>${esc(u.username)}</option>`).join('');
+            const clientOpts = allClients.map(c => `<option value="${c.id}" ${m.client_id == c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
+            const instOpts = allUsers.filter(u => u.role === 'installer').map(u => `<option value="${u.id}" ${m.installer_id == u.id ? 'selected' : ''}>${esc(u.username)}</option>`).join('');
             assignBlock = `
                 <div class="wf-step">
-                    <div class="wf-num ${step1done?'done':'active'}">1</div>
-                    <div class="wf-label ${step1done?'done':''}">Assegna cliente e installatore</div>
+                    <div class="wf-num ${step1done ? 'done' : 'active'}">1</div>
+                    <div class="wf-label ${step1done ? 'done' : ''}">Assegna cliente e installatore</div>
                 </div>
-                <div style="padding:8px 0 10px 38px; display:flex; flex-direction:column; gap:8px;">
+                <div style="padding:8px 0 10px 38px;">
                     <div class="assign-row">
-                        <select id="sel-client-${m.id}">
-                            <option value="">— Seleziona cliente —</option>
-                            ${clientOpts}
-                        </select>
-                        <select id="sel-inst-${m.id}">
-                            <option value="">— Installatore —</option>
-                            ${instOpts}
-                        </select>
+                        <select id="sel-client-${m.id}"><option value="">— Seleziona cliente —</option>${clientOpts}</select>
+                        <select id="sel-inst-${m.id}"><option value="">— Installatore —</option>${instOpts}</select>
                         <button class="btn-save-sm" id="save-btn-${m.id}" onclick="saveAssign(${m.id})">💾 Salva</button>
                     </div>
                 </div>`;
         } else if (isInstaller) {
-            const clientOpts = allClients.map(c =>
-                `<option value="${c.id}" ${m.client_id==c.id?'selected':''}>${esc(c.name)}</option>`).join('');
+            const clientOpts = allClients.map(c => `<option value="${c.id}" ${m.client_id == c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
             assignBlock = `
                 <div class="wf-step">
-                    <div class="wf-num ${step1done?'done':'active'}">1</div>
-                    <div class="wf-label ${step1done?'done':''}">Assegna cliente</div>
+                    <div class="wf-num ${step1done ? 'done' : 'active'}">1</div>
+                    <div class="wf-label ${step1done ? 'done' : ''}">Assegna cliente</div>
                 </div>
                 <div style="padding:8px 0 10px 38px;">
                     <div class="assign-row">
-                        <select id="sel-client-${m.id}">
-                            <option value="">— Seleziona cliente —</option>
-                            ${clientOpts}
-                        </select>
+                        <select id="sel-client-${m.id}"><option value="">— Seleziona cliente —</option>${clientOpts}</select>
                         <button class="btn-save-sm" id="save-btn-${m.id}" onclick="saveAssignInstaller(${m.id})">💾 Salva</button>
                     </div>
                 </div>`;
         } else {
             assignBlock = `
                 <div class="wf-step">
-                    <div class="wf-num ${step1done?'done':'active'}">1</div>
-                    <div class="wf-label ${step1done?'done':''}">
-                        ${step1done ? `Cliente: <strong>${esc(m.client_name||'—')}</strong>` : 'In attesa di cliente'}
-                    </div>
+                    <div class="wf-num ${step1done ? 'done' : 'active'}">1</div>
+                    <div class="wf-label ${step1done ? 'done' : ''}">${step1done ? `Cliente: <strong>${esc(m.client_name || '—')}</strong>` : 'In attesa di cliente'}</div>
                 </div>`;
         }
 
@@ -926,7 +898,7 @@ function renderCards(machines) {
                 <div class="cmd-panel-title">🛠 Comandi remoti</div>
                 <div class="cmd-buttons">
                     <button class="btn-cmd btn-cmd-programs" onclick="sendPrograms(${m.id})">📅 Aggiorna programmi</button>
-                    <button class="btn-cmd btn-cmd-ota" onclick="openOtaModal(${m.id}, '${esc(m.machine_name||m.mac_address)}')">⬆️ OTA Firmware</button>
+                    <button class="btn-cmd btn-cmd-ota" onclick="openOtaModal(${m.id}, '${esc(m.machine_name || m.mac_address)}')">⬆️ OTA Firmware</button>
                     <button class="btn-cmd btn-cmd-reboot" onclick="sendReboot(${m.id})">🔄 Riavvia</button>
                 </div>
                 <div class="cmd-status" id="cmd-status-${m.id}"></div>
@@ -934,34 +906,32 @@ function renderCards(machines) {
         }
 
         return `
-        <div class="machine-card ${hasAlert?'has-alert':''}">
+        <div class="machine-card ${hasAlert ? 'has-alert' : ''}">
             <div class="card-head">
                 <div>
-                    <div class="card-name">${esc(m.machine_name||'Impianto')}</div>
+                    <div class="card-name">${esc(m.machine_name || 'Impianto')}</div>
                     <div class="card-mac">${m.mac_address}</div>
                 </div>
                 <div class="status-dot-wrap">
-                    <div class="sdot ${online?'online':'offline'}"></div>
-                    <span class="status-txt ${online?'online':'offline'}">${online?'Online':'Offline'}</span>
+                    <div class="sdot ${online ? 'online' : 'offline'}"></div>
+                    <span class="status-txt ${online ? 'online' : 'offline'}">${online ? 'Online' : 'Offline'}</span>
                 </div>
             </div>
             <div class="card-sensors">
-                <div class="sensor-chip ${waterOk?'sensor-ok':'sensor-err'}">
+                <div class="sensor-chip ${waterOk ? 'sensor-ok' : 'sensor-err'}">
                     <span class="sensor-icon">💧</span>
-                    <span>${waterOk?'Acqua OK':'Acqua ❌'}</span>
+                    <span>${waterOk ? 'Acqua OK' : 'Acqua ❌'}</span>
                 </div>
-                <div class="sensor-chip ${insOk?'sensor-ok':'sensor-err'}">
+                <div class="sensor-chip ${insOk ? 'sensor-ok' : 'sensor-err'}">
                     <span class="sensor-icon">🧪</span>
-                    <span>${insOk?'Insetticida OK':'Insetticida ❌'}</span>
+                    <span>${insOk ? 'Insetticida OK' : 'Insetticida ❌'}</span>
                 </div>
             </div>
             <div class="workflow">
                 ${assignBlock}
                 <div class="wf-step">
-                    <div class="wf-num ${step2done?'done':(step1done?'active':'')}">2</div>
-                    <div class="wf-label ${step2done?'done':''}">
-                        ${step2done ? 'Telegram attivo ✅' : 'Telegram non ancora attivato'}
-                    </div>
+                    <div class="wf-num ${step2done ? 'done' : (step1done ? 'active' : '')}">2</div>
+                    <div class="wf-label ${step2done ? 'done' : ''}">${step2done ? 'Telegram attivo ✅' : 'Telegram non ancora attivato'}</div>
                 </div>
             </div>
             ${qrBtn}
@@ -971,30 +941,28 @@ function renderCards(machines) {
     }).join('');
 }
 
-// Assegnazione per ADMIN
 async function saveAssign(machineId) {
-    const clientId   = document.getElementById(`sel-client-${machineId}`)?.value || null;
-    const installerId= document.getElementById(`sel-inst-${machineId}`)?.value   || null;
-    const btn        = document.getElementById(`save-btn-${machineId}`);
-    btn.textContent  = '⏳'; btn.disabled = true;
-    const res = await apiPut(`/machines/${machineId}/assign`, { client_id: clientId||null, installer_id: installerId||null });
+    const clientId = document.getElementById(`sel-client-${machineId}`)?.value || null;
+    const installerId = document.getElementById(`sel-inst-${machineId}`)?.value || null;
+    const btn = document.getElementById(`save-btn-${machineId}`);
+    btn.textContent = '⏳'; btn.disabled = true;
+    const res = await apiPut(`/machines/${machineId}/assign`, { client_id: clientId || null, installer_id: installerId || null });
     if (res.success) {
         btn.textContent = '✅';
-        setTimeout(async () => { btn.textContent = '💾 Salva'; btn.disabled = false; await loadMachines(); }, 1200);
+        setTimeout(async () => { btn.textContent = '💾 Salva'; btn.disabled = false; await loadMachines(); await loadClients(); }, 1200);
     } else {
         btn.textContent = '❌'; setTimeout(() => { btn.textContent = '💾 Salva'; btn.disabled = false; }, 2000);
     }
 }
 
-// Assegnazione per INSTALLER (solo cliente)
 async function saveAssignInstaller(machineId) {
-    const clientId   = document.getElementById(`sel-client-${machineId}`)?.value || null;
-    const btn        = document.getElementById(`save-btn-${machineId}`);
-    btn.textContent  = '⏳'; btn.disabled = true;
-    const res = await apiPut(`/machines/${machineId}/assign`, { client_id: clientId||null, installer_id: null });
+    const clientId = document.getElementById(`sel-client-${machineId}`)?.value || null;
+    const btn = document.getElementById(`save-btn-${machineId}`);
+    btn.textContent = '⏳'; btn.disabled = true;
+    const res = await apiPut(`/machines/${machineId}/assign`, { client_id: clientId || null, installer_id: null });
     if (res.success) {
         btn.textContent = '✅';
-        setTimeout(async () => { btn.textContent = '💾 Salva'; btn.disabled = false; await loadMachines(); }, 1200);
+        setTimeout(async () => { btn.textContent = '💾 Salva'; btn.disabled = false; await loadMachines(); await loadClients(); }, 1200);
     } else {
         btn.textContent = '❌'; setTimeout(() => { btn.textContent = '💾 Salva'; btn.disabled = false; }, 2000);
     }
@@ -1009,9 +977,10 @@ async function openQR(machineId, machineName) {
     document.getElementById('qrMachineName').textContent = '🏭 ' + machineName;
     const canvas = document.getElementById('qrCanvas');
     canvas.innerHTML = '';
-    new QRCode(canvas, { text: res.telegram_link, width: 220, height: 220, colorDark:'#000', colorLight:'#fff', correctLevel: QRCode.CorrectLevel.M });
+    new QRCode(canvas, { text: res.telegram_link, width: 220, height: 220, colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.M });
     document.getElementById('qrModal').classList.add('open');
 }
+
 function closeQR() {
     document.getElementById('qrModal').classList.remove('open');
     document.getElementById('qrCanvas').innerHTML = '';
@@ -1025,13 +994,14 @@ function openMachine(id, name, ip) {
     document.getElementById('machineIframe').src = `/remote.html?ip=${ip}`;
     document.getElementById('machineModal').classList.add('open');
 }
+
 function closeMachine() {
     document.getElementById('machineModal').classList.remove('open');
     document.getElementById('machineIframe').src = '';
 }
 
 // ============================================
-// CLIENTS
+// CLIENTS (admin e installer)
 // ============================================
 async function loadClients() {
     try {
@@ -1039,7 +1009,6 @@ async function loadClients() {
         if (data.success) {
             allClients = data.clients;
             renderClientsTable();
-            // Ricarica le macchine per aggiornare i dropdown
             await loadMachines();
         }
     } catch(e) {
@@ -1050,25 +1019,24 @@ async function loadClients() {
 function renderClientsTable() {
     const tbody = document.getElementById('clientsTbody');
     if (!tbody) return;
-    
     if (!allClients.length) {
         tbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted); text-align:center; padding:20px;">Nessun cliente presente</td></tr>';
         return;
     }
-    
+    const isAdmin = currentUser.role === 'admin';
     tbody.innerHTML = allClients.map(c => `
         <tr>
             <td><strong>${esc(c.name)}</strong></td>
-            <td class="td-mono">${esc(c.email||'—')}</td>
-            <td class="td-mono">${esc(c.phone||'—')}</td>
+            <td class="td-mono">${esc(c.email || '—')}</td>
+            <td class="td-mono">${esc(c.phone || '—')}</td>
             <td>${c.telegram_chat_id ? `<span style="color:var(--green); font-size:12px;">✅ ${esc(c.telegram_chat_id)}</span>` : '<span style="color:var(--muted); font-size:12px;">—</span>'}</td>
-            <td>${currentUser.role === 'admin' ? `<button class="btn-save-sm" onclick="deleteClient(${c.id})" style="background:var(--red-dim); color:var(--red);">🗑</button>` : ''}</td>
+            <td>${isAdmin ? `<button class="btn-save-sm btn-delete-sm" onclick="deleteClient(${c.id})">🗑</button>` : ''}</td>
         </tr>
     `).join('');
 }
 
 async function addClient() {
-    const name  = document.getElementById('clientName').value.trim();
+    const name = document.getElementById('clientName').value.trim();
     const email = document.getElementById('clientEmail').value.trim();
     const phone = document.getElementById('clientPhone').value.trim();
     if (!name) return alert('Il nome è obbligatorio');
@@ -1116,10 +1084,7 @@ function renderInstallers() {
     }
     tbody.innerHTML = installers.map(u => {
         const count = allMachines.filter(m => m.installer_id == u.id).length;
-        return `<tr>
-            <td><strong>${esc(u.username)}</strong></td>
-            <td>${count > 0 ? `${count} impianto${count>1?'i':''}` : '<span style="color:var(--muted)">—</span>'}</td>
-        </tr>`;
+        return `<tr><td><strong>${esc(u.username)}</strong></td><td>${count > 0 ? `${count} impianto${count > 1 ? 'i' : ''}` : '<span style="color:var(--muted)">—</span>'}</td></tr>`;
     }).join('');
 }
 
@@ -1140,34 +1105,46 @@ async function addInstaller() {
 }
 
 // ============================================
-// TELEGRAM WEBHOOK
+// TELEGRAM WEBHOOK (admin e installer possono vedere/registrare)
 // ============================================
 async function loadWebhookStatus() {
     try {
         const res = await apiGet('/telegram/webhook-status');
-        const el  = document.getElementById('webhookUrl');
-        if (res.url) { el.textContent = res.url; el.style.color = 'var(--green)'; }
-        else { el.textContent = 'Nessun webhook configurato'; el.style.color = 'var(--amber)'; }
+        const el = document.getElementById('webhookUrl');
+        if (res.url) {
+            el.textContent = res.url;
+            el.style.color = 'var(--green)';
+        } else {
+            el.textContent = 'Nessun webhook configurato';
+            el.style.color = 'var(--amber)';
+        }
     } catch(e) {
         document.getElementById('webhookUrl').textContent = 'Impossibile verificare';
     }
 }
 
 async function setupWebhook() {
-    const btn    = document.getElementById('webhookBtn');
+    const btn = document.getElementById('webhookBtn');
     const result = document.getElementById('webhookResult');
-    btn.textContent = '⏳ Registrazione...'; btn.disabled = true;
+    btn.textContent = '⏳ Registrazione...';
+    btn.disabled = true;
     const webhookUrl = window.location.origin + '/api/telegram/webhook';
     try {
         const res = await apiPost('/telegram/setup-webhook', { webhook_url: webhookUrl });
         result.innerHTML = res.success
             ? `<div class="result-ok">✅ Webhook registrato: <code>${webhookUrl}</code></div>`
             : `<div class="result-err">❌ ${res.message}</div>`;
-        if (res.success) { btn.textContent = '✅ Registrato'; loadWebhookStatus(); }
-        else { btn.textContent = '🔗 Riprova'; btn.disabled = false; }
+        if (res.success) {
+            btn.textContent = '✅ Registrato';
+            loadWebhookStatus();
+        } else {
+            btn.textContent = '🔗 Riprova';
+            btn.disabled = false;
+        }
     } catch(e) {
         result.innerHTML = '<div class="result-err">❌ Errore di connessione</div>';
-        btn.textContent = '🔗 Riprova'; btn.disabled = false;
+        btn.textContent = '🔗 Riprova';
+        btn.disabled = false;
     }
 }
 
@@ -1191,7 +1168,9 @@ async function sendPrograms(machineId) {
         statusDiv.textContent = '❌ Errore di connessione';
         statusDiv.className = 'cmd-status err';
     }
-    setTimeout(() => { if (statusDiv.textContent !== '⏳ Invio comando programmi...') statusDiv.textContent = ''; }, 5000);
+    setTimeout(() => {
+        if (statusDiv.textContent !== '⏳ Invio comando programmi...') statusDiv.textContent = '';
+    }, 5000);
 }
 
 async function sendReboot(machineId) {
@@ -1211,7 +1190,9 @@ async function sendReboot(machineId) {
         statusDiv.textContent = '❌ Errore di connessione';
         statusDiv.className = 'cmd-status err';
     }
-    setTimeout(() => { if (statusDiv.textContent !== '⏳ Invio comando reboot...') statusDiv.textContent = ''; }, 5000);
+    setTimeout(() => {
+        if (statusDiv.textContent !== '⏳ Invio comando reboot...') statusDiv.textContent = '';
+    }, 5000);
 }
 
 function openOtaModal(machineId, machineName) {
@@ -1241,7 +1222,9 @@ async function sendOta(machineId, firmwareUrl) {
         statusDiv.textContent = '❌ Errore di connessione';
         statusDiv.className = 'cmd-status err';
     }
-    setTimeout(() => { if (statusDiv.textContent !== '⏳ Invio comando OTA firmware...') statusDiv.textContent = ''; }, 5000);
+    setTimeout(() => {
+        if (statusDiv.textContent !== '⏳ Invio comando OTA firmware...') statusDiv.textContent = '';
+    }, 5000);
 }
 
 // ============================================
@@ -1250,10 +1233,15 @@ async function sendOta(machineId, firmwareUrl) {
 function esc(text) {
     if (!text) return '';
     const d = document.createElement('div');
-    d.textContent = text; return d.innerHTML;
+    d.textContent = text;
+    return d.innerHTML;
 }
 
-function refreshAll() { loadMachines(); loadAlerts(); loadClients(); }
+function refreshAll() {
+    loadMachines();
+    loadAlerts();
+    loadClients();
+}
 
 // ============================================
 // INIT
@@ -1264,7 +1252,13 @@ if (token && currentUser) {
     document.getElementById('loginScreen').style.display = 'flex';
 }
 
-setInterval(() => { if (token) { loadMachines(); loadAlerts(); } }, 30000);
+// Refresh automatico ogni 30 secondi
+setInterval(() => {
+    if (token) {
+        loadMachines();
+        loadAlerts();
+    }
+}, 30000);
 </script>
 </body>
 </html>
