@@ -336,6 +336,26 @@ app.post('/api/telegram/setup-webhook', authenticateToken, requireAdmin, async (
 });
 
 // ============================================
+// TELEGRAM WEBHOOK STATUS
+// ============================================
+app.get('/api/telegram/webhook-status', authenticateToken, requireAdmin, async (req, res) => {
+    if (!TELEGRAM_BOT_TOKEN) {
+        return res.json({ success: false, url: null, message: 'TELEGRAM_BOT_TOKEN non configurato' });
+    }
+    try {
+        const r = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo`);
+        const data = await r.json();
+        res.json({
+            success: data.ok,
+            url: data.result?.url || null,
+            pending_updates: data.result?.pending_update_count || 0
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, url: null, message: err.message });
+    }
+});
+
+// ============================================
 // API SETUP (primo avvio — crea admin)
 // ============================================
 app.post('/api/setup', async (req, res) => {
@@ -698,59 +718,6 @@ app.post('/api/machines/:id/qr', authenticateToken, async (req, res) => {
 });
 
 // ============================================
-// API DEBUG — legge ultimi messaggi bot (trova Chat ID)
-// ============================================
-app.get('/api/telegram/last-messages', async (req, res) => {
-    if (!TELEGRAM_BOT_TOKEN) {
-        return res.status(500).json({ success: false, message: 'TELEGRAM_BOT_TOKEN non configurato' });
-    }
-    try {
-        const r = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?limit=10`);
-        const data = await r.json();
-        if (!data.ok) {
-            return res.json({ success: false, message: data.description });
-        }
-        const messages = data.result.map(u => ({
-            chat_id: u.message?.chat?.id,
-            name: u.message?.chat?.first_name + ' ' + (u.message?.chat?.last_name || ''),
-            username: u.message?.chat?.username,
-            text: u.message?.text,
-            date: u.message?.date ? new Date(u.message.date * 1000).toLocaleString('it-IT') : null
-        })).filter(m => m.chat_id);
-        res.json({ success: true, messages });
-    } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
-    }
-});
-
-// ============================================
-// API TEST ALLARME TELEGRAM (solo admin)
-// ============================================
-app.post('/api/telegram/test-alert', authenticateToken, requireAdmin, async (req, res) => {
-    const { machine_id, type } = req.body; // type: 'water' o 'insecticide'
-    try {
-        const machineResult = await queryWithRetry(
-            'SELECT m.*, c.telegram_chat_id, c.name as client_name FROM machines m LEFT JOIN clients c ON m.client_id = c.id WHERE m.id = $1',
-            [machine_id]
-        );
-        if (machineResult.rows.length === 0) {
-            return res.json({ success: false, message: 'Macchina non trovata' });
-        }
-        const machine = machineResult.rows[0];
-        if (!machine.telegram_chat_id) {
-            return res.json({ success: false, message: `Nessun Chat ID Telegram per il cliente "${machine.client_name || '—'}"` });
-        }
-        const text = type === 'water'
-            ? `🚨 <b>TEST Allarme NabulAir</b>\n\n🏭 Macchina: <b>${machine.machine_name}</b>\n💧 Flusso acqua assente\nVerificare la pressione dell'acqua.`
-            : `🚨 <b>TEST Allarme NabulAir</b>\n\n🏭 Macchina: <b>${machine.machine_name}</b>\n⚠️ Insetticida esaurito\nVerificare il contenitore.`;
-        await sendTelegramMessage(machine.telegram_chat_id, text);
-        res.json({ success: true, message: `Messaggio inviato a Chat ID ${machine.telegram_chat_id}` });
-    } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
-    }
-});
-
-// ============================================
 // API REGISTRAZIONE ESP32 (pubblica) - CON RETRY
 // ============================================
 app.post('/api/register', async (req, res) => {
@@ -791,18 +758,7 @@ app.post('/api/register', async (req, res) => {
 // API PING ESP32 (con stato allarmi + Telegram)
 // ============================================
 app.post('/api/ping', async (req, res) => {
-    const { mac_address, ip, flow, status } = req.body;
-    
-    // Normalizza water_ok e insecticide_ok — accetta bool, 0/1, "true"/"false"
-    const normalize = v => {
-        if (v === undefined || v === null) return null;
-        if (typeof v === 'boolean') return v;
-        if (v === 0 || v === '0' || v === 'false') return false;
-        if (v === 1 || v === '1' || v === 'true') return true;
-        return null;
-    };
-    const water_ok = normalize(req.body.water_ok);
-    const insecticide_ok = normalize(req.body.insecticide_ok);
+    const { mac_address, ip, water_ok, insecticide_ok, flow, status } = req.body;
     
     if (!mac_address) {
         return res.status(400).json({ success: false });
