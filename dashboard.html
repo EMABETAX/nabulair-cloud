@@ -452,6 +452,34 @@
         .empty-state .big { font-size: 48px; margin-bottom: 14px; }
         .empty-state p { font-size: 15px; }
 
+        /* ── COMMAND PANEL ── */
+        .cmd-panel {
+            border-top: 1px solid var(--border);
+            margin-top: 14px; padding-top: 14px;
+        }
+        .cmd-panel-title {
+            font-size: 11px; font-weight: 700; letter-spacing: 1px;
+            text-transform: uppercase; color: var(--muted);
+            margin-bottom: 10px;
+        }
+        .cmd-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+        .btn-cmd {
+            padding: 7px 14px; border-radius: 20px; font-size: 12px;
+            font-weight: 600; cursor: pointer; border: 1px solid;
+            transition: opacity 0.2s; white-space: nowrap;
+        }
+        .btn-cmd-programs { background: var(--blue-dim); color: var(--blue); border-color: rgba(56,189,248,0.3); }
+        .btn-cmd-ota      { background: var(--amber-dim); color: var(--amber); border-color: rgba(245,158,11,0.3); }
+        .btn-cmd-reboot   { background: var(--red-dim); color: var(--red); border-color: rgba(239,68,68,0.3); }
+        .btn-cmd:hover { opacity: 0.75; }
+        .cmd-status {
+            font-size: 11px; color: var(--muted); min-height: 16px;
+            transition: color 0.3s;
+        }
+        .cmd-status.ok  { color: var(--green); }
+        .cmd-status.err { color: var(--red); }
+        .cmd-status.wait { color: var(--amber); }
+
         /* ── RESPONSIVE ── */
         @media (max-width: 640px) {
             .sidebar { display: none !important; }
@@ -903,6 +931,27 @@ function renderCards(machines) {
                 </div>`;
         }
 
+        // Pannello comandi (solo admin)
+        let cmdPanel = '';
+        if (isAdmin) {
+            cmdPanel = `
+            <div class="cmd-panel">
+                <div class="cmd-panel-title">🛠 Comandi remoti</div>
+                <div class="cmd-buttons">
+                    <button class="btn-cmd btn-cmd-programs" onclick="sendPrograms(${m.id})">
+                        📅 Aggiorna programmi
+                    </button>
+                    <button class="btn-cmd btn-cmd-ota" onclick="openOtaModal(${m.id}, '${esc(m.machine_name||m.mac_address)}')">
+                        ⬆️ OTA Firmware
+                    </button>
+                    <button class="btn-cmd btn-cmd-reboot" onclick="sendReboot(${m.id})">
+                        🔄 Riavvia
+                    </button>
+                </div>
+                <div class="cmd-status" id="cmd-status-${m.id}"></div>
+            </div>`;
+        }
+
         return `
         <div class="machine-card ${hasAlert?'has-alert':''}">
             <div class="card-head">
@@ -939,6 +988,7 @@ function renderCards(machines) {
 
             ${qrBtn}
             ${enterBtn}
+            ${cmdPanel}
         </div>`;
     }).join('');
 }
