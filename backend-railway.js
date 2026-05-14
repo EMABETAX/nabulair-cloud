@@ -9,7 +9,15 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+// ← FIX: CORS limitato a origini specifiche (configurabile via env)
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS 
+    ? process.env.ALLOWED_ORIGINS.split(',') 
+    : ['https://nabulair-cloud-production.up.railway.app', 'http://localhost:3000'];
+
+app.use(cors({
+    origin: ALLOWED_ORIGINS,
+    credentials: true
+}));
 app.use(express.json());
 
 // ============================================
@@ -152,24 +160,27 @@ async function initDatabase() {
     }
 }
 
-pool.connect(async (err) => {
-    if (err) {
+// ← FIX: sostituito pool.connect(callback) con IIFE + pool.query()
+//        per evitare leak di client non rilasciati nel pool
+(async () => {
+    try {
+        await pool.query('SELECT 1');
+        console.log('✅ Connesso a PostgreSQL su Railway!');
+        await initDatabase();
+    } catch (err) {
         console.error('❌ Errore DB iniziale:', err.message);
         console.log('⚠️ Nuovo tentativo di connessione tra 5 secondi...');
         setTimeout(async () => {
             try {
-                await pool.connect();
-                console.log('✅ Connesso a PostgreSQL su Railway!');
+                await pool.query('SELECT 1');
+                console.log('✅ Connesso a PostgreSQL su Railway! (retry)');
                 await initDatabase();
             } catch (retryErr) {
                 console.error('❌ Fallita riconnessione:', retryErr.message);
             }
         }, 5000);
-    } else {
-        console.log('✅ Connesso a PostgreSQL su Railway!');
-        await initDatabase();
     }
-});
+})();
 
 // ============================================
 // TELEGRAM NOTIFICHE
@@ -1090,11 +1101,9 @@ app.get('/', (req, res) => {
     });
 });
 
-app.post('/api/reset', async (req, res) => {
-    const hash = await bcrypt.hash(req.body.password || 'admin', 10);
-    await queryWithRetry("UPDATE users SET password_hash = $1 WHERE username = 'admin'", [hash]);
-    res.json({success: true, message: 'Password resettata. Rimuovi questo endpoint!'});
-});
+// ← FIX: rimosso endpoint /api/reset esposto senza autenticazione
+//        Se serve in emergenza, usare psql direttamente o reimplementare
+//        con authenticateToken + requireAdmin
 
 app.listen(PORT, () => {
     console.log(`✅ NabulAir Cloud avviato su porta ${PORT}`);
@@ -1105,4 +1114,5 @@ app.listen(PORT, () => {
     console.log(`📁 File statici: ${__dirname}`);
     console.log(`🚨 Sistema allarmi: ATTIVO`);
     console.log(`🔄 DB Auto-Retry: ATTIVO (max 3 tentativi)`);
+    console.log(`🌐 CORS origini: ${ALLOWED_ORIGINS.join(', ')}`);
 });
