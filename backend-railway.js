@@ -183,6 +183,32 @@ async function initDatabase() {
 })();
 
 // ============================================
+// OFFLINE DETECTION JOB
+// ============================================
+function startOfflineDetectionJob() {
+    const OFFLINE_THRESHOLD_MINUTES = 5;
+    const CHECK_INTERVAL_MS = 60 * 1000; // ogni 60 secondi
+
+    setInterval(async () => {
+        try {
+            const result = await pool.query(
+                `UPDATE machines 
+                 SET status = 'offline' 
+                 WHERE status != 'offline' 
+                   AND last_seen < NOW() - INTERVAL '${OFFLINE_THRESHOLD_MINUTES} minutes'`
+            );
+            if (result.rowCount > 0) {
+                console.log(`🔴 ${result.rowCount} macchina/e marcate offline (no ping da >${OFFLINE_THRESHOLD_MINUTES}min)`);
+            }
+        } catch (err) {
+            console.error('❌ Errore nel job offline detection:', err.message);
+        }
+    }, CHECK_INTERVAL_MS);
+
+    console.log(`🕐 Offline detection job attivo: check ogni ${CHECK_INTERVAL_MS/1000}s, timeout ${OFFLINE_THRESHOLD_MINUTES}min`);
+}
+
+// ============================================
 // TELEGRAM NOTIFICHE
 // ============================================
 async function sendTelegramMessage(chatId, text) {
@@ -442,7 +468,10 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
                 m.sta_ip, 
                 m.last_seen, 
                 m.firmware_version, 
-                m.status,
+                CASE 
+                    WHEN m.last_seen > NOW() - INTERVAL '5 minutes' THEN 'online' 
+                    ELSE 'offline' 
+                END as status,
                 m.water_ok,
                 m.insecticide_ok,
                 m.flow,
@@ -464,7 +493,9 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
             params.push(req.user.client_id);
         }
         
-        const orderBy = `ORDER BY m.status DESC, m.last_seen DESC NULLS LAST`;
+        const orderBy = `ORDER BY 
+            CASE WHEN m.last_seen > NOW() - INTERVAL '5 minutes' THEN 1 ELSE 0 END DESC, 
+            m.last_seen DESC NULLS LAST`;
         
         const result = await queryWithRetry(`${baseQuery} ${whereClause} ${orderBy}`, params);
         
@@ -530,7 +561,27 @@ app.get('/api/machine/:id', authenticateToken, async (req, res) => {
     
     try {
         const result = await queryWithRetry(`
-            SELECT m.*, c.name as client_name, c.email, c.phone, c.address
+            SELECT 
+                m.id,
+                m.machine_name,
+                m.mac_address,
+                m.sta_ip,
+                m.last_seen,
+                m.firmware_version,
+                m.water_ok,
+                m.insecticide_ok,
+                m.flow,
+                m.client_id,
+                m.installer_id,
+                m.created_at,
+                CASE 
+                    WHEN m.last_seen > NOW() - INTERVAL '5 minutes' THEN 'online' 
+                    ELSE 'offline' 
+                END as status,
+                c.name as client_name,
+                c.email,
+                c.phone,
+                c.address
             FROM machines m
             LEFT JOIN clients c ON m.client_id = c.id
             WHERE m.id = $1
@@ -698,46 +749,6 @@ app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
             [username.toLowerCase(), hash, role, client_id || null]
         );
         res.json({ success: true, message: 'Utente creato' });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-app.put('/api/users/:id', authenticateToken, requireAdmin, async (req, res) => {
-    const { id } = req.params;
-    const { username, password } = req.body;
-    try {
-        const fields = [];
-        const values = [];
-        let idx = 1;
-        if (username !== undefined) { fields.push(`username = $${idx++}`); values.push(username.toLowerCase()); }
-        if (password !== undefined && password.length > 0) {
-            const hash = await bcrypt.hash(password, 10);
-            fields.push(`password_hash = $${idx++}`);
-            values.push(hash);
-        }
-        if (fields.length === 0) {
-            return res.status(400).json({ success: false, message: 'Nessun campo da aggiornare' });
-        }
-        values.push(id);
-        await queryWithRetry(
-            `UPDATE users SET ${fields.join(', ')} WHERE id = $${idx}`,
-            values
-        );
-        res.json({ success: true, message: 'Utente aggiornato' });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-app.delete('/api/users/:id', authenticateToken, requireAdmin, async (req, res) => {
-    const { id } = req.params;
-    try {
-        if (parseInt(id) === req.user.id) {
-            return res.status(400).json({ success: false, message: 'Non puoi eliminare il tuo account' });
-        }
-        await queryWithRetry('DELETE FROM users WHERE id = $1', [id]);
-        res.json({ success: true, message: 'Utente eliminato' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -1118,7 +1129,7 @@ app.get('/', (req, res) => {
         version: '2.6',
         status: 'online',
         ssl_db: false,
-        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry', 'Installer can create and see clients', 'Installer can configure Telegram'],
+        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry', 'Installer can create and see clients', 'Installer can configure Telegram', 'Offline Detection'],
         endpoints: [
             'GET /',
             'GET /health',
@@ -1127,7 +1138,7 @@ app.get('/', (req, res) => {
             'POST /api/setup',
             'POST /api/login',
             'GET /api/me',
-            'GET /api/machines (protected)',
+            'GET /api/machines (protected + realtime status)',
             'GET /api/alerts (protected)',
             'GET /api/clients (admin + installer)',
             'POST /api/clients (admin + installer)',
@@ -1145,6 +1156,11 @@ app.get('/', (req, res) => {
 //        Se serve in emergenza, usare psql direttamente o reimplementare
 //        con authenticateToken + requireAdmin
 
+// ============================================
+// AVVIO SERVER + JOB
+// ============================================
+startOfflineDetectionJob();
+
 app.listen(PORT, () => {
     console.log(`✅ NabulAir Cloud avviato su porta ${PORT}`);
     console.log(`🔐 JWT_SECRET: ${JWT_SECRET ? '✅ Configurato' : '❌ MANCANTE'}`);
@@ -1155,4 +1171,5 @@ app.listen(PORT, () => {
     console.log(`🚨 Sistema allarmi: ATTIVO`);
     console.log(`🔄 DB Auto-Retry: ATTIVO (max 3 tentativi)`);
     console.log(`🌐 CORS origini: ${ALLOWED_ORIGINS.join(', ')}`);
+    console.log(`🕐 Offline Detection: ATTIVO (timeout 5min)`);
 });
