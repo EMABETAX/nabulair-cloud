@@ -9,7 +9,6 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ← FIX: CORS limitato a origini specifiche (configurabile via env)
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS 
     ? process.env.ALLOWED_ORIGINS.split(',') 
     : ['https://nabulair-cloud-production.up.railway.app', 'http://localhost:3000'];
@@ -20,9 +19,6 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// ============================================
-// FILE STATICI
-// ============================================
 app.use(express.static(__dirname));
 
 app.get('/dashboard', (req, res) => {
@@ -41,9 +37,6 @@ app.get('/remote.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'remote.html'));
 });
 
-// ============================================
-// VARIABILI D'AMBIENTE
-// ============================================
 const JWT_SECRET = process.env.JWT_SECRET;
 const DATABASE_URL = process.env.DATABASE_URL;
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -58,9 +51,6 @@ if (!DATABASE_URL) {
     process.exit(1);
 }
 
-// ============================================
-// DATABASE CONNECTION
-// ============================================
 let cleanDatabaseUrl = DATABASE_URL;
 if (cleanDatabaseUrl.includes('?sslmode=require')) {
     cleanDatabaseUrl = cleanDatabaseUrl.replace('?sslmode=require', '');
@@ -111,6 +101,24 @@ async function queryWithRetry(query, params, maxRetries = 3) {
 async function initDatabase() {
     try {
         await pool.query(`
+            CREATE TABLE IF NOT EXISTS machines (
+                id SERIAL PRIMARY KEY,
+                mac_address VARCHAR(17) UNIQUE NOT NULL,
+                machine_name VARCHAR(100),
+                sta_ip VARCHAR(15),
+                firmware_version VARCHAR(20),
+                status VARCHAR(20) DEFAULT 'pending',
+                last_seen TIMESTAMP,
+                water_ok BOOLEAN DEFAULT TRUE,
+                insecticide_ok BOOLEAN DEFAULT TRUE,
+                flow FLOAT DEFAULT 0,
+                client_id INTEGER REFERENCES clients(id),
+                installer_id INTEGER REFERENCES users(id),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `).catch(e => console.log('Tabella machines già esistente'));
+
+        await pool.query(`
             CREATE TABLE IF NOT EXISTS alerts (
                 id SERIAL PRIMARY KEY,
                 machine_id INTEGER REFERENCES machines(id) ON DELETE CASCADE,
@@ -160,8 +168,6 @@ async function initDatabase() {
     }
 }
 
-// ← FIX: sostituito pool.connect(callback) con IIFE + pool.query()
-//        per evitare leak di client non rilasciati nel pool
 (async () => {
     try {
         await pool.query('SELECT 1');
@@ -182,12 +188,9 @@ async function initDatabase() {
     }
 })();
 
-// ============================================
-// OFFLINE DETECTION JOB
-// ============================================
 function startOfflineDetectionJob() {
     const OFFLINE_THRESHOLD_MINUTES = 5;
-    const CHECK_INTERVAL_MS = 60 * 1000; // ogni 60 secondi
+    const CHECK_INTERVAL_MS = 60 * 1000;
 
     setInterval(async () => {
         try {
@@ -208,9 +211,6 @@ function startOfflineDetectionJob() {
     console.log(`🕐 Offline detection job attivo: check ogni ${CHECK_INTERVAL_MS/1000}s, timeout ${OFFLINE_THRESHOLD_MINUTES}min`);
 }
 
-// ============================================
-// TELEGRAM NOTIFICHE
-// ============================================
 async function sendTelegramMessage(chatId, text) {
     if (!TELEGRAM_BOT_TOKEN || !chatId) return;
     try {
@@ -337,9 +337,6 @@ function requireRole(...roles) {
 
 const requireAdmin = requireRole('admin');
 
-// ============================================
-// API TELEGRAM WEBHOOK (Admin + Installer)
-// ============================================
 app.post('/api/telegram/setup-webhook', authenticateToken, requireRole('admin', 'installer'), async (req, res) => {
     const { webhook_url } = req.body;
     if (!webhook_url) {
@@ -378,9 +375,6 @@ app.get('/api/telegram/webhook-status', authenticateToken, requireRole('admin', 
     }
 });
 
-// ============================================
-// API SETUP
-// ============================================
 app.post('/api/setup', async (req, res) => {
     try {
         const count = await queryWithRetry('SELECT COUNT(*) FROM users');
@@ -403,9 +397,6 @@ app.post('/api/setup', async (req, res) => {
     }
 });
 
-// ============================================
-// API LOGIN
-// ============================================
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     
@@ -455,9 +446,6 @@ app.get('/api/me', authenticateToken, (req, res) => {
     res.json({ success: true, user: req.user });
 });
 
-// ============================================
-// API MACCHINE
-// ============================================
 app.get('/api/machines', authenticateToken, async (req, res) => {
     try {
         let baseQuery = `
@@ -507,9 +495,49 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
     }
 });
 
-// ============================================
-// API ALLARMI
-// ============================================
+// ← FIX FLUSSO: endpoint pre-registrazione macchina (Admin vende HW all'installatore)
+app.post('/api/machines/preregister', authenticateToken, requireAdmin, async (req, res) => {
+    const { mac_address, installer_id, machine_name } = req.body;
+    
+    if (!mac_address) {
+        return res.status(400).json({ success: false, message: 'MAC address obbligatorio' });
+    }
+    
+    const macRegex = /^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$/i;
+    if (!macRegex.test(mac_address)) {
+        return res.status(400).json({ success: false, message: 'MAC address non valido' });
+    }
+    
+    try {
+        if (installer_id) {
+            const instCheck = await queryWithRetry(
+                'SELECT id FROM users WHERE id = $1 AND role = $2',
+                [installer_id, 'installer']
+            );
+            if (instCheck.rows.length === 0) {
+                return res.status(400).json({ success: false, message: 'Installatore non trovato' });
+            }
+        }
+        
+        const result = await queryWithRetry(
+            `INSERT INTO machines (mac_address, machine_name, installer_id, status, last_seen)
+             VALUES ($1, $2, $3, 'pending', NULL)
+             ON CONFLICT (mac_address) DO UPDATE SET 
+                 installer_id = EXCLUDED.installer_id,
+                 machine_name = COALESCE(EXCLUDED.machine_name, machines.machine_name)
+             RETURNING *`,
+            [mac_address.toUpperCase(), machine_name || null, installer_id || null]
+        );
+        
+        console.log(`📦 Macchina pre-registrata: ${mac_address} → installer ${installer_id}`);
+        res.json({ success: true, machine: result.rows[0] });
+        
+    } catch (error) {
+        console.error('Errore pre-registrazione:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 app.get('/api/alerts', authenticateToken, async (req, res) => {
     try {
         let baseQuery = `
@@ -581,7 +609,8 @@ app.get('/api/machine/:id', authenticateToken, async (req, res) => {
                 c.name as client_name,
                 c.email,
                 c.phone,
-                c.address
+                c.address,
+                c.telegram_chat_id
             FROM machines m
             LEFT JOIN clients c ON m.client_id = c.id
             WHERE m.id = $1
@@ -599,11 +628,6 @@ app.get('/api/machine/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// ============================================
-// API CLIENTI
-// ============================================
-
-// GET - Admin vede tutti, Installer vede TUTTI i clienti che ha creato lui + quelli associati
 app.get('/api/clients', authenticateToken, async (req, res) => {
     try {
         let query = '';
@@ -634,7 +658,6 @@ app.get('/api/clients', authenticateToken, async (req, res) => {
     }
 });
 
-// POST - Admin e Installer possono creare clienti
 app.post('/api/clients', authenticateToken, requireRole('admin', 'installer'), async (req, res) => {
     const { name, email, phone, address, telegram_chat_id } = req.body;
     if (!name) {
@@ -657,7 +680,6 @@ app.post('/api/clients', authenticateToken, requireRole('admin', 'installer'), a
     }
 });
 
-// PUT - Admin può modificare tutti, Installer solo i suoi clienti
 app.put('/api/clients/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { telegram_chat_id, name, email, phone, address } = req.body;
@@ -698,7 +720,6 @@ app.put('/api/clients/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// DELETE - Solo admin
 app.delete('/api/clients/:id', authenticateToken, requireAdmin, async (req, res) => {
     const { id } = req.params;
     try {
@@ -720,9 +741,6 @@ app.delete('/api/clients/:id', authenticateToken, requireAdmin, async (req, res)
     }
 });
 
-// ============================================
-// API UTENTI (solo admin)
-// ============================================
 app.get('/api/users', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const result = await queryWithRetry(`
@@ -754,9 +772,6 @@ app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
     }
 });
 
-// ============================================
-// API ASSEGNAZIONE MACCHINA
-// ============================================
 app.put('/api/machines/:id/assign', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { client_id, installer_id } = req.body;
@@ -794,9 +809,6 @@ app.put('/api/machines/:id/assign', authenticateToken, async (req, res) => {
     }
 });
 
-// ============================================
-// API QR CODE TELEGRAM
-// ============================================
 app.post('/api/machines/:id/qr', authenticateToken, async (req, res) => {
     const { id } = req.params;
 
@@ -848,9 +860,6 @@ app.post('/api/machines/:id/qr', authenticateToken, async (req, res) => {
     }
 });
 
-// ============================================
-// API REGISTRAZIONE ESP32
-// ============================================
 app.post('/api/register', async (req, res) => {
     const { mac_address, ip, version, machine_name } = req.body;
     
@@ -885,9 +894,6 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-// ============================================
-// API PING ESP32
-// ============================================
 app.post('/api/ping', async (req, res) => {
     const { mac_address, ip, water_ok, insecticide_ok, flow, status } = req.body;
     
@@ -1016,9 +1022,6 @@ app.post('/api/ping', async (req, res) => {
     }
 });
 
-// ============================================
-// COMANDI ESP32
-// ============================================
 app.post('/api/machines/:id/command', authenticateToken, async (req, res) => {
     const machineId = parseInt(req.params.id);
     const { type, payload } = req.body;
@@ -1097,9 +1100,6 @@ app.get('/api/machines/:id/commands', authenticateToken, async (req, res) => {
     }
 });
 
-// ============================================
-// HEALTH CHECK
-// ============================================
 app.get('/health', async (req, res) => {
     let dbConnected = false;
     let dbError = null;
@@ -1126,10 +1126,10 @@ app.get('/health', async (req, res) => {
 app.get('/', (req, res) => {
     res.json({ 
         message: 'NabulAir Cloud API', 
-        version: '2.6',
+        version: '2.7',
         status: 'online',
         ssl_db: false,
-        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry', 'Installer can create and see clients', 'Installer can configure Telegram', 'Offline Detection'],
+        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry', 'Installer can create and see clients', 'Installer can configure Telegram', 'Offline Detection', 'Machine Pre-registration'],
         endpoints: [
             'GET /',
             'GET /health',
@@ -1139,6 +1139,7 @@ app.get('/', (req, res) => {
             'POST /api/login',
             'GET /api/me',
             'GET /api/machines (protected + realtime status)',
+            'POST /api/machines/preregister (admin)',
             'GET /api/alerts (protected)',
             'GET /api/clients (admin + installer)',
             'POST /api/clients (admin + installer)',
@@ -1152,13 +1153,6 @@ app.get('/', (req, res) => {
     });
 });
 
-// ← FIX: rimosso endpoint /api/reset esposto senza autenticazione
-//        Se serve in emergenza, usare psql direttamente o reimplementare
-//        con authenticateToken + requireAdmin
-
-// ============================================
-// AVVIO SERVER + JOB
-// ============================================
 startOfflineDetectionJob();
 
 app.listen(PORT, () => {
@@ -1172,4 +1166,5 @@ app.listen(PORT, () => {
     console.log(`🔄 DB Auto-Retry: ATTIVO (max 3 tentativi)`);
     console.log(`🌐 CORS origini: ${ALLOWED_ORIGINS.join(', ')}`);
     console.log(`🕐 Offline Detection: ATTIVO (timeout 5min)`);
+    console.log(`📦 Pre-registrazione macchine: ATTIVA (admin only)`);
 });
