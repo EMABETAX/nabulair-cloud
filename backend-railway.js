@@ -538,49 +538,34 @@ app.post('/api/machines/preregister', authenticateToken, requireAdmin, async (re
     }
 });
 
-app.get('/api/alerts', authenticateToken, async (req, res) => {
-    try {
-        let baseQuery = `
-            SELECT a.*, m.machine_name, c.name as client_name
-            FROM alerts a
-            JOIN machines m ON a.machine_id = m.id
-            LEFT JOIN clients c ON m.client_id = c.id
-            WHERE a.status = 'active'
-        `;
-        let params = [];
-        let paramIndex = 1;
-        
-        if (req.user.role === 'installer') {
-            baseQuery += ` AND m.installer_id = $${paramIndex++}`;
-            params.push(req.user.id);
-        } else if (req.user.role === 'client') {
-            baseQuery += ` AND m.client_id = $${paramIndex++}`;
-            params.push(req.user.client_id);
-        }
-        
-        baseQuery += ` ORDER BY a.created_at DESC`;
-        
-        const result = await queryWithRetry(baseQuery, params);
-        res.json({ success: true, alerts: result.rows });
-        
-    } catch (error) {
-        console.error('Errore GET alerts:', error.message);
-        res.status(500).json({ success: false, message: 'Errore caricamento allarmi' });
-    }
-});
-
-app.post('/api/alerts/:id/resolve', authenticateToken, async (req, res) => {
+app.put('/api/machines/:id', authenticateToken, requireAdmin, async (req, res) => {
     const { id } = req.params;
+    const { machine_name, mac_address } = req.body;
     
     try {
-        await queryWithRetry(
-            `UPDATE alerts SET status = 'resolved', resolved_at = NOW()
-             WHERE id = $1`,
-            [id]
-        );
-        res.json({ success: true, message: 'Allarme risolto' });
+        const fields = [];
+        const values = [];
+        let idx = 1;
+        
+        if (machine_name !== undefined) { fields.push(`machine_name = $${idx++}`); values.push(machine_name); }
+        if (mac_address !== undefined) { 
+            const macRegex = /^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$/i;
+            if (!macRegex.test(mac_address)) {
+                return res.status(400).json({ success: false, message: 'MAC address non valido' });
+            }
+            fields.push(`mac_address = $${idx++}`); 
+            values.push(mac_address.toUpperCase()); 
+        }
+        
+        if (fields.length === 0) {
+            return res.status(400).json({ success: false, message: 'Nessun campo da aggiornare' });
+        }
+        
+        values.push(id);
+        await queryWithRetry(`UPDATE machines SET ${fields.join(', ')} WHERE id = $${idx}`, values);
+        res.json({ success: true, message: 'Macchina aggiornata' });
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        res.status(500).json({ success: false, message: error.message });
     }
 });
 
@@ -625,6 +610,71 @@ app.get('/api/machine/:id', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('Errore GET machine:', error.message);
         res.status(500).json({ success: false, message: 'Errore caricamento' });
+    }
+});
+
+app.delete('/api/machines/:id', authenticateToken, requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+        // Prima cancella gli allarmi e comandi associati (FK CASCADE li gestisce, ma per sicurezza)
+        await queryWithRetry('DELETE FROM alerts WHERE machine_id = $1', [id]);
+        await queryWithRetry('DELETE FROM commands WHERE machine_id = $1', [id]);
+        
+        const result = await queryWithRetry('DELETE FROM machines WHERE id = $1 RETURNING id', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Macchina non trovata' });
+        }
+        console.log(`🗑 Macchina ${id} eliminata da admin`);
+        res.json({ success: true, message: 'Macchina eliminata' });
+    } catch (error) {
+        console.error('Errore delete machine:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.get('/api/alerts', authenticateToken, async (req, res) => {
+    try {
+        let baseQuery = `
+            SELECT a.*, m.machine_name, c.name as client_name
+            FROM alerts a
+            JOIN machines m ON a.machine_id = m.id
+            LEFT JOIN clients c ON m.client_id = c.id
+            WHERE a.status = 'active'
+        `;
+        let params = [];
+        let paramIndex = 1;
+        
+        if (req.user.role === 'installer') {
+            baseQuery += ` AND m.installer_id = $${paramIndex++}`;
+            params.push(req.user.id);
+        } else if (req.user.role === 'client') {
+            baseQuery += ` AND m.client_id = $${paramIndex++}`;
+            params.push(req.user.client_id);
+        }
+        
+        baseQuery += ` ORDER BY a.created_at DESC`;
+        
+        const result = await queryWithRetry(baseQuery, params);
+        res.json({ success: true, alerts: result.rows });
+        
+    } catch (error) {
+        console.error('Errore GET alerts:', error.message);
+        res.status(500).json({ success: false, message: 'Errore caricamento allarmi' });
+    }
+});
+
+app.post('/api/alerts/:id/resolve', authenticateToken, async (req, res) => {
+    const { id } = req.params;
+    
+    try {
+        await queryWithRetry(
+            `UPDATE alerts SET status = 'resolved', resolved_at = NOW()
+             WHERE id = $1`,
+            [id]
+        );
+        res.json({ success: true, message: 'Allarme risolto' });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -767,6 +817,73 @@ app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
             [username.toLowerCase(), hash, role, client_id || null]
         );
         res.json({ success: true, message: 'Utente creato' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.delete('/api/users/:id', authenticateToken, requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    const userId = parseInt(id);
+    
+    try {
+        // Non permettere di cancellare se stesso
+        if (userId === req.user.id) {
+            return res.status(400).json({ success: false, message: 'Non puoi eliminare il tuo account' });
+        }
+        
+        // Verifica che non sia un admin (opzionale: puoi bloccare cancellazione admin)
+        const userCheck = await queryWithRetry('SELECT role FROM users WHERE id = $1', [userId]);
+        if (userCheck.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Utente non trovato' });
+        }
+        
+        // Se è un installatore, verifica che non abbia macchine assegnate
+        if (userCheck.rows[0].role === 'installer') {
+            const machines = await queryWithRetry('SELECT id FROM machines WHERE installer_id = $1 LIMIT 1', [userId]);
+            if (machines.rows.length > 0) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'Impossibile eliminare: installatore ha macchine assegnate. Riassegna o elimina le macchine prima.' 
+                });
+            }
+        }
+        
+        await queryWithRetry('DELETE FROM users WHERE id = $1', [userId]);
+        console.log(`🗑 Utente ${userId} eliminato da admin`);
+        res.json({ success: true, message: 'Utente eliminato' });
+    } catch (error) {
+        console.error('Errore delete user:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.put('/api/users/:id', authenticateToken, requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { username, password, role, client_id } = req.body;
+    
+    try {
+        const fields = [];
+        const values = [];
+        let idx = 1;
+        
+        if (username !== undefined) { fields.push(`username = $${idx++}`); values.push(username.toLowerCase()); }
+        if (role !== undefined)     { fields.push(`role = $${idx++}`);     values.push(role); }
+        if (client_id !== undefined){ fields.push(`client_id = $${idx++}`);values.push(client_id || null); }
+        
+        if (password) {
+            const hash = await bcrypt.hash(password, 10);
+            fields.push(`password_hash = $${idx++}`);
+            values.push(hash);
+        }
+        
+        if (fields.length === 0) {
+            return res.status(400).json({ success: false, message: 'Nessun campo da aggiornare' });
+        }
+        
+        values.push(id);
+        await queryWithRetry(`UPDATE users SET ${fields.join(', ')} WHERE id = $${idx}`, values);
+        res.json({ success: true, message: 'Utente aggiornato' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -1129,7 +1246,7 @@ app.get('/', (req, res) => {
         version: '2.7',
         status: 'online',
         ssl_db: false,
-        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry', 'Installer can create and see clients', 'Installer can configure Telegram', 'Offline Detection', 'Machine Pre-registration'],
+        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry', 'Installer can create and see clients', 'Installer can configure Telegram', 'Offline Detection', 'Machine Pre-registration', 'Full CRUD for machines and users'],
         endpoints: [
             'GET /',
             'GET /health',
@@ -1140,12 +1257,17 @@ app.get('/', (req, res) => {
             'GET /api/me',
             'GET /api/machines (protected + realtime status)',
             'POST /api/machines/preregister (admin)',
+            'PUT /api/machines/:id (admin)',
+            'DELETE /api/machines/:id (admin)',
             'GET /api/alerts (protected)',
             'GET /api/clients (admin + installer)',
             'POST /api/clients (admin + installer)',
             'PUT /api/clients/:id (admin + installer)',
             'DELETE /api/clients/:id (admin only)',
+            'GET /api/users (admin)',
             'POST /api/users (admin)',
+            'PUT /api/users/:id (admin)',
+            'DELETE /api/users/:id (admin)',
             'PUT /api/machines/:id/assign (admin + installer)',
             'POST /api/register',
             'POST /api/ping'
