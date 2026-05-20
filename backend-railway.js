@@ -3,7 +3,7 @@ const cors = require('cors');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const { Pool } = require('pg');
+const { Pool } = require('pg'); 
 const path = require('path');
 
 const app = express();
