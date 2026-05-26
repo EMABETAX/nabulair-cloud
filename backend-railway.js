@@ -3,7 +3,7 @@ const cors = require('cors');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const { Pool } = require('pg'); 
+const { Pool } = require('pg');
 const path = require('path');
 
 const app = express();
@@ -1049,7 +1049,7 @@ app.post('/api/ping', async (req, res) => {
                 clientInfo = clientResult.rows[0];
             }
             
-            if (insecticide_ok === false) {
+            if (insecticideOkNormalized === false) {
                 const existing = await queryWithRetry(
                     `SELECT id FROM alerts WHERE machine_id = $1 AND type = 'insecticide' AND status = 'active'`,
                     [machine_id]
@@ -1071,7 +1071,7 @@ app.post('/api/ping', async (req, res) => {
                         );
                     }
                 }
-            } else if (insecticide_ok === true) {
+            } else if (insecticideOkNormalized === true) {
                 await queryWithRetry(
                     `UPDATE alerts 
                      SET status = 'resolved', resolved_at = NOW()
@@ -1080,7 +1080,7 @@ app.post('/api/ping', async (req, res) => {
                 );
             }
             
-            if (water_ok === false) {
+            if (waterOkNormalized === false) {
                 const existing = await queryWithRetry(
                     `SELECT id FROM alerts WHERE machine_id = $1 AND type = 'water' AND status = 'active'`,
                     [machine_id]
@@ -1102,7 +1102,7 @@ app.post('/api/ping', async (req, res) => {
                         );
                     }
                 }
-            } else if (water_ok === true) {
+            } else if (waterOkNormalized === true) {
                 await queryWithRetry(
                     `UPDATE alerts 
                      SET status = 'resolved', resolved_at = NOW()
