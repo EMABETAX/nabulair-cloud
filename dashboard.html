@@ -767,7 +767,7 @@ function bootApp() {
     document.getElementById('appShell').style.display    = 'block';
 
     const role = currentUser.role;
-    if (role === 'client') { window.location.href = '/remote'; return; }
+    // Client redirect removed - client can access dashboard to see their machines
     document.getElementById('topUsername').textContent   = currentUser.username;
     const badge = document.getElementById('topRoleBadge');
     badge.textContent  = role === 'admin' ? 'Admin' : role === 'installer' ? 'Installatore' : 'Cliente';
