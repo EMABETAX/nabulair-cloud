@@ -162,6 +162,16 @@ async function initDatabase() {
             )
         `);
 
+        // NEW: tabella per i programmi delle macchine
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS machine_programs (
+                id SERIAL PRIMARY KEY,
+                machine_id INTEGER UNIQUE REFERENCES machines(id) ON DELETE CASCADE,
+                programs JSONB NOT NULL DEFAULT '[]',
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
         console.log('✅ Database inizializzato correttamente');
     } catch (err) {
         console.error('❌ Errore init database:', err.message);
@@ -1028,6 +1038,64 @@ app.put('/api/machines/:id/assign', authenticateToken, async (req, res) => {
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
+});
+
+// ==================== PROGRAMMI CLOUD ====================
+app.get('/api/machines/:id/programs', authenticateToken, async (req, res) => {
+    try {
+        const machineId = req.params.id;
+        // Verifica accesso
+        const machine = await queryWithRetry('SELECT installer_id, client_id FROM machines WHERE id = $1', [machineId]);
+        if (!machine.rows.length) return res.status(404).json({ success: false, message: 'Macchina non trovata' });
+        const m = machine.rows[0];
+        if (req.user.role === 'installer' && m.installer_id !== req.user.id) return res.status(403).json({ success: false });
+        if (req.user.role === 'client' && m.client_id !== req.user.client_id) return res.status(403).json({ success: false });
+        
+        const progRes = await queryWithRetry('SELECT programs FROM machine_programs WHERE machine_id = $1', [machineId]);
+        let programs = [];
+        if (progRes.rows.length) {
+            programs = progRes.rows[0].programs;
+        }
+        res.json({ success: true, programs });
+    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+app.put('/api/machines/:id/programs', authenticateToken, async (req, res) => {
+    try {
+        const machineId = req.params.id;
+        const { programs, sendToDevice = false } = req.body;
+        if (!Array.isArray(programs)) return res.status(400).json({ success: false, message: 'programs deve essere un array' });
+        
+        // Salva nel database
+        await queryWithRetry(
+            `INSERT INTO machine_programs (machine_id, programs, updated_at)
+             VALUES ($1, $2, NOW())
+             ON CONFLICT (machine_id) DO UPDATE SET programs = EXCLUDED.programs, updated_at = NOW()`,
+            [machineId, JSON.stringify(programs)]
+        );
+        
+        // Se richiesto, invia comando all'ESP32
+        if (sendToDevice) {
+            const commandPayload = { programs: programs.map(p => ({
+                id: p.id,
+                nome: p.nome,
+                attivo: p.attivo,
+                days: p.days,
+                orario: p.orario,
+                durata: p.durata,
+                percentuale: p.percentuale,
+                lavaggio: p.lavaggio || false
+            })) };
+            await queryWithRetry(
+                `INSERT INTO commands (machine_id, type, payload, created_by)
+                 VALUES ($1, 'update_programs', $2, $3)`,
+                [machineId, JSON.stringify(commandPayload), req.user.id]
+            );
+            res.json({ success: true, message: 'Programmi salvati e inviati al dispositivo' });
+        } else {
+            res.json({ success: true, message: 'Programmi salvati nel cloud' });
+        }
+    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
 app.post('/api/machines/:id/qr', authenticateToken, async (req, res) => {
