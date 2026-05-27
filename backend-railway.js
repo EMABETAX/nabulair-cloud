@@ -1259,7 +1259,7 @@ app.post('/api/machines/:id/command', authenticateToken, async (req, res) => {
     const { type, payload } = req.body;
 
     // AGGIUNTI sync_time e start_cycle
-    const ALLOWED_TYPES = ['update_programs', 'ota_firmware', 'ota_littlefs', 'reboot', 'sync_time', 'start_cycle'];
+    const ALLOWED_TYPES = ['update_programs', 'ota_firmware', 'ota_littlefs', 'reboot', 'sync_time', 'start_cycle', 'stop_cycle', 'wash_cycle', 'test_cycle'];
     if (!type || !ALLOWED_TYPES.includes(type)) {
         return res.status(400).json({ success: false, message: `Tipo comando non valido. Validi: ${ALLOWED_TYPES.join(', ')}` });
     }
