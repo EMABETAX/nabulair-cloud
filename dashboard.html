@@ -1331,7 +1331,7 @@ async function preregisterMachine() {
     if (!installerId) return alert('Seleziona un installatore');
     const res = await apiPost('/machines/preregister', { mac_address: mac, machine_name: name || null, installer_id: parseInt(installerId) });
     if (res.success) {
-        alert('✅ Macchina pre-registrata!\n\nQuando l'installatore la accenderà, apparirà automaticamente nel suo pannello.');
+        alert(`✅ Macchina pre-registrata!\n\nQuando l'installatore la accenderà, apparirà automaticamente nel suo pannello.`);
         document.getElementById('preregMac').value = '';
         document.getElementById('preregName').value = '';
         document.getElementById('preregInstaller').value = '';
