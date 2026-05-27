@@ -162,13 +162,14 @@ async function initDatabase() {
             )
         `);
 
-        // NEW: tabella per i programmi delle macchine
+        // ========== NUOVA TABELLA PER I PROGRAMMI ==========
         await pool.query(`
             CREATE TABLE IF NOT EXISTS machine_programs (
                 id SERIAL PRIMARY KEY,
-                machine_id INTEGER UNIQUE REFERENCES machines(id) ON DELETE CASCADE,
+                machine_id INTEGER REFERENCES machines(id) ON DELETE CASCADE,
                 programs JSONB NOT NULL DEFAULT '[]',
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(machine_id)
             )
         `);
 
@@ -1040,64 +1041,6 @@ app.put('/api/machines/:id/assign', authenticateToken, async (req, res) => {
     }
 });
 
-// ==================== PROGRAMMI CLOUD ====================
-app.get('/api/machines/:id/programs', authenticateToken, async (req, res) => {
-    try {
-        const machineId = req.params.id;
-        // Verifica accesso
-        const machine = await queryWithRetry('SELECT installer_id, client_id FROM machines WHERE id = $1', [machineId]);
-        if (!machine.rows.length) return res.status(404).json({ success: false, message: 'Macchina non trovata' });
-        const m = machine.rows[0];
-        if (req.user.role === 'installer' && m.installer_id !== req.user.id) return res.status(403).json({ success: false });
-        if (req.user.role === 'client' && m.client_id !== req.user.client_id) return res.status(403).json({ success: false });
-        
-        const progRes = await queryWithRetry('SELECT programs FROM machine_programs WHERE machine_id = $1', [machineId]);
-        let programs = [];
-        if (progRes.rows.length) {
-            programs = progRes.rows[0].programs;
-        }
-        res.json({ success: true, programs });
-    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
-});
-
-app.put('/api/machines/:id/programs', authenticateToken, async (req, res) => {
-    try {
-        const machineId = req.params.id;
-        const { programs, sendToDevice = false } = req.body;
-        if (!Array.isArray(programs)) return res.status(400).json({ success: false, message: 'programs deve essere un array' });
-        
-        // Salva nel database
-        await queryWithRetry(
-            `INSERT INTO machine_programs (machine_id, programs, updated_at)
-             VALUES ($1, $2, NOW())
-             ON CONFLICT (machine_id) DO UPDATE SET programs = EXCLUDED.programs, updated_at = NOW()`,
-            [machineId, JSON.stringify(programs)]
-        );
-        
-        // Se richiesto, invia comando all'ESP32
-        if (sendToDevice) {
-            const commandPayload = { programs: programs.map(p => ({
-                id: p.id,
-                nome: p.nome,
-                attivo: p.attivo,
-                days: p.days,
-                orario: p.orario,
-                durata: p.durata,
-                percentuale: p.percentuale,
-                lavaggio: p.lavaggio || false
-            })) };
-            await queryWithRetry(
-                `INSERT INTO commands (machine_id, type, payload, created_by)
-                 VALUES ($1, 'update_programs', $2, $3)`,
-                [machineId, JSON.stringify(commandPayload), req.user.id]
-            );
-            res.json({ success: true, message: 'Programmi salvati e inviati al dispositivo' });
-        } else {
-            res.json({ success: true, message: 'Programmi salvati nel cloud' });
-        }
-    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
-});
-
 app.post('/api/machines/:id/qr', authenticateToken, async (req, res) => {
     const { id } = req.params;
 
@@ -1315,7 +1258,8 @@ app.post('/api/machines/:id/command', authenticateToken, async (req, res) => {
     const machineId = parseInt(req.params.id);
     const { type, payload } = req.body;
 
-    const ALLOWED_TYPES = ['update_programs', 'ota_firmware', 'ota_littlefs', 'reboot'];
+    // AGGIUNTI sync_time e start_cycle
+    const ALLOWED_TYPES = ['update_programs', 'ota_firmware', 'ota_littlefs', 'reboot', 'sync_time', 'start_cycle'];
     if (!type || !ALLOWED_TYPES.includes(type)) {
         return res.status(400).json({ success: false, message: `Tipo comando non valido. Validi: ${ALLOWED_TYPES.join(', ')}` });
     }
@@ -1389,6 +1333,102 @@ app.get('/api/machines/:id/commands', authenticateToken, async (req, res) => {
     }
 });
 
+// ==================== GESTIONE PROGRAMMI ====================
+
+// GET /api/machines/:id/programs
+app.get('/api/machines/:id/programs', authenticateToken, async (req, res) => {
+    const machineId = parseInt(req.params.id);
+    
+    try {
+        const machineCheck = await queryWithRetry(
+            'SELECT installer_id, client_id FROM machines WHERE id = $1',
+            [machineId]
+        );
+        if (machineCheck.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Macchina non trovata' });
+        }
+        const machine = machineCheck.rows[0];
+        
+        if (req.user.role === 'installer' && machine.installer_id !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+        if (req.user.role === 'client' && machine.client_id !== req.user.client_id) {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+
+        const result = await queryWithRetry(
+            'SELECT programs FROM machine_programs WHERE machine_id = $1',
+            [machineId]
+        );
+        let programs = [];
+        if (result.rows.length > 0 && result.rows[0].programs) {
+            programs = result.rows[0].programs;
+        }
+        res.json({ success: true, programs });
+    } catch (error) {
+        console.error('Errore GET programs:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// PUT /api/machines/:id/programs
+app.put('/api/machines/:id/programs', authenticateToken, async (req, res) => {
+    const machineId = parseInt(req.params.id);
+    const { programs, sendToDevice } = req.body;
+    
+    if (!programs || !Array.isArray(programs)) {
+        return res.status(400).json({ success: false, message: 'Formato programmi non valido' });
+    }
+
+    try {
+        const machineCheck = await queryWithRetry(
+            'SELECT installer_id, client_id FROM machines WHERE id = $1',
+            [machineId]
+        );
+        if (machineCheck.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Macchina non trovata' });
+        }
+        const machine = machineCheck.rows[0];
+        
+        if (req.user.role === 'installer' && machine.installer_id !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+        if (req.user.role === 'client' && machine.client_id !== req.user.client_id) {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+
+        // Upsert dei programmi nel DB
+        await queryWithRetry(
+            `INSERT INTO machine_programs (machine_id, programs, updated_at)
+             VALUES ($1, $2, NOW())
+             ON CONFLICT (machine_id) DO UPDATE SET
+             programs = EXCLUDED.programs, updated_at = NOW()`,
+            [machineId, JSON.stringify(programs)]
+        );
+
+        let commandId = null;
+        if (sendToDevice === true) {
+            const cmdResult = await queryWithRetry(
+                `INSERT INTO commands (machine_id, type, payload, created_by)
+                 VALUES ($1, $2, $3, $4) RETURNING id`,
+                [machineId, 'update_programs', JSON.stringify({ programs }), req.user.id]
+            );
+            commandId = cmdResult.rows[0].id;
+            console.log(`📥 Comando update_programs accodato per macchina ${machineId} (cmd ${commandId})`);
+        }
+
+        res.json({
+            success: true,
+            message: sendToDevice
+                ? `Programmi salvati e invio richiesto (cmd #${commandId})`
+                : 'Programmi salvati nel cloud'
+        });
+    } catch (error) {
+        console.error('Errore PUT programs:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 app.get('/health', async (req, res) => {
     let dbConnected = false;
     let dbError = null;
@@ -1418,7 +1458,7 @@ app.get('/', (req, res) => {
         version: '2.8',
         status: 'online',
         ssl_db: false,
-        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry', 'Installer can create and see clients', 'Installer can configure Telegram', 'Offline Detection', 'Machine Pre-registration', 'Full CRUD for machines and users', 'Client login with own password'],
+        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry', 'Installer can create and see clients', 'Installer can configure Telegram', 'Offline Detection', 'Machine Pre-registration', 'Full CRUD for machines and users', 'Client login with own password', 'Machine Programs Management'],
         endpoints: [
             'GET /',
             'GET /health',
@@ -1442,7 +1482,9 @@ app.get('/', (req, res) => {
             'DELETE /api/users/:id (admin)',
             'PUT /api/machines/:id/assign (admin + installer)',
             'POST /api/register',
-            'POST /api/ping'
+            'POST /api/ping',
+            'GET /api/machines/:id/programs',
+            'PUT /api/machines/:id/programs'
         ]
     });
 });
@@ -1462,4 +1504,5 @@ app.listen(PORT, () => {
     console.log(`🕐 Offline Detection: ATTIVO (timeout 5min)`);
     console.log(`📦 Pre-registrazione macchine: ATTIVA (admin only)`);
     console.log(`👤 Client login: ATTIVO (creazione automatica utente)`);
+    console.log(`📋 Gestione programmi macchina: ATTIVA`);
 });
