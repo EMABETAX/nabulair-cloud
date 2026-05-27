@@ -590,7 +590,7 @@
                             <tr><th>Nome</th><th>MAC</th><th>Stato</th><th>Sensori</th><th>Cliente</th><th>Installatore</th><th>Azioni</th></tr>
                         </thead>
                         <tbody id="machinesTbody">
-                            <tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">⏳</div><p>Caricamento impianti...</p></tr>
+                            <tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">⏳</div><p>Caricamento impianti...</p></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -845,7 +845,7 @@ async function loadMachines() {
             renderTopPills(data.machines);
         }
     } catch(e) {
-        document.getElementById('machinesTbody').innerHTML = '<tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">❌</div><p>Errore di connessione</p></tr>';
+        document.getElementById('machinesTbody').innerHTML = '<table><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">❌</div><p>Errore di connessione</p></td></tr>';
     }
 }
 
@@ -1017,7 +1017,8 @@ function openDetail(id) {
         <div class="detail-section">
             <h4>🛠 Comandi remoti</h4>
             <div class="cmd-grid">
-                <button class="btn-cmd btn-cmd-programs" onclick="alert('Funzione in sviluppo: configura i programmi dall\\'app locale dell\\'impianto')">📅 Programmi (app locale)</button>
+                <button class="btn-cmd btn-cmd-programs" onclick="sendMachineCmd(${m.id},'sync_time')">🕒 Sincronizza ora</button>
+                <button class="btn-cmd btn-cmd-programs" onclick="sendMachineCmd(${m.id},'start_cycle')">💨 Avvia ciclo manuale</button>
                 <button class="btn-cmd btn-cmd-reboot" onclick="sendMachineCmd(${m.id},'reboot')">🔄 Riavvia</button>
                 <button class="btn-cmd btn-cmd-ota" onclick="toggleOtaPanel(${m.id})">⬆️ OTA Firmware</button>
             </div>
@@ -1026,6 +1027,15 @@ function openDetail(id) {
                 <label style="font-size:12px; color:var(--muted);">URL firmware (.bin)</label>
                 <input type="text" id="ota-url-${m.id}" placeholder="https://.../firmware.bin">
                 <button class="btn-cmd btn-cmd-ota" style="width:100%" onclick="sendMachineCmd(${m.id},'ota_firmware')">🚀 Avvia aggiornamento</button>
+            </div>
+        </div>
+        <div class="detail-section">
+            <h4>📋 Programmi</h4>
+            <div style="font-size:13px; color:var(--muted);">
+                ⚙️ Usa l'<strong>app locale</strong> (interfaccia web dell'ESP32) per configurare i programmi di nebulizzazione.
+            </div>
+            <div style="margin-top:12px;">
+                <a href="http://${m.sta_ip || '192.168.4.2'}" target="_blank" class="btn-cmd btn-cmd-programs" style="display:inline-block; text-decoration:none;">🔗 Apri app locale (${m.sta_ip || '192.168.4.2'})</a>
             </div>
         </div>
         `;
@@ -1155,7 +1165,7 @@ function editClient(id) {
 }
 
 async function deleteClient(id) {
-    if (!confirm('Eliminare definitivamente questo cliente?')) return;
+    if (!confirm('Eliminare definitivamente questo cliente? Le macchine ad esso associate verranno dissociate.')) return;
     const res = await apiDel(`/clients/${id}`);
     if (res.success) await loadClients(); else alert(res.message || 'Errore eliminazione');
 }
