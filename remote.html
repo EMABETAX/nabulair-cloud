@@ -205,10 +205,6 @@
         .btn-start   { background:linear-gradient(135deg,#00e676,#00b248); }
         .btn-stop    { background:linear-gradient(135deg,#ff5252,#c62828); }
         .btn-sync    { background:linear-gradient(135deg,#f59e0b,#b45309); }
-        .btn-reboot  { background:linear-gradient(135deg,#64748b,#334155); }
-        .btn-ota     { background:linear-gradient(135deg,#7b2ff7,#5b21b6); }
-        .btn-wash    { background:linear-gradient(135deg,#38bdf8,#0284c7); }
-        .btn-test    { background:linear-gradient(135deg,#a78bfa,#7c3aed); }
 
         /* Command status box */
         .cmd-status-box {
@@ -514,22 +510,7 @@
                 <button class="btn-cmd btn-sync" id="btnSync" onclick="sendCmd('sync_time')">🕒 Sincronizza ora</button>
             </div>
 
-            <!-- Comandi avanzati (solo installer/admin) -->
-            <div class="cmd-grid" id="adminCmds" style="display:none; margin-top:12px;">
-                <button class="btn-cmd btn-wash" onclick="sendCmd('start_wash')">🚿 Lavaggio rapido</button>
-                <button class="btn-cmd btn-test" onclick="sendCmd('test_sensors')">🧪 Test sensori</button>
-                <button class="btn-cmd btn-reboot" onclick="confirmReboot()">🔄 Riavvia</button>
-                <button class="btn-cmd btn-ota" onclick="toggleOtaPanel()">⬆️ OTA Firmware</button>
-            </div>
-
-            <!-- OTA Panel -->
-            <div class="ota-panel" id="otaPanel">
-                <label>URL firmware (.bin)</label>
-                <input type="text" id="otaUrl" placeholder="https://.../firmware.bin">
-                <button class="btn-cmd btn-ota" style="width:100%;" onclick="sendCmd('ota_firmware')">🚀 Avvia aggiornamento</button>
-                <div class="info-note">
-                    L'aggiornamento OTA funziona sempre via cloud, anche da remoto. L'ESP32 si aggiornerà al prossimo ping.
-                </div>
+            
             </div>
 
             <div class="cmd-status-box" id="cmdStatusBox">
@@ -660,30 +641,13 @@
 
     function bootRemote() {
         document.getElementById('mainContent').style.display = 'block';
-        setupRoleUI();
-        loadStatus();
+                loadStatus();
         loadPrograms();
         loadCmdHistory();
         pollTimer = setInterval(() => { loadStatus(); loadCmdHistory(); }, 5000);
     }
 
-    function setupRoleUI() {
-        const role = currentUser.role;
-        const isClient = role === 'client';
-        const isAdminInstaller = (role === 'admin' || role === 'installer');
-
-        document.getElementById('adminCmds').style.display = isAdminInstaller ? 'grid' : 'none';
-        document.getElementById('otaPanel').style.display = 'none';
-
-        if (isClient) {
-            document.getElementById('programActions').style.display = 'none';
-        }
-    }
-
-    // =============================================
-    // LOGIN
-    // =============================================
-    async function doLogin() {
+    function doLogin() {
         const u = document.getElementById('loginUser').value.trim();
         const p = document.getElementById('loginPass').value;
         const err = document.getElementById('loginError');
@@ -808,16 +772,6 @@
         showCmdStatus('pending', '⏳ Comando <strong>' + cmdLabel(type) + '</strong> in coda...');
 
         let bodyPayload = payload || null;
-        if (type === 'ota_firmware') {
-            const url = document.getElementById('otaUrl')?.value.trim();
-            if (!url) {
-                showCmdStatus('failed', '❌ Inserisci URL firmware');
-                setBtnDisabled(false);
-                return;
-            }
-            bodyPayload = { url: url };
-        }
-
         try {
             const body = { type: type };
             if (bodyPayload) body.payload = bodyPayload;
@@ -867,17 +821,10 @@
         }, 5000);
     }
 
-    async function confirmReboot() {
-        if (!confirm("Riavviare l'ESP32? La macchina andrà offline per ~30 secondi.")) return;
-        sendCmd('reboot');
-    }
-
     function cmdLabel(type) {
         const labels = {
             start_cycle:'Avvia ciclo', stop_cycle:'Ferma ciclo',
-            sync_time:'Sincronizza ora', reboot:'Riavvio',
-            ota_firmware:'Aggiornamento OTA', start_wash:'Lavaggio rapido',
-            test_sensors:'Test sensori'
+            sync_time:'Sincronizza ora'
         };
         return labels[type] || type;
     }
@@ -923,15 +870,7 @@
         return Math.round(secs/3600) + 'h fa';
     }
 
-    function toggleOtaPanel() {
-        const panel = document.getElementById('otaPanel');
-        panel.classList.toggle('open');
-    }
-
-    // =============================================
-    // PROGRAMS
-    // =============================================
-    async function loadPrograms() {
+    function loadPrograms() {
         try {
             const data = await apiGet('/machines/' + machineId + '/programs');
             if (data.success) {
