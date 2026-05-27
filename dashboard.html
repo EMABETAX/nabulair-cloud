@@ -1217,7 +1217,7 @@ function openDetail(id) {
                 <span class="label">IP Locale</span>
                 <span class="value td-mono" id="device-ip-${m.id}">${m.sta_ip || '—'}</span>
                 ${m.sta_ip ? `<button class="btn-save-sm" style="margin-left:10px;" onclick="testLocalConnection('${m.sta_ip}', ${m.id})">🔍 Test</button>
-                              <a href="/remote" target="_blank" class="btn-save-sm" style="text-decoration:none;">🌐 Controllo Remoto</a>
+                              <a href="/remote?machineId=${m.id}" target="_blank" class="btn-save-sm" style="text-decoration:none;">🌐 Controllo Remoto</a>
                               <span id="local-test-${m.id}" style="margin-left:8px;"></span>` : ''}
             </div>
         </div>
