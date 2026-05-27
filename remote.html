@@ -156,8 +156,6 @@
 
         .btn-start   { background:linear-gradient(135deg,#00e676,#00b248); }
         .btn-stop    { background:linear-gradient(135deg,#ff5252,#c62828); }
-        .btn-wash    { background:linear-gradient(135deg,#00d4ff,#0080b3); }
-        .btn-test    { background:linear-gradient(135deg,#7b2ff7,#4a0099); }
         .btn-sync    { background:linear-gradient(135deg,#f59e0b,#b45309); }
         .btn-reboot  { background:linear-gradient(135deg,#64748b,#334155); }
 
@@ -237,18 +235,6 @@
             background:rgba(255,82,82,.2); color:#ff5252;
         }
         .program-badge.active { background:rgba(0,230,118,.2); color:#00e676; }
-
-        /* OTA panel */
-        .ota-panel {
-            display:none; margin-top:16px; padding:16px;
-            background:rgba(0,0,0,.2); border-radius:14px;
-        }
-        .ota-panel input {
-            width:100%; padding:10px 14px; border-radius:10px;
-            background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15);
-            color:#fff; font-size:13px; margin-bottom:10px;
-        }
-        .ota-panel input::placeholder { color:rgba(255,255,255,.35); }
 
         /* Toast */
         .toast {
@@ -368,8 +354,6 @@
         <div class="cmd-grid">
             <button class="btn-cmd btn-start"  id="btnStart"  onclick="sendCmd('start_cycle')">💨 Avvia ciclo</button>
             <button class="btn-cmd btn-stop"   id="btnStop"   onclick="sendCmd('stop_cycle')">⏹ Ferma ciclo</button>
-            <button class="btn-cmd btn-wash"   id="btnWash"   onclick="sendCmd('wash_cycle')">🚿 Lavaggio</button>
-            <button class="btn-cmd btn-test"   id="btnTest"   onclick="sendCmd('test_cycle')">🔬 Test (1%)</button>
             <button class="btn-cmd btn-sync"   id="btnSync"   onclick="sendCmd('sync_time')">🕒 Sincronizza ora</button>
             <button class="btn-cmd btn-reboot" id="btnReboot" onclick="confirmReboot()">🔄 Riavvia</button>
         </div>
@@ -377,15 +361,6 @@
         <div class="cmd-status-box" id="cmdStatusBox">
             <div class="cmd-spinner" id="cmdSpinner"></div>
             <span id="cmdStatusText"></span>
-        </div>
-
-        <!-- OTA -->
-        <div style="margin-top:16px;">
-            <button class="btn-cmd btn-reboot" style="width:auto; padding:12px 20px;" onclick="toggleOta()">⬆️ OTA Firmware</button>
-            <div class="ota-panel" id="otaPanel">
-                <input type="text" id="otaUrl" placeholder="https://.../firmware.bin">
-                <button class="btn-cmd btn-sync" style="width:100%;" onclick="sendOta()">🚀 Avvia aggiornamento OTA</button>
-            </div>
         </div>
 
         <!-- Storico comandi -->
@@ -599,25 +574,11 @@
         sendCmd('reboot');
     }
 
-    function toggleOta() {
-        const p = document.getElementById('otaPanel');
-        p.style.display = p.style.display === 'block' ? 'none' : 'block';
-    }
-
-    async function sendOta() {
-        const url = document.getElementById('otaUrl').value.trim();
-        if (!url || !url.startsWith('http')) { showToast('❌ URL firmware non valido', 'error'); return; }
-        if (!confirm(`Avviare aggiornamento OTA da:\n${url}`)) return;
-        sendCmd('ota_firmware', { url });
-        document.getElementById('otaPanel').style.display = 'none';
-    }
-
     function cmdLabel(type) {
         const labels = {
             start_cycle:'Avvia ciclo', stop_cycle:'Ferma ciclo',
-            wash_cycle:'Lavaggio', test_cycle:'Test',
             sync_time:'Sincronizza ora', reboot:'Riavvio',
-            ota_firmware:'OTA Firmware', update_programs:'Aggiorna programmi'
+            update_programs:'Aggiorna programmi'
         };
         return labels[type] || type;
     }
