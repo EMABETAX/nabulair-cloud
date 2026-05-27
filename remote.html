@@ -647,7 +647,7 @@
         pollTimer = setInterval(() => { loadStatus(); loadCmdHistory(); }, 5000);
     }
 
-    function doLogin() {
+    async function doLogin() {
         const u = document.getElementById('loginUser').value.trim();
         const p = document.getElementById('loginPass').value;
         const err = document.getElementById('loginError');
@@ -794,7 +794,7 @@
         setBtnDisabled(false);
     }
 
-    function startCmdPoll(cmdId) {
+    async function startCmdPoll(cmdId) {
         if (cmdPollTimer) clearInterval(cmdPollTimer);
         let attempts = 0;
         cmdPollTimer = setInterval(async () => {
@@ -870,7 +870,7 @@
         return Math.round(secs/3600) + 'h fa';
     }
 
-    function loadPrograms() {
+    async function loadPrograms() {
         try {
             const data = await apiGet('/machines/' + machineId + '/programs');
             if (data.success) {
