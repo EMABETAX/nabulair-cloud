@@ -616,7 +616,6 @@ app.get('/api/machine/:id', authenticateToken, async (req, res) => {
 app.delete('/api/machines/:id', authenticateToken, requireAdmin, async (req, res) => {
     const { id } = req.params;
     try {
-        // Prima cancella gli allarmi e comandi associati (FK CASCADE li gestisce, ma per sicurezza)
         await queryWithRetry('DELETE FROM alerts WHERE machine_id = $1', [id]);
         await queryWithRetry('DELETE FROM commands WHERE machine_id = $1', [id]);
         
@@ -726,15 +725,13 @@ app.post('/api/clients', authenticateToken, requireRole('admin', 'installer'), a
     }
 
     try {
-        // Normalizza username: tolowercase, rimuove spazi, caratteri speciali leggeri
         let username = name.toLowerCase()
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // rimuove accenti
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
             .replace(/[^a-z0-9_]/g, '_')
             .replace(/_+/g, '_')
             .replace(/^_|_$/, '');
         if (!username) username = `client_${Date.now()}`;
 
-        // Verifica unicità username
         const existingUser = await queryWithRetry('SELECT id FROM users WHERE username = $1', [username]);
         if (existingUser.rows.length > 0) {
             username = `${username}_${Date.now()}`;
@@ -745,7 +742,6 @@ app.post('/api/clients', authenticateToken, requireRole('admin', 'installer'), a
             created_by_installer_id = req.user.id;
         }
 
-        // Inserisci cliente
         const clientResult = await queryWithRetry(
             `INSERT INTO clients (name, email, phone, address, telegram_chat_id, created_by_installer_id) 
              VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
@@ -753,7 +749,6 @@ app.post('/api/clients', authenticateToken, requireRole('admin', 'installer'), a
         );
         const client = clientResult.rows[0];
 
-        // Crea utente client associato
         const hash = await bcrypt.hash(password, 10);
         await queryWithRetry(
             `INSERT INTO users (username, password_hash, role, client_id) 
@@ -838,7 +833,6 @@ app.put('/api/clients/:id', authenticateToken, async (req, res) => {
             );
         }
 
-        // Aggiorna password utente client se fornita
         if (password) {
             if (password.length < 6) {
                 return res.status(400).json({ success: false, message: 'La password deve essere di almeno 6 caratteri' });
@@ -854,9 +848,7 @@ app.put('/api/clients/:id', authenticateToken, async (req, res) => {
                     [hash, userResult.rows[0].id]
                 );
             } else {
-                // Se per qualche ragione non esiste, lo creiamo
                 let username = (name || 'cliente').toLowerCase().replace(/[^a-z0-9]/g, '_');
-                const hash = await bcrypt.hash(password, 10);
                 await queryWithRetry(
                     `INSERT INTO users (username, password_hash, role, client_id) VALUES ($1, $2, 'client', $3)`,
                     [username, hash, id]
@@ -871,26 +863,28 @@ app.put('/api/clients/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// MODIFICA: ELIMINAZIONE CLIENTE - DISSOCIA LE MACCHINE INVECE DI BLOCCARE
 app.delete('/api/clients/:id', authenticateToken, requireAdmin, async (req, res) => {
     const { id } = req.params;
     try {
-        const checkResult = await queryWithRetry(
-            'SELECT id FROM machines WHERE client_id = $1 LIMIT 1',
+        // 1. Dissocia le macchine da questo cliente (non le elimina)
+        await queryWithRetry(
+            'UPDATE machines SET client_id = NULL WHERE client_id = $1',
             [id]
         );
-        if (checkResult.rows.length > 0) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Impossibile eliminare: cliente associato a uno o più impianti' 
-            });
-        }
-        
-        // Elimina l'utente client associato
-        await queryWithRetry('DELETE FROM users WHERE client_id = $1 AND role = $2', [id, 'client']);
-        // Elimina il cliente
+
+        // 2. Elimina l'utente client associato
+        await queryWithRetry(
+            'DELETE FROM users WHERE client_id = $1 AND role = $2',
+            [id, 'client']
+        );
+
+        // 3. Elimina il cliente
         await queryWithRetry('DELETE FROM clients WHERE id = $1', [id]);
-        res.json({ success: true, message: 'Cliente eliminato' });
+
+        res.json({ success: true, message: 'Cliente eliminato. Le macchine sono state dissociate.' });
     } catch (error) {
+        console.error('Errore eliminazione cliente:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
@@ -931,18 +925,15 @@ app.delete('/api/users/:id', authenticateToken, requireAdmin, async (req, res) =
     const userId = parseInt(id);
     
     try {
-        // Non permettere di cancellare se stesso
         if (userId === req.user.id) {
             return res.status(400).json({ success: false, message: 'Non puoi eliminare il tuo account' });
         }
         
-        // Verifica che non sia un admin (opzionale: puoi bloccare cancellazione admin)
         const userCheck = await queryWithRetry('SELECT role FROM users WHERE id = $1', [userId]);
         if (userCheck.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Utente non trovato' });
         }
         
-        // Se è un installatore, verifica che non abbia macchine assegnate
         if (userCheck.rows[0].role === 'installer') {
             const machines = await queryWithRetry('SELECT id FROM machines WHERE installer_id = $1 LIMIT 1', [userId]);
             if (machines.rows.length > 0) {
@@ -1243,11 +1234,12 @@ app.post('/api/ping', async (req, res) => {
     }
 });
 
+// MODIFICA: ALLOWED_TYPES include sync_time e start_cycle
 app.post('/api/machines/:id/command', authenticateToken, async (req, res) => {
     const machineId = parseInt(req.params.id);
     const { type, payload } = req.body;
 
-    const ALLOWED_TYPES = ['update_programs', 'ota_firmware', 'ota_littlefs', 'reboot'];
+    const ALLOWED_TYPES = ['update_programs', 'ota_firmware', 'ota_littlefs', 'reboot', 'sync_time', 'start_cycle'];
     if (!type || !ALLOWED_TYPES.includes(type)) {
         return res.status(400).json({ success: false, message: `Tipo comando non valido. Validi: ${ALLOWED_TYPES.join(', ')}` });
     }
@@ -1267,6 +1259,7 @@ app.post('/api/machines/:id/command', authenticateToken, async (req, res) => {
             return res.status(403).json({ success: false, message: 'Accesso negato' });
         }
 
+        // Cancella eventuali comandi pending dello stesso tipo per evitare code duplicate
         await queryWithRetry(
             `UPDATE commands SET status = 'cancelled'
              WHERE machine_id = $1 AND type = $2 AND status = 'pending'`,
@@ -1347,10 +1340,10 @@ app.get('/health', async (req, res) => {
 app.get('/', (req, res) => {
     res.json({ 
         message: 'NabulAir Cloud API', 
-        version: '2.8',
+        version: '2.9',
         status: 'online',
         ssl_db: false,
-        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry', 'Installer can create and see clients', 'Installer can configure Telegram', 'Offline Detection', 'Machine Pre-registration', 'Full CRUD for machines and users', 'Client login with own password'],
+        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry', 'Installer can create and see clients', 'Installer can configure Telegram', 'Offline Detection', 'Machine Pre-registration', 'Full CRUD for machines and users', 'Client login with own password', 'Remote commands: sync_time, start_cycle, reboot, OTA', 'Delete client now dissociates machines'],
         endpoints: [
             'GET /',
             'GET /health',
@@ -1367,7 +1360,7 @@ app.get('/', (req, res) => {
             'GET /api/clients (admin + installer)',
             'POST /api/clients (admin + installer)',
             'PUT /api/clients/:id (admin + installer)',
-            'DELETE /api/clients/:id (admin only)',
+            'DELETE /api/clients/:id (admin only) - dissociates machines',
             'GET /api/users (admin)',
             'POST /api/users (admin)',
             'PUT /api/users/:id (admin)',
@@ -1394,4 +1387,5 @@ app.listen(PORT, () => {
     console.log(`🕐 Offline Detection: ATTIVO (timeout 5min)`);
     console.log(`📦 Pre-registrazione macchine: ATTIVA (admin only)`);
     console.log(`👤 Client login: ATTIVO (creazione automatica utente)`);
+    console.log(`🛠 Comandi remoti: sync_time, start_cycle, reboot, OTA`);
 });
