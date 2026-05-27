@@ -3,7 +3,7 @@ const cors = require('cors');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const { Pool } = require('pg');
+const { Pool } = require('pg'); 
 const path = require('path');
 
 const app = express();
@@ -680,50 +680,120 @@ app.post('/api/alerts/:id/resolve', authenticateToken, async (req, res) => {
 
 app.get('/api/clients', authenticateToken, async (req, res) => {
     try {
-        let query = '';
+        let query = `
+            SELECT c.*, u.username
+            FROM clients c
+            LEFT JOIN users u ON u.client_id = c.id AND u.role = 'client'
+        `;
         let params = [];
+        let whereConditions = [];
         
         if (req.user.role === 'admin') {
-            query = 'SELECT * FROM clients ORDER BY name';
+            // nessun filtro
         } else if (req.user.role === 'installer') {
-            query = `
-                SELECT DISTINCT c.* 
-                FROM clients c
-                LEFT JOIN machines m ON m.client_id = c.id
-                WHERE c.created_by_installer_id = $1 OR m.installer_id = $1
-                ORDER BY c.name
-            `;
+            whereConditions.push(`(c.created_by_installer_id = $${params.length+1} OR EXISTS (SELECT 1 FROM machines m WHERE m.client_id = c.id AND m.installer_id = $${params.length+1}))`);
             params.push(req.user.id);
         } else if (req.user.role === 'client') {
-            query = 'SELECT * FROM clients WHERE id = $1';
+            whereConditions.push(`c.id = $${params.length+1}`);
             params.push(req.user.client_id);
         } else {
             return res.status(403).json({ success: false, message: 'Accesso negato' });
         }
         
+        if (whereConditions.length > 0) {
+            query += ' WHERE ' + whereConditions.join(' AND ');
+        }
+        query += ' ORDER BY c.name';
+        
         const result = await queryWithRetry(query, params);
         res.json({ success: true, clients: result.rows });
     } catch (error) {
+        console.error('Errore GET clients:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
 
 app.post('/api/clients', authenticateToken, requireRole('admin', 'installer'), async (req, res) => {
-    const { name, email, phone, address, telegram_chat_id } = req.body;
+    const { name, email, phone, address, telegram_chat_id, password } = req.body;
     if (!name) {
         return res.status(400).json({ success: false, message: 'Il nome è obbligatorio' });
     }
+    if (!password) {
+        return res.status(400).json({ success: false, message: 'La password per il cliente è obbligatoria' });
+    }
+    if (password.length < 6) {
+        return res.status(400).json({ success: false, message: 'La password deve essere di almeno 6 caratteri' });
+    }
+
     try {
+        // Normalizza username: tolowercase, rimuove spazi, caratteri speciali leggeri
+        let username = name.toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // rimuove accenti
+            .replace(/[^a-z0-9_]/g, '_')
+            .replace(/_+/g, '_')
+            .replace(/^_|_$/, '');
+        if (!username) username = `client_${Date.now()}`;
+
+        // Verifica unicità username
+        const existingUser = await queryWithRetry('SELECT id FROM users WHERE username = $1', [username]);
+        if (existingUser.rows.length > 0) {
+            username = `${username}_${Date.now()}`;
+        }
+
         let created_by_installer_id = null;
         if (req.user.role === 'installer') {
             created_by_installer_id = req.user.id;
         }
-        
-        const result = await queryWithRetry(
+
+        // Inserisci cliente
+        const clientResult = await queryWithRetry(
             `INSERT INTO clients (name, email, phone, address, telegram_chat_id, created_by_installer_id) 
              VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
             [name, email || null, phone || null, address || null, telegram_chat_id || null, created_by_installer_id]
         );
+        const client = clientResult.rows[0];
+
+        // Crea utente client associato
+        const hash = await bcrypt.hash(password, 10);
+        await queryWithRetry(
+            `INSERT INTO users (username, password_hash, role, client_id) 
+             VALUES ($1, $2, 'client', $3)`,
+            [username, hash, client.id]
+        );
+
+        res.json({ success: true, client: client, user_created: username });
+    } catch (error) {
+        console.error('Errore creazione cliente:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.get('/api/clients/:id', authenticateToken, async (req, res) => {
+    const { id } = req.params;
+    try {
+        let query = `
+            SELECT c.*, u.username, u.id as user_id
+            FROM clients c
+            LEFT JOIN users u ON u.client_id = c.id AND u.role = 'client'
+            WHERE c.id = $1
+        `;
+        let params = [id];
+
+        if (req.user.role === 'installer') {
+            query += ` AND (c.created_by_installer_id = $2 OR EXISTS (SELECT 1 FROM machines m WHERE m.client_id = c.id AND m.installer_id = $2))`;
+            params.push(req.user.id);
+        } else if (req.user.role === 'client') {
+            if (req.user.client_id != id) {
+                return res.status(403).json({ success: false, message: 'Accesso negato' });
+            }
+        } else if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+
+        const result = await queryWithRetry(query, params);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Cliente non trovato' });
+        }
         res.json({ success: true, client: result.rows[0] });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -732,7 +802,7 @@ app.post('/api/clients', authenticateToken, requireRole('admin', 'installer'), a
 
 app.put('/api/clients/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
-    const { telegram_chat_id, name, email, phone, address } = req.body;
+    const { telegram_chat_id, name, email, phone, address, password } = req.body;
     
     try {
         if (req.user.role === 'installer') {
@@ -756,16 +826,47 @@ app.put('/api/clients/:id', authenticateToken, async (req, res) => {
         if (phone !== undefined)            { fields.push(`phone = $${idx++}`);            values.push(phone); }
         if (address !== undefined)          { fields.push(`address = $${idx++}`);          values.push(address); }
 
-        if (fields.length === 0) {
+        if (fields.length === 0 && !password) {
             return res.status(400).json({ success: false, message: 'Nessun campo da aggiornare' });
         }
-        values.push(id);
-        await queryWithRetry(
-            `UPDATE clients SET ${fields.join(', ')} WHERE id = $${idx}`,
-            values
-        );
+
+        if (fields.length > 0) {
+            values.push(id);
+            await queryWithRetry(
+                `UPDATE clients SET ${fields.join(', ')} WHERE id = $${idx}`,
+                values
+            );
+        }
+
+        // Aggiorna password utente client se fornita
+        if (password) {
+            if (password.length < 6) {
+                return res.status(400).json({ success: false, message: 'La password deve essere di almeno 6 caratteri' });
+            }
+            const hash = await bcrypt.hash(password, 10);
+            const userResult = await queryWithRetry(
+                `SELECT id FROM users WHERE client_id = $1 AND role = 'client'`,
+                [id]
+            );
+            if (userResult.rows.length > 0) {
+                await queryWithRetry(
+                    `UPDATE users SET password_hash = $1 WHERE id = $2`,
+                    [hash, userResult.rows[0].id]
+                );
+            } else {
+                // Se per qualche ragione non esiste, lo creiamo
+                let username = (name || 'cliente').toLowerCase().replace(/[^a-z0-9]/g, '_');
+                const hash = await bcrypt.hash(password, 10);
+                await queryWithRetry(
+                    `INSERT INTO users (username, password_hash, role, client_id) VALUES ($1, $2, 'client', $3)`,
+                    [username, hash, id]
+                );
+            }
+        }
+
         res.json({ success: true, message: 'Cliente aggiornato' });
     } catch (error) {
+        console.error('Errore update cliente:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
@@ -784,6 +885,9 @@ app.delete('/api/clients/:id', authenticateToken, requireAdmin, async (req, res)
             });
         }
         
+        // Elimina l'utente client associato
+        await queryWithRetry('DELETE FROM users WHERE client_id = $1 AND role = $2', [id, 'client']);
+        // Elimina il cliente
         await queryWithRetry('DELETE FROM clients WHERE id = $1', [id]);
         res.json({ success: true, message: 'Cliente eliminato' });
     } catch (error) {
@@ -1243,10 +1347,10 @@ app.get('/health', async (req, res) => {
 app.get('/', (req, res) => {
     res.json({ 
         message: 'NabulAir Cloud API', 
-        version: '2.7',
+        version: '2.8',
         status: 'online',
         ssl_db: false,
-        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry', 'Installer can create and see clients', 'Installer can configure Telegram', 'Offline Detection', 'Machine Pre-registration', 'Full CRUD for machines and users'],
+        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry', 'Installer can create and see clients', 'Installer can configure Telegram', 'Offline Detection', 'Machine Pre-registration', 'Full CRUD for machines and users', 'Client login with own password'],
         endpoints: [
             'GET /',
             'GET /health',
@@ -1289,4 +1393,5 @@ app.listen(PORT, () => {
     console.log(`🌐 CORS origini: ${ALLOWED_ORIGINS.join(', ')}`);
     console.log(`🕐 Offline Detection: ATTIVO (timeout 5min)`);
     console.log(`📦 Pre-registrazione macchine: ATTIVA (admin only)`);
+    console.log(`👤 Client login: ATTIVO (creazione automatica utente)`);
 });
