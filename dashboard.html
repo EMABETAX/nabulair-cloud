@@ -508,7 +508,6 @@
             .filters-bar input, .filters-bar select { min-width: 140px; }
         }
     </style>
-<base target="_blank">
 </head>
 <body>
 
@@ -558,7 +557,7 @@
                 <div class="page-title" id="machinesTitle">🏭 Impianti</div>
                 <div class="page-sub" id="machinesSub">Tutti gli impianti NabulAir</div>
 
-                <!-- ← FIX FLUSSO: form pre-registrazione macchina (solo admin) -->
+                <!-- Preregistrazione macchina (solo admin) -->
                 <div class="form-card" id="preregisterCard" style="display:none;">
                     <h3>➕ Pre-registra nuova macchina</h3>
                     <div class="form-grid">
@@ -588,18 +587,10 @@
                 <div class="data-table-wrap">
                     <table class="data-table" id="machinesTable">
                         <thead>
-                            <tr>
-                                <th>Nome</th>
-                                <th>MAC</th>
-                                <th>Stato</th>
-                                <th>Sensori</th>
-                                <th>Cliente</th>
-                                <th>Installatore</th>
-                                <th>Azioni</th>
-                            </tr>
+                            <tr><th>Nome</th><th>MAC</th><th>Stato</th><th>Sensori</th><th>Cliente</th><th>Installatore</th><th>Azioni</th></tr>
                         </thead>
                         <tbody id="machinesTbody">
-                            <tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">⏳</div><p>Caricamento impianti...</p></td></tr>
+                            <tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">⏳</div><p>Caricamento impianti...</p></tr>
                         </tbody>
                     </table>
                 </div>
@@ -622,9 +613,7 @@
                     <h3>📋 Installatori registrati</h3>
                     <div class="data-table-wrap">
                         <table class="data-table" id="installersTable">
-                            <thead>
-                                <tr><th>Nome utente</th><th>Impianti assegnati</th><th>Azioni</th></tr>
-                            </thead>
+                            <thead><tr><th>Nome utente</th><th>Impianti assegnati</th><th>Azioni</th></tr></thead>
                             <tbody id="installersTbody"></tbody>
                         </table>
                     </div>
@@ -638,20 +627,22 @@
                 <div class="form-card">
                     <h3>➕ Nuovo Cliente</h3>
                     <div class="form-grid">
-                        <input type="text"  id="clientName"  placeholder="Nome e cognome">
+                        <input type="text"  id="clientName"  placeholder="Nome e cognome (es. Mario Rossi)">
                         <input type="email" id="clientEmail" placeholder="Email">
                         <input type="tel"   id="clientPhone" placeholder="Telefono">
+                        <input type="password" id="clientPassword" placeholder="Password (min 6 caratteri)">
                     </div>
                     <button class="btn-add" onclick="addClient()">Aggiungi Cliente</button>
+                    <div class="info-box" style="margin-top:12px; background: var(--blue-dim);">
+                        ℹ️ Il cliente potrà accedere con il suo <strong>nome utente</strong> (generato dal nome) e la password impostata.
+                    </div>
                 </div>
 
                 <div class="form-card">
                     <h3>📋 Clienti registrati</h3>
                     <div class="data-table-wrap">
                         <table class="data-table">
-                            <thead>
-                                <tr><th>Nome</th><th>Email</th><th>Telefono</th><th>Telegram</th><th>Azioni</th></tr>
-                            </thead>
+                            <thead><tr><th>Nome</th><th>Email</th><th>Telefono</th><th>Username / Accesso</th><th>Telegram</th><th>Azioni</th></tr></thead>
                             <tbody id="clientsTbody"></tbody>
                         </table>
                     </div>
@@ -681,9 +672,7 @@
         <button class="modal-close-btn" onclick="closeQR()">×</button>
         <h3>📲 Attiva notifiche Telegram</h3>
         <div class="modal-machine-name" id="qrMachineName"></div>
-        <div class="qr-wrap">
-            <div id="qrCanvas"></div>
-        </div>
+        <div class="qr-wrap"><div id="qrCanvas"></div></div>
         <div class="qr-steps">
             <div class="qr-step-item"><div class="qstep-n">1</div><div>Mostra questo QR code al cliente</div></div>
             <div class="qr-step-item"><div class="qstep-n">2</div><div>Il cliente lo scansiona con la fotocamera del telefono</div></div>
@@ -696,14 +685,10 @@
 <div class="modal-bg" id="detailModal">
     <div class="modal-box">
         <div class="detail-head">
-            <div>
-                <h3 id="detailTitle">🏭 Dettaglio impianto</h3>
-                <div style="color:var(--muted); font-size:13px; margin-top:2px;" id="detailSub"></div>
-            </div>
+            <div><h3 id="detailTitle">🏭 Dettaglio impianto</h3><div style="color:var(--muted); font-size:13px; margin-top:2px;" id="detailSub"></div></div>
             <button class="modal-close-btn" onclick="closeDetail()">×</button>
         </div>
-        <div class="detail-body" id="detailBody">
-        </div>
+        <div class="detail-body" id="detailBody"></div>
     </div>
 </div>
 
@@ -711,8 +696,7 @@
     <div class="modal-box">
         <button class="modal-close-btn" onclick="closeEdit()">×</button>
         <h3 id="editTitle">Modifica</h3>
-        <div class="edit-form" id="editForm">
-        </div>
+        <div class="edit-form" id="editForm"></div>
     </div>
 </div>
 
@@ -767,25 +751,16 @@ function bootApp() {
     badge.className    = `role-badge role-${role}`;
 
     const sidebar = document.getElementById('sidebar');
-    
     if (role === 'admin') {
         sidebar.classList.add('visible');
         sidebar.innerHTML = `
             <div class="sidebar-label">Menu</div>
-            <button class="nav-item active" onclick="showSection('machines')" id="nav-machines">
-                <span class="nav-icon">🏭</span> Impianti
-            </button>
-            <button class="nav-item" onclick="showSection('installers')" id="nav-installers">
-                <span class="nav-icon">🔧</span> Installatori
-            </button>
-            <button class="nav-item" onclick="showSection('clients')" id="nav-clients">
-                <span class="nav-icon">👥</span> Clienti
-            </button>
+            <button class="nav-item active" onclick="showSection('machines')" id="nav-machines"><span class="nav-icon">🏭</span> Impianti</button>
+            <button class="nav-item" onclick="showSection('installers')" id="nav-installers"><span class="nav-icon">🔧</span> Installatori</button>
+            <button class="nav-item" onclick="showSection('clients')" id="nav-clients"><span class="nav-icon">👥</span> Clienti</button>
             <hr class="sidebar-divider">
             <div class="sidebar-label">Sistema</div>
-            <button class="nav-item" onclick="showSection('telegram')" id="nav-telegram">
-                <span class="nav-icon">📱</span> Telegram Bot
-            </button>
+            <button class="nav-item" onclick="showSection('telegram')" id="nav-telegram"><span class="nav-icon">📱</span> Telegram Bot</button>
         `;
         document.getElementById('filterClient').style.display = 'inline-block';
         document.getElementById('filterInstaller').style.display = 'inline-block';
@@ -796,17 +771,11 @@ function bootApp() {
         sidebar.classList.add('visible');
         sidebar.innerHTML = `
             <div class="sidebar-label">Menu</div>
-            <button class="nav-item active" onclick="showSection('machines')" id="nav-machines">
-                <span class="nav-icon">🏭</span> I Tuoi Impianti
-            </button>
-            <button class="nav-item" onclick="showSection('clients')" id="nav-clients">
-                <span class="nav-icon">👥</span> Clienti
-            </button>
+            <button class="nav-item active" onclick="showSection('machines')" id="nav-machines"><span class="nav-icon">🏭</span> I Tuoi Impianti</button>
+            <button class="nav-item" onclick="showSection('clients')" id="nav-clients"><span class="nav-icon">👥</span> Clienti</button>
             <hr class="sidebar-divider">
             <div class="sidebar-label">Sistema</div>
-            <button class="nav-item" onclick="showSection('telegram')" id="nav-telegram">
-                <span class="nav-icon">📱</span> Telegram Bot
-            </button>
+            <button class="nav-item" onclick="showSection('telegram')" id="nav-telegram"><span class="nav-icon">📱</span> Telegram Bot</button>
         `;
         document.getElementById('machinesTitle').textContent = '🏭 I Tuoi Impianti';
         document.getElementById('machinesSub').textContent   = 'Impianti assegnati a te';
@@ -835,11 +804,7 @@ async function api(method, endpoint, body) {
     const opts = { method, headers: { 'Authorization': `Bearer ${token}` } };
     if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
     const res = await fetch(API + endpoint, opts);
-    if (res.status === 401) {
-        console.warn('Token scaduto — logout forzato');
-        logout();
-        return { success: false, message: 'Sessione scaduta' };
-    }
+    if (res.status === 401) { logout(); return { success: false, message: 'Sessione scaduta' }; }
     return res.json();
 }
 const apiGet  = ep       => api('GET',  ep);
@@ -880,8 +845,7 @@ async function loadMachines() {
             renderTopPills(data.machines);
         }
     } catch(e) {
-        document.getElementById('machinesTbody').innerHTML =
-            '<tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">❌</div><p>Errore di connessione</p></td></tr>';
+        document.getElementById('machinesTbody').innerHTML = '<tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">❌</div><p>Errore di connessione</p></tr>';
     }
 }
 
@@ -924,7 +888,7 @@ function filterMachines() {
 function renderMachinesTable(machines) {
     const tbody = document.getElementById('machinesTbody');
     if (!machines.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">📭</div><p>Nessun impianto trovato</p></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">📭</div><p>Nessun impianto trovato</p></tr>';
         return;
     }
 
@@ -948,16 +912,8 @@ function renderMachinesTable(machines) {
         return `<tr>
             <td><strong>${esc(m.machine_name || 'Impianto')}</strong></td>
             <td class="td-mono">${m.mac_address || '—'}</td>
-            <td>
-                <span class="td-status">
-                    <span class="td-dot ${online?'online':'offline'}"></span>
-                    ${online?'Online':'Offline'}
-                </span>
-            </td>
-            <td>
-                <span class="td-sensor ${waterOk?'ok':'err'}">💧 ${waterOk?'OK':'❌'}</span>
-                <span class="td-sensor ${insOk?'ok':'err'}">🧪 ${insOk?'OK':'❌'}</span>
-            </td>
+            <td><span class="td-status"><span class="td-dot ${online?'online':'offline'}"></span>${online?'Online':'Offline'}</span></td>
+            <td><span class="td-sensor ${waterOk?'ok':'err'}">💧 ${waterOk?'OK':'❌'}</span><span class="td-sensor ${insOk?'ok':'err'}">🧪 ${insOk?'OK':'❌'}</span></td>
             <td>${esc(clientName)}</td>
             <td>${esc(instName)}</td>
             <td class="td-actions">${actions}</td>
@@ -1004,26 +960,17 @@ function openDetail(id) {
             <div class="detail-row"><span class="label">MAC</span><span class="value td-mono">${m.mac_address||'—'}</span></div>
             <div class="detail-row"><span class="label">IP</span><span class="value td-mono">${m.sta_ip||'—'}</span></div>
         </div>
-
         <div class="detail-section">
             <h4>🧪 Sensori</h4>
-            <div class="sensor-big ${waterOk?'ok':'err'}">
-                <span style="font-size:18px">💧</span>
-                <span>${waterOk?'Acqua presente':'Acqua assente — rabboccare!'}</span>
-            </div>
-            <div class="sensor-big ${insOk?'ok':'err'}">
-                <span style="font-size:18px">🧪</span>
-                <span>${insOk?'Insetticida OK':'Insetticida esaurito!'}</span>
-            </div>
+            <div class="sensor-big ${waterOk?'ok':'err'}"><span style="font-size:18px">💧</span><span>${waterOk?'Acqua presente':'Acqua assente — rabboccare!'}</span></div>
+            <div class="sensor-big ${insOk?'ok':'err'}"><span style="font-size:18px">🧪</span><span>${insOk?'Insetticida OK':'Insetticida esaurito!'}</span></div>
         </div>
     `;
 
     let assignSection = `<div class="detail-section"><h4>👤 Assegnazione</h4>`;
     if (isAdmin) {
-        const clientOpts = allClients.map(c =>
-            `<option value="${c.id}" ${m.client_id==c.id?'selected':''}>${esc(c.name)}</option>`).join('');
-        const instOpts = allUsers.filter(u=>u.role==='installer').map(u =>
-            `<option value="${u.id}" ${m.installer_id==u.id?'selected':''}>${esc(u.username)}</option>`).join('');
+        const clientOpts = allClients.map(c => `<option value="${c.id}" ${m.client_id==c.id?'selected':''}>${esc(c.name)}</option>`).join('');
+        const instOpts = allUsers.filter(u=>u.role==='installer').map(u => `<option value="${u.id}" ${m.installer_id==u.id?'selected':''}>${esc(u.username)}</option>`).join('');
         assignSection += `
             <div class="assign-box">
                 <label style="font-size:12px; color:var(--muted);">Cliente</label>
@@ -1034,8 +981,7 @@ function openDetail(id) {
             </div>
         `;
     } else if (isInstaller) {
-        const clientOpts = allClients.map(c =>
-            `<option value="${c.id}" ${m.client_id==c.id?'selected':''}>${esc(c.name)}</option>`).join('');
+        const clientOpts = allClients.map(c => `<option value="${c.id}" ${m.client_id==c.id?'selected':''}>${esc(c.name)}</option>`).join('');
         assignSection += `
             <div class="assign-box">
                 <label style="font-size:12px; color:var(--muted);">Cliente assegnato</label>
@@ -1053,9 +999,7 @@ function openDetail(id) {
     let telegramSection = `<div class="detail-section"><h4>📱 Telegram</h4>`;
     if (step2done) {
         telegramSection += `<div style="color:var(--green); font-size:13px; font-weight:600;">✅ Attivo — chat ID: ${esc(m.telegram_chat_id)}</div>`;
-        if (!isClient) {
-            telegramSection += `<button class="btn-qr-big telegram-ok" style="margin-top:12px;" onclick="openQR(${m.id},'${esc(m.machine_name||m.mac_address)}')">🔄 Rigenera QR</button>`;
-        }
+        if (!isClient) telegramSection += `<button class="btn-qr-big telegram-ok" style="margin-top:12px;" onclick="openQR(${m.id},'${esc(m.machine_name||m.mac_address)}')">🔄 Rigenera QR</button>`;
     } else if (step1done && !isClient) {
         telegramSection += `<div style="color:var(--muted); font-size:13px;">Non ancora attivato dal cliente</div>`;
         telegramSection += `<button class="btn-qr-big" style="margin-top:12px;" onclick="openQR(${m.id},'${esc(m.machine_name||m.mac_address)}')">📲 Genera QR Telegram</button>`;
@@ -1078,7 +1022,6 @@ function openDetail(id) {
                 <button class="btn-cmd btn-cmd-ota" onclick="toggleOtaPanel(${m.id})">⬆️ OTA Firmware</button>
             </div>
             <div class="cmd-status" id="cmd-status-${m.id}"></div>
-
             <div class="ota-panel" id="ota-panel-${m.id}">
                 <label style="font-size:12px; color:var(--muted);">URL firmware (.bin)</label>
                 <input type="text" id="ota-url-${m.id}" placeholder="https://.../firmware.bin">
@@ -1101,65 +1044,39 @@ function openDetail(id) {
     document.getElementById('detailModal').classList.add('open');
 }
 
-function closeDetail() {
-    document.getElementById('detailModal').classList.remove('open');
-    currentDetailId = null;
-}
+function closeDetail() { document.getElementById('detailModal').classList.remove('open'); currentDetailId = null; }
 
 async function saveDetailAssign(machineId) {
     const clientId   = document.getElementById(`det-client-${machineId}`)?.value || null;
     const installerId = document.getElementById(`det-inst-${machineId}`)?.value || null;
     const res = await apiPut(`/machines/${machineId}/assign`, { client_id: clientId||null, installer_id: installerId||null });
-    if (res.success) {
-        await loadMachines();
-        openDetail(machineId);
-    } else {
-        alert(res.message || 'Errore salvataggio');
-    }
+    if (res.success) { await loadMachines(); openDetail(machineId); } else alert(res.message || 'Errore salvataggio');
 }
 
 async function saveDetailAssignInstaller(machineId) {
     const clientId = document.getElementById(`det-client-${machineId}`)?.value || null;
     const res = await apiPut(`/machines/${machineId}/assign`, { client_id: clientId||null, installer_id: null });
-    if (res.success) {
-        await loadMachines();
-        openDetail(machineId);
-    } else {
-        alert(res.message || 'Errore salvataggio');
-    }
+    if (res.success) { await loadMachines(); openDetail(machineId); } else alert(res.message || 'Errore salvataggio');
 }
 
 async function sendMachineCmd(machineId, cmd) {
     const statusEl = document.getElementById(`cmd-status-${machineId}`);
     statusEl.textContent = '⏳ Invio comando...';
     statusEl.className = 'cmd-status wait';
-
     let payload = {};
     if (cmd === 'ota_firmware') {
         const url = document.getElementById(`ota-url-${machineId}`)?.value.trim();
         if (!url) { statusEl.textContent = '❌ Inserisci URL firmware'; statusEl.className='cmd-status err'; return; }
         payload.url = url;
     }
-
     try {
         const res = await apiPost(`/machines/${machineId}/command`, { type: cmd, payload });
-        if (res.success) {
-            statusEl.textContent = '✅ Comando inviato';
-            statusEl.className = 'cmd-status ok';
-        } else {
-            statusEl.textContent = '❌ ' + (res.message || 'Errore');
-            statusEl.className = 'cmd-status err';
-        }
-    } catch(e) {
-        statusEl.textContent = '❌ Errore di connessione';
-        statusEl.className = 'cmd-status err';
-    }
+        if (res.success) { statusEl.textContent = '✅ Comando inviato'; statusEl.className = 'cmd-status ok'; }
+        else { statusEl.textContent = '❌ ' + (res.message || 'Errore'); statusEl.className = 'cmd-status err'; }
+    } catch(e) { statusEl.textContent = '❌ Errore di connessione'; statusEl.className = 'cmd-status err'; }
 }
 
-function toggleOtaPanel(id) {
-    const p = document.getElementById(`ota-panel-${id}`);
-    p.classList.toggle('open');
-}
+function toggleOtaPanel(id) { document.getElementById(`ota-panel-${id}`).classList.toggle('open'); }
 
 async function openQR(machineId, machineName) {
     const res = await apiPost(`/machines/${machineId}/qr`, {});
@@ -1170,42 +1087,28 @@ async function openQR(machineId, machineName) {
     new QRCode(canvas, { text: res.telegram_link, width: 220, height: 220, colorDark:'#000', colorLight:'#fff', correctLevel: QRCode.CorrectLevel.M });
     document.getElementById('qrModal').classList.add('open');
 }
-function closeQR() {
-    document.getElementById('qrModal').classList.remove('open');
-    document.getElementById('qrCanvas').innerHTML = '';
-}
+function closeQR() { document.getElementById('qrModal').classList.remove('open'); document.getElementById('qrCanvas').innerHTML = ''; }
 
 async function loadClients() {
     const data = await apiGet('/clients');
-    if (data.success) {
-        allClients = data.clients;
-        renderClientsTable();
-        populateFilterDropdowns();
-    }
+    if (data.success) { allClients = data.clients; renderClientsTable(); populateFilterDropdowns(); }
 }
 
 function renderClientsTable() {
     const tbody = document.getElementById('clientsTbody');
     if (!tbody) return;
-    if (!allClients.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="empty-state" style="padding:20px;">Nessun cliente registrato</td></tr>';
-        return;
-    }
+    if (!allClients.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state" style="padding:20px;">Nessun cliente registrato</td></tr>'; return; }
     const isAdmin = currentUser.role === 'admin';
     const isInstaller = currentUser.role === 'installer';
-    
     tbody.innerHTML = allClients.map(c => {
         let actions = '';
-        if (isAdmin || isInstaller) {
-            actions = `
-                <button class="btn-row btn-row-edit" onclick="editClient(${c.id})">✎ Modifica</button>
-                <button class="btn-row btn-row-del" onclick="deleteClient(${c.id})">🗑 Elimina</button>
-            `;
-        }
+        if (isAdmin || isInstaller) { actions = `<button class="btn-row btn-row-edit" onclick="editClient(${c.id})">✎ Modifica</button><button class="btn-row btn-row-del" onclick="deleteClient(${c.id})">🗑 Elimina</button>`; }
+        const userExists = c.username ? true : false;
         return `<tr>
             <td><strong>${esc(c.name)}</strong></td>
             <td class="td-mono">${esc(c.email||'—')}</td>
             <td class="td-mono">${esc(c.phone||'—')}</td>
+            <td>${userExists ? `<span style="color:var(--green);">✅ ${esc(c.username)}</span>` : '<span style="color:var(--amber);">⚠️ Nessun account</span>'}</td>
             <td>${c.telegram_chat_id ? `<span style="color:var(--green); font-size:12px;">✅ ${esc(c.telegram_chat_id)}</span>` : '<span style="color:var(--muted); font-size:12px;">—</span>'}</td>
             <td class="td-actions">${actions}</td>
         </tr>`;
@@ -1216,17 +1119,19 @@ async function addClient() {
     const name  = document.getElementById('clientName').value.trim();
     const email = document.getElementById('clientEmail').value.trim();
     const phone = document.getElementById('clientPhone').value.trim();
+    const password = document.getElementById('clientPassword').value;
     if (!name) return alert('Il nome è obbligatorio');
-    const res = await apiPost('/clients', { name, email, phone });
+    if (!password) return alert('La password è obbligatoria');
+    if (password.length < 6) return alert('La password deve avere almeno 6 caratteri');
+    const res = await apiPost('/clients', { name, email, phone, password });
     if (res.success) {
         document.getElementById('clientName').value = '';
         document.getElementById('clientEmail').value = '';
         document.getElementById('clientPhone').value = '';
+        document.getElementById('clientPassword').value = '';
         await loadClients();
-        alert('✅ Cliente creato con successo');
-    } else {
-        alert(res.message || 'Errore');
-    }
+        alert('✅ Cliente creato con successo. Ora può fare login con username generato automaticamente.');
+    } else { alert(res.message || 'Errore'); }
 }
 
 function editClient(id) {
@@ -1237,12 +1142,14 @@ function editClient(id) {
         fields: [
             { label: 'Nome', name: 'name', value: c.name, type: 'text' },
             { label: 'Email', name: 'email', value: c.email||'', type: 'email' },
-            { label: 'Telefono', name: 'phone', value: c.phone||'', type: 'tel' }
+            { label: 'Telefono', name: 'phone', value: c.phone||'', type: 'tel' },
+            { label: 'Nuova password (lascia vuoto per non cambiare)', name: 'password', value: '', type: 'password' }
         ],
         onSave: async (vals) => {
-            const res = await apiPut(`/clients/${id}`, vals);
-            if (res.success) { closeEdit(); await loadClients(); }
-            else alert(res.message || 'Errore modifica');
+            const body = { name: vals.name, email: vals.email, phone: vals.phone };
+            if (vals.password) body.password = vals.password;
+            const res = await apiPut(`/clients/${id}`, body);
+            if (res.success) { closeEdit(); await loadClients(); } else alert(res.message || 'Errore modifica');
         }
     });
 }
@@ -1250,37 +1157,25 @@ function editClient(id) {
 async function deleteClient(id) {
     if (!confirm('Eliminare definitivamente questo cliente?')) return;
     const res = await apiDel(`/clients/${id}`);
-    if (res.success) await loadClients();
-    else alert(res.message || 'Errore eliminazione');
+    if (res.success) await loadClients(); else alert(res.message || 'Errore eliminazione');
 }
 
 async function loadUsers() {
     const data = await apiGet('/users');
-    if (data.success) {
-        allUsers = data.users;
-        renderInstallers();
-        populateFilterDropdowns();
-        populatePreregInstallers();
-    }
+    if (data.success) { allUsers = data.users; renderInstallers(); populateFilterDropdowns(); populatePreregInstallers(); }
 }
 
 function renderInstallers() {
     const tbody = document.getElementById('installersTbody');
     if (!tbody) return;
     const installers = allUsers.filter(u => u.role === 'installer');
-    if (!installers.length) {
-        tbody.innerHTML = '<tr><td colspan="3" style="color:var(--muted); text-align:center; padding:20px;">Nessun installatore ancora</td></tr>';
-        return;
-    }
+    if (!installers.length) { tbody.innerHTML = '<tr><td colspan="3" style="color:var(--muted); text-align:center; padding:20px;">Nessun installatore ancora</td></tr>'; return; }
     tbody.innerHTML = installers.map(u => {
         const count = allMachines.filter(m => m.installer_id == u.id).length;
         return `<tr>
             <td><strong>${esc(u.username)}</strong></td>
             <td>${count > 0 ? `${count} impianto${count>1?'i':''}` : '<span style="color:var(--muted)">—</span>'}</td>
-            <td class="td-actions">
-                <button class="btn-row btn-row-edit" onclick="editInstaller(${u.id})">✎ Modifica</button>
-                <button class="btn-row btn-row-del" onclick="deleteInstaller(${u.id})">🗑 Elimina</button>
-            </td>
+            <td class="td-actions"><button class="btn-row btn-row-edit" onclick="editInstaller(${u.id})">✎ Modifica</button><button class="btn-row btn-row-del" onclick="deleteInstaller(${u.id})">🗑 Elimina</button></td>
         </tr>`;
     }).join('');
 }
@@ -1296,9 +1191,7 @@ async function addInstaller() {
         document.getElementById('instPassword').value = '';
         await loadUsers();
         alert(`✅ Installatore "${username}" creato!`);
-    } else {
-        alert(res.message || 'Errore nella creazione');
-    }
+    } else { alert(res.message || 'Errore nella creazione'); }
 }
 
 function editInstaller(id) {
@@ -1314,8 +1207,7 @@ function editInstaller(id) {
             const body = { username: vals.username };
             if (vals.password) body.password = vals.password;
             const res = await apiPut(`/users/${id}`, body);
-            if (res.success) { closeEdit(); await loadUsers(); }
-            else alert(res.message || 'Errore modifica');
+            if (res.success) { closeEdit(); await loadUsers(); } else alert(res.message || 'Errore modifica');
         }
     });
 }
@@ -1323,8 +1215,7 @@ function editInstaller(id) {
 async function deleteInstaller(id) {
     if (!confirm('Eliminare definitivamente questo installatore?')) return;
     const res = await apiDel(`/users/${id}`);
-    if (res.success) await loadUsers();
-    else alert(res.message || 'Errore eliminazione');
+    if (res.success) await loadUsers(); else alert(res.message || 'Errore eliminazione');
 }
 
 function editMachine(id) {
@@ -1338,8 +1229,7 @@ function editMachine(id) {
         ],
         onSave: async (vals) => {
             const res = await apiPut(`/machines/${id}`, vals);
-            if (res.success) { closeEdit(); await loadMachines(); }
-            else alert(res.message || 'Errore modifica');
+            if (res.success) { closeEdit(); await loadMachines(); } else alert(res.message || 'Errore modifica');
         }
     });
 }
@@ -1347,12 +1237,7 @@ function editMachine(id) {
 async function deleteMachine(id) {
     if (!confirm('Eliminare definitivamente questo impianto?')) return;
     const res = await apiDel(`/machines/${id}`);
-    if (res.success) {
-        await loadMachines();
-        closeDetail();
-    } else {
-        alert(res.message || 'Errore eliminazione');
-    }
+    if (res.success) { await loadMachines(); closeDetail(); } else alert(res.message || 'Errore eliminazione');
 }
 
 let currentEditSave = null;
@@ -1360,34 +1245,19 @@ let currentEditSave = null;
 function openEditModal({title, fields, onSave}) {
     document.getElementById('editTitle').textContent = title;
     const form = document.getElementById('editForm');
-    form.innerHTML = fields.map(f => `
-        <label>${esc(f.label)}</label>
-        <input type="${f.type||'text'}" id="edit-field-${f.name}" value="${esc(f.value||'')}">
-    `).join('') + `
-        <div class="edit-actions">
-            <button class="btn-cancel" onclick="closeEdit()">Annulla</button>
-            <button class="btn-add" onclick="submitEdit()">Salva</button>
-        </div>
-    `;
+    form.innerHTML = fields.map(f => `<label>${esc(f.label)}</label><input type="${f.type||'text'}" id="edit-field-${f.name}" value="${esc(f.value||'')}">`).join('') +
+        `<div class="edit-actions"><button class="btn-cancel" onclick="closeEdit()">Annulla</button><button class="btn-add" onclick="submitEdit()">Salva</button></div>`;
     currentEditSave = onSave;
     document.getElementById('editModal').classList.add('open');
 }
 
-function closeEdit() {
-    document.getElementById('editModal').classList.remove('open');
-    currentEditSave = null;
-}
+function closeEdit() { document.getElementById('editModal').classList.remove('open'); currentEditSave = null; }
 
 async function submitEdit() {
     if (!currentEditSave) return;
     const inputs = document.querySelectorAll('#editForm input, #editForm select');
     const vals = {};
-    inputs.forEach(inp => {
-        if (inp.id && inp.id.startsWith('edit-field-')) {
-            const name = inp.id.replace('edit-field-', '');
-            vals[name] = inp.value.trim();
-        }
-    });
+    inputs.forEach(inp => { if (inp.id && inp.id.startsWith('edit-field-')) { const name = inp.id.replace('edit-field-', ''); vals[name] = inp.value.trim(); } });
     await currentEditSave(vals);
 }
 
@@ -1397,73 +1267,48 @@ async function loadWebhookStatus() {
         const el  = document.getElementById('webhookUrl');
         if (res.url) { el.textContent = res.url; el.style.color = 'var(--green)'; }
         else { el.textContent = 'Nessun webhook configurato'; el.style.color = 'var(--amber)'; }
-    } catch(e) {
-        document.getElementById('webhookUrl').textContent = 'Impossibile verificare';
-    }
+    } catch(e) { document.getElementById('webhookUrl').textContent = 'Impossibile verificare'; }
 }
 async function setupWebhook() {
-    const btn    = document.getElementById('webhookBtn');
+    const btn = document.getElementById('webhookBtn');
     const result = document.getElementById('webhookResult');
     btn.textContent = '⏳ Registrazione...'; btn.disabled = true;
     const webhookUrl = window.location.origin + '/api/telegram/webhook';
     try {
         const res = await apiPost('/telegram/setup-webhook', { webhook_url: webhookUrl });
-        result.innerHTML = res.success
-            ? `<div class="result-ok">✅ Webhook registrato: <code>${webhookUrl}</code></div>`
-            : `<div class="result-err">❌ ${res.message}</div>`;
+        result.innerHTML = res.success ? `<div class="result-ok">✅ Webhook registrato: <code>${webhookUrl}</code></div>` : `<div class="result-err">❌ ${res.message}</div>`;
         if (res.success) { btn.textContent = '✅ Registrato'; loadWebhookStatus(); }
         else { btn.textContent = '🔗 Riprova'; btn.disabled = false; }
-    } catch(e) {
-        result.innerHTML = '<div class="result-err">❌ Errore di connessione</div>';
-        btn.textContent = '🔗 Riprova'; btn.disabled = false;
-    }
+    } catch(e) { result.innerHTML = '<div class="result-err">❌ Errore di connessione</div>'; btn.textContent = '🔗 Riprova'; btn.disabled = false; }
 }
 
-// ← FIX FLUSSO: popola select installatori nel form pre-registrazione
 function populatePreregInstallers() {
     const sel = document.getElementById('preregInstaller');
     if (!sel) return;
     const installers = allUsers.filter(u => u.role === 'installer');
-    sel.innerHTML = '<option value="">— Seleziona installatore —</option>' +
-        installers.map(u => `<option value="${u.id}">${esc(u.username)}</option>`).join('');
+    sel.innerHTML = '<option value="">— Seleziona installatore —</option>' + installers.map(u => `<option value="${u.id}">${esc(u.username)}</option>`).join('');
 }
 
-// ← FIX FLUSSO: pre-registrazione macchina da admin
 async function preregisterMachine() {
     const mac = document.getElementById('preregMac').value.trim();
     const name = document.getElementById('preregName').value.trim();
     const installerId = document.getElementById('preregInstaller').value;
     if (!mac) return alert('MAC address obbligatorio');
     if (!installerId) return alert('Seleziona un installatore');
-    const res = await apiPost('/machines/preregister', { 
-        mac_address: mac, 
-        machine_name: name || null, 
-        installer_id: parseInt(installerId) 
-    });
+    const res = await apiPost('/machines/preregister', { mac_address: mac, machine_name: name || null, installer_id: parseInt(installerId) });
     if (res.success) {
         alert('✅ Macchina pre-registrata!\n\nQuando l\'installatore la accenderà, apparirà automaticamente nel suo pannello.');
         document.getElementById('preregMac').value = '';
         document.getElementById('preregName').value = '';
         document.getElementById('preregInstaller').value = '';
         await loadMachines();
-    } else {
-        alert(res.message || 'Errore pre-registrazione');
-    }
+    } else { alert(res.message || 'Errore pre-registrazione'); }
 }
 
-function esc(text) {
-    if (!text) return '';
-    const d = document.createElement('div');
-    d.textContent = text; return d.innerHTML;
-}
+function esc(text) { if (!text) return ''; const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
 function refreshAll() { loadMachines(); loadAlerts(); }
 
-if (token && currentUser) {
-    bootApp();
-} else {
-    document.getElementById('loginScreen').style.display = 'flex';
-}
-
+if (token && currentUser) { bootApp(); } else { document.getElementById('loginScreen').style.display = 'flex'; }
 setInterval(() => { if (token) { loadMachines(); loadAlerts(); } }, 30000);
 </script>
 </body>
