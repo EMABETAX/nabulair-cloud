@@ -825,8 +825,8 @@
 
             if (data.success) {
                 pendingCmdId = data.command_id;
-                showCmdStatus('sent', '📡 Comando <strong>' + cmdLabel(type) + '</strong> in attesa di conferma dall'ESP32...');
-                showToast('📡 ' + cmdLabel(type) + ' — in attesa dell'ESP32');
+                showCmdStatus("sent", "📡 Comando <strong>" + cmdLabel(type) + "</strong> in attesa di conferma dall'ESP32...");
+                showToast("📡 " + cmdLabel(type) + " — in attesa dell'ESP32");
                 startCmdPoll(data.command_id);
             } else {
                 showCmdStatus('failed', '❌ Errore: ' + data.message);
@@ -868,7 +868,7 @@
     }
 
     async function confirmReboot() {
-        if (!confirm('Riavviare l'ESP32? La macchina andrà offline per ~30 secondi.')) return;
+        if (!confirm("Riavviare l'ESP32? La macchina andrà offline per ~30 secondi.")) return;
         sendCmd('reboot');
     }
 
@@ -1074,7 +1074,7 @@
             if (data.success) {
                 showToast('✅ ' + data.message);
                 if (sendToDevice && data.command_id) {
-                    showCmdStatus('sent', '📡 <strong>Aggiorna programmi</strong> in attesa di conferma dall'ESP32...');
+                    showCmdStatus("sent", "📡 <strong>Aggiorna programmi</strong> in attesa di conferma dall'ESP32...");
                     startCmdPoll(data.command_id);
                 }
             } else {
