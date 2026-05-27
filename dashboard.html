@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NabulAir — Centrale Operativa</title>
+    <title>NabulAir — Centrale</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        /* stile identico a quello originale (nessuna modifica) */
+        /* (lo stesso stile di prima, nessuna modifica necessaria) */
         :root {
             --bg:       #0a0e1a;
             --surface:  #111827;
@@ -505,6 +505,7 @@
             .filters-bar input, .filters-bar select { min-width: 140px; }
         }
     </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -715,8 +716,13 @@ async function testLocalConnection(ip, machineId) {
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000);
+        // Tentiamo una fetch verso l'endpoint /status (o qualsiasi rotta che risponda velocemente)
+        // Usiamo mode: 'no-cors' per evitare problemi CORS, ma non potremo leggere la risposta.
+        // Per avere un vero test, idealmente l'ESP risponde con un piccolo JSON.
+        // In mancanza, proviamo a vedere se la connessione TCP viene stabilita.
         const res = await fetch(`http://${ip}/status`, { signal: controller.signal, mode: 'no-cors' });
         clearTimeout(timeoutId);
+        // Con 'no-cors', la risposta è opaca e non possiamo leggere lo status, ma se non c'è eccezione la connessione è ok.
         statusSpan.textContent = '✅ Raggiungibile (stessa LAN)';
         statusSpan.style.color = 'var(--green)';
     } catch(e) {
@@ -761,13 +767,7 @@ function bootApp() {
     document.getElementById('appShell').style.display    = 'block';
 
     const role = currentUser.role;
-    
-    // CLIENT: reindirizzamento diretto a /remote (controllo remoto)
-    if (role === 'client') {
-        window.location.href = '/remote';
-        return;
-    }
-    
+    if (role === 'client') { window.location.href = '/remote'; return; }
     document.getElementById('topUsername').textContent   = currentUser.username;
     const badge = document.getElementById('topRoleBadge');
     badge.textContent  = role === 'admin' ? 'Admin' : role === 'installer' ? 'Installatore' : 'Cliente';
@@ -803,6 +803,10 @@ function bootApp() {
         document.getElementById('machinesTitle').textContent = '🏭 I Tuoi Impianti';
         document.getElementById('machinesSub').textContent   = 'Impianti assegnati a te';
         loadClients();
+    } else {
+        sidebar.classList.remove('visible');
+        document.getElementById('machinesTitle').textContent = '🏭 I Tuoi Impianti';
+        document.getElementById('machinesSub').textContent   = 'I tuoi impianti NabulAir';
     }
 
     loadMachines();
@@ -864,7 +868,7 @@ async function loadMachines() {
             renderTopPills(data.machines);
         }
     } catch(e) {
-        document.getElementById('machinesTbody').innerHTML = '<tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">❌</div><p>Errore di connessione</p></td></table>';
+        document.getElementById('machinesTbody').innerHTML = '<tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">❌</div><p>Errore di connessione</p></td></td>';
     }
 }
 
@@ -913,6 +917,7 @@ function renderMachinesTable(machines) {
 
     const isAdmin     = currentUser.role === 'admin';
     const isInstaller = currentUser.role === 'installer';
+    const isClient    = currentUser.role === 'client';
 
     tbody.innerHTML = machines.map(m => {
         const online  = m.status === 'online';
@@ -980,8 +985,8 @@ function openDetail(id) {
                 <span class="label">IP Locale</span>
                 <span class="value td-mono" id="device-ip-${m.id}">${m.sta_ip || '—'}</span>
                 ${m.sta_ip ? `<button class="btn-save-sm" style="margin-left:10px;" onclick="testLocalConnection('${m.sta_ip}', ${m.id})">🔍 Test</button>
-                              <a href="/remote?machineId=${m.id}" target="_blank" class="btn-save-sm" style="text-decoration:none;">🌐 Controllo Remoto</a>
                               <span id="local-test-${m.id}" style="margin-left:8px;"></span>` : ''}
+                <a href="/remote?machineId=${m.id}" target="_blank" class="btn-save-sm" style="text-decoration:none; margin-left:10px;">🌐 Controllo Remoto</a>
             </div>
         </div>
         <div class="detail-section">
@@ -1035,13 +1040,14 @@ function openDetail(id) {
     telegramSection += `</div>`;
     left += telegramSection;
 
-    // Comandi remoti (senza programmi)
-    let right = `
+    let right = '';
+    if (!isClient) {
+        right = `
         <div class="detail-section">
             <h4>🛠 Comandi remoti</h4>
             <div class="cmd-grid">
-                <button class="btn-cmd btn-cmd-programs" onclick="sendMachineCmd(${m.id},'start_cycle')">💨 Avvia ciclo manuale</button>
                 <button class="btn-cmd btn-cmd-programs" onclick="sendMachineCmd(${m.id},'sync_time')">🕒 Sincronizza ora</button>
+                <button class="btn-cmd btn-cmd-programs" onclick="sendMachineCmd(${m.id},'start_cycle')">💨 Avvia ciclo manuale</button>
                 <button class="btn-cmd btn-cmd-reboot" onclick="sendMachineCmd(${m.id},'reboot')">🔄 Riavvia</button>
                 <button class="btn-cmd btn-cmd-ota" onclick="toggleOtaPanel(${m.id})">⬆️ OTA Firmware</button>
             </div>
@@ -1051,14 +1057,12 @@ function openDetail(id) {
                 <input type="text" id="ota-url-${m.id}" placeholder="https://.../firmware.bin">
                 <button class="btn-cmd btn-cmd-ota" style="width:100%" onclick="sendMachineCmd(${m.id},'ota_firmware')">🚀 Avvia aggiornamento</button>
                 <div class="info-note">
-                    💡 L'OTA via cloud funziona sempre, anche da remoto.
+                    💡 L'OTA via cloud funziona sempre, anche da remoto. Usa questa sezione per aggiornare l'ESP32 ovunque si trovi.
                 </div>
             </div>
-            <div style="margin-top:16px;">
-                <a href="/remote?machineId=${m.id}" target="_blank" class="btn-save-sm" style="display:inline-block; width:100%; text-align:center;">🌐 Vai al controllo remoto completo</a>
-            </div>
         </div>
-    `;
+        `;
+    }
 
     if (isAdmin) {
         right += `
@@ -1071,6 +1075,7 @@ function openDetail(id) {
 
     document.getElementById('detailBody').innerHTML = left + right;
     document.getElementById('detailModal').classList.add('open');
+
 }
 
 function closeDetail() { document.getElementById('detailModal').classList.remove('open'); currentDetailId = null; }
@@ -1205,7 +1210,7 @@ function renderInstallers() {
             <td><strong>${esc(u.username)}</strong></td>
             <td>${count > 0 ? `${count} impianto${count>1?'i':''}` : '<span style="color:var(--muted)">—</span>'}</td>
             <td class="td-actions"><button class="btn-row btn-row-edit" onclick="editInstaller(${u.id})">✎ Modifica</button><button class="btn-row btn-row-del" onclick="deleteInstaller(${u.id})">🗑 Elimina</button></td>
-         <tr>`;
+         </tr>`;
     }).join('');
 }
 
@@ -1326,7 +1331,7 @@ async function preregisterMachine() {
     if (!installerId) return alert('Seleziona un installatore');
     const res = await apiPost('/machines/preregister', { mac_address: mac, machine_name: name || null, installer_id: parseInt(installerId) });
     if (res.success) {
-        alert('✅ Macchina pre-registrata!\n\nQuando l\'installatore la accenderà, apparirà automaticamente nel suo pannello.');
+        alert('✅ Macchina pre-registrata!\n\nQuando l'installatore la accenderà, apparirà automaticamente nel suo pannello.');
         document.getElementById('preregMac').value = '';
         document.getElementById('preregName').value = '';
         document.getElementById('preregInstaller').value = '';
@@ -1338,7 +1343,7 @@ function esc(text) { if (!text) return ''; const d = document.createElement('div
 function refreshAll() { loadMachines(); loadAlerts(); }
 
 if (token && currentUser) { bootApp(); } else { document.getElementById('loginScreen').style.display = 'flex'; }
-setInterval(() => { if (token && currentUser && currentUser.role !== 'client') { loadMachines(); loadAlerts(); } }, 30000);
+setInterval(() => { if (token) { loadMachines(); loadAlerts(); } }, 30000);
 </script>
 </body>
 </html>
