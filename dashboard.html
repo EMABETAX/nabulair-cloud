@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
+        /* (lo stesso stile di prima, nessuna modifica necessaria) */
         :root {
             --bg:       #0a0e1a;
             --surface:  #111827;
@@ -27,16 +28,13 @@
             --font-display: 'Syne', sans-serif;
             --font-body:    'DM Sans', sans-serif;
         }
-
         * { margin:0; padding:0; box-sizing:border-box; }
-
         body {
             font-family: var(--font-body);
             background: var(--bg);
             color: var(--text);
             min-height: 100vh;
         }
-
         #loginScreen {
             position: fixed; inset: 0;
             background: var(--bg);
@@ -85,7 +83,6 @@
         }
         .btn-login:hover { opacity: 0.85; }
         .login-err { color: var(--red); font-size:13px; text-align:center; margin-top:12px; display:none; }
-
         #appShell { display: none; }
         .topbar {
             background: var(--surface);
@@ -138,9 +135,7 @@
         .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
         .btn-logout { color: var(--red); }
         .btn-logout:hover { border-color: var(--red); color: var(--red); }
-
         .layout { display:flex; min-height:calc(100vh - 64px); }
-
         .sidebar {
             width: 220px; min-width: 220px;
             background: var(--surface);
@@ -165,19 +160,15 @@
         .nav-item.active { background: var(--green-dim); color: var(--green); font-weight: 600; }
         .nav-icon { font-size: 16px; }
         .sidebar-divider { border:none; border-top:1px solid var(--border); margin: 16px 0; }
-
         .main { flex: 1; padding: 28px 32px; overflow-x: hidden; }
         @media (max-width: 768px) { .main { padding: 16px; } }
-
         .section-page { display: none; }
         .section-page.active { display: block; }
-
         .page-title {
             font-family: var(--font-display);
             font-size: 22px; font-weight: 800; margin-bottom: 6px;
         }
         .page-sub { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
-
         .alerts-wrap { display:none; }
         .alerts-wrap.has-alerts { display:block; margin-bottom:24px; }
         .alert-row {
@@ -193,7 +184,6 @@
             padding: 5px 14px; border-radius: 20px;
             cursor: pointer; font-size: 12px; white-space: nowrap;
         }
-
         .filters-bar {
             display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;
             align-items: center;
@@ -208,7 +198,6 @@
         .filters-bar input:focus, .filters-bar select:focus { border-color: var(--accent); }
         .filters-bar input::placeholder { color: var(--muted); }
         .filters-bar select option { background: var(--card); }
-
         .data-table-wrap { overflow-x: auto; }
         .data-table {
             width: 100%; border-collapse: collapse;
@@ -249,7 +238,6 @@
         }
         .td-sensor.ok { background: var(--green-dim); color: var(--green); }
         .td-sensor.err { background: var(--red-dim); color: var(--red); }
-
         .btn-row {
             padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
             cursor: pointer; border: 1px solid; transition: opacity 0.2s; white-space: nowrap;
@@ -259,7 +247,6 @@
         .btn-row-edit { color: var(--amber); border-color: rgba(245,158,11,0.3); background: var(--amber-dim); }
         .btn-row-del  { color: var(--red);  border-color: rgba(239,68,68,0.3);  background: var(--red-dim); }
         .btn-row:hover { opacity: 0.75; }
-
         .form-card {
             background: var(--card); border: 1px solid var(--border);
             border-radius: 20px; padding: 24px; margin-bottom: 24px;
@@ -290,7 +277,6 @@
             cursor: pointer; transition: opacity 0.2s;
         }
         .btn-add:hover { opacity: 0.85; }
-
         .modal-bg {
             display: none; position: fixed; inset: 0;
             background: rgba(0,0,0,0.85); backdrop-filter: blur(6px);
@@ -335,7 +321,6 @@
             display: flex; align-items: center; justify-content: center;
             flex-shrink: 0; margin-top: 1px;
         }
-
         #detailModal .modal-box {
             max-width: 900px; width: 100%; text-align: left; padding: 0;
             display: flex; flex-direction: column; max-height: 90vh;
@@ -351,7 +336,6 @@
             display: grid; grid-template-columns: 1fr 1fr; gap: 28px;
         }
         @media (max-width: 720px) { .detail-body { grid-template-columns: 1fr; } }
-
         .detail-section {
             background: var(--surface); border: 1px solid var(--border);
             border-radius: 16px; padding: 20px;
@@ -369,7 +353,6 @@
         .detail-row:last-child { border-bottom: none; }
         .detail-row .label { color: var(--muted); }
         .detail-row .value { font-weight: 600; }
-
         .sensor-big {
             display: flex; align-items: center; gap: 10px;
             padding: 12px; border-radius: 12px; margin-bottom: 10px;
@@ -377,7 +360,6 @@
         }
         .sensor-big.ok { background: var(--green-dim); color: var(--green); }
         .sensor-big.err { background: var(--red-dim); color: var(--red); }
-
         .cmd-grid {
             display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
             gap: 10px; margin-bottom: 12px;
@@ -399,7 +381,6 @@
         .cmd-status.ok  { color: var(--green); }
         .cmd-status.err { color: var(--red); }
         .cmd-status.wait { color: var(--amber); }
-
         .ota-panel {
             margin-top: 12px; padding: 14px;
             background: rgba(0,0,0,0.2); border-radius: 12px;
@@ -411,7 +392,6 @@
             background: rgba(255,255,255,0.05); border: 1px solid var(--border);
             border-radius: 8px; color: var(--text); margin-bottom: 10px; font-size: 13px;
         }
-
         .assign-box {
             display: flex; flex-direction: column; gap: 10px; margin-top: 8px;
         }
@@ -428,7 +408,6 @@
             cursor: pointer; align-self: flex-start;
         }
         .btn-save-sm:hover { opacity: 0.8; }
-
         .btn-qr-big {
             width: 100%; margin-top: 10px;
             padding: 12px;
@@ -450,7 +429,6 @@
             background: var(--green-dim); color: var(--green);
             border: 1px solid rgba(34,197,94,0.3);
         }
-
         .btn-del-big {
             width: 100%; margin-top: 10px;
             padding: 12px;
@@ -460,7 +438,6 @@
             cursor: pointer; transition: opacity 0.2s;
         }
         .btn-del-big:hover { opacity: 0.8; }
-
         #editModal .modal-box {
             max-width: 420px; text-align: left; padding: 32px;
         }
@@ -482,7 +459,6 @@
             cursor: pointer; flex: 1; text-align: center;
         }
         .btn-cancel:hover { border-color: var(--text); color: var(--text); }
-
         .webhook-box {
             background: var(--surface); border-radius: 14px;
             padding: 16px 18px; margin-bottom: 18px;
@@ -490,14 +466,12 @@
         .webhook-url { font-family: monospace; font-size: 13px; color: var(--blue); margin-top: 6px; word-break: break-all; }
         .result-ok  { background: var(--green-dim); border:1px solid rgba(34,197,94,0.3); border-radius:10px; padding:14px; font-size:13px; color:var(--green); }
         .result-err { background: var(--red-dim);   border:1px solid rgba(239,68,68,0.3);  border-radius:10px; padding:14px; font-size:13px; color:var(--red); }
-
         .empty-state {
             text-align: center; padding: 60px 20px;
             color: var(--muted);
         }
         .empty-state .big { font-size: 48px; margin-bottom: 14px; }
         .empty-state p { font-size: 15px; }
-
         .day-btn {
             background: var(--card);
             border: 1px solid var(--border);
@@ -512,7 +486,15 @@
             border-color: var(--green);
             color: var(--green);
         }
-
+        .info-note {
+            background: var(--blue-dim);
+            border-left: 4px solid var(--blue);
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            margin-top: 12px;
+            color: var(--blue);
+        }
         @media (max-width: 640px) {
             .sidebar { display: none !important; }
             .main { padding: 14px; }
@@ -958,6 +940,30 @@ async function saveProgramsToCloud(machineId, sendToDevice) {
     }
 }
 
+// ==================== FUNZIONI DI TEST CONNESSIONE LOCALE ====================
+async function testLocalConnection(ip, machineId) {
+    const statusSpan = document.getElementById(`local-test-${machineId}`);
+    if (!statusSpan) return;
+    statusSpan.textContent = '⏳ testing...';
+    statusSpan.style.color = 'var(--amber)';
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        // Tentiamo una fetch verso l'endpoint /status (o qualsiasi rotta che risponda velocemente)
+        // Usiamo mode: 'no-cors' per evitare problemi CORS, ma non potremo leggere la risposta.
+        // Per avere un vero test, idealmente l'ESP risponde con un piccolo JSON.
+        // In mancanza, proviamo a vedere se la connessione TCP viene stabilita.
+        const res = await fetch(`http://${ip}/status`, { signal: controller.signal, mode: 'no-cors' });
+        clearTimeout(timeoutId);
+        // Con 'no-cors', la risposta è opaca e non possiamo leggere lo status, ma se non c'è eccezione la connessione è ok.
+        statusSpan.textContent = '✅ Raggiungibile (stessa LAN)';
+        statusSpan.style.color = 'var(--green)';
+    } catch(e) {
+        statusSpan.textContent = '❌ Non raggiungibile o firewall';
+        statusSpan.style.color = 'var(--red)';
+    }
+}
+
 async function doLogin() {
     const u = document.getElementById('loginUser').value.trim();
     const p = document.getElementById('loginPass').value;
@@ -1094,7 +1100,7 @@ async function loadMachines() {
             renderTopPills(data.machines);
         }
     } catch(e) {
-        document.getElementById('machinesTbody').innerHTML = '<tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">❌</div><p>Errore di connessione</p></td></tr>';
+        document.getElementById('machinesTbody').innerHTML = '<tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">❌</div><p>Errore di connessione</p></td></td>';
     }
 }
 
@@ -1207,7 +1213,13 @@ function openDetail(id) {
             <h4>📡 Stato</h4>
             <div class="detail-row"><span class="label">Connessione</span><span class="value" style="color:${online?'var(--green)':'var(--red)'}">${online?'🟢 Online':'🔴 Offline'}</span></div>
             <div class="detail-row"><span class="label">MAC</span><span class="value td-mono">${m.mac_address||'—'}</span></div>
-            <div class="detail-row"><span class="label">IP</span><span class="value td-mono">${m.sta_ip||'—'}</span></div>
+            <div class="detail-row">
+                <span class="label">IP Locale</span>
+                <span class="value td-mono" id="device-ip-${m.id}">${m.sta_ip || '—'}</span>
+                ${m.sta_ip ? `<button class="btn-save-sm" style="margin-left:10px;" onclick="testLocalConnection('${m.sta_ip}', ${m.id})">🔍 Test</button>
+                              <a href="http://${m.sta_ip}" target="_blank" class="btn-save-sm" style="text-decoration:none;">🌐 Apri web ESP</a>
+                              <span id="local-test-${m.id}" style="margin-left:8px;"></span>` : ''}
+            </div>
         </div>
         <div class="detail-section">
             <h4>🧪 Sensori</h4>
@@ -1276,6 +1288,9 @@ function openDetail(id) {
                 <label style="font-size:12px; color:var(--muted);">URL firmware (.bin)</label>
                 <input type="text" id="ota-url-${m.id}" placeholder="https://.../firmware.bin">
                 <button class="btn-cmd btn-cmd-ota" style="width:100%" onclick="sendMachineCmd(${m.id},'ota_firmware')">🚀 Avvia aggiornamento</button>
+                <div class="info-note">
+                    💡 L'OTA via cloud funziona sempre, anche da remoto. Usa questa sezione per aggiornare l'ESP32 ovunque si trovi.
+                </div>
             </div>
         </div>
         
@@ -1288,6 +1303,10 @@ function openDetail(id) {
             <div style="display:flex; gap:8px; margin-top:12px;">
                 <button class="btn-save-sm" onclick="saveProgramsToCloud(${m.id}, false)">💾 Salva solo nel cloud</button>
                 <button class="btn-save-sm" onclick="saveProgramsToCloud(${m.id}, true)">📡 Salva e invia all'ESP32</button>
+            </div>
+            <div class="info-note" style="margin-top:12px;">
+                📌 <strong>Nota sull'OTA</strong>: Se l'ESP32 è connesso a una rete Wi-Fi (STA), l'aggiornamento OTA tramite cloud funziona sempre.<br>
+                Per l'accesso locale all'interfaccia web dell'ESP, usa il link "Apri web ESP" sopra (solo se sei sulla stessa LAN).
             </div>
         </div>
         `;
@@ -1442,7 +1461,7 @@ function renderInstallers() {
             <td><strong>${esc(u.username)}</strong></td>
             <td>${count > 0 ? `${count} impianto${count>1?'i':''}` : '<span style="color:var(--muted)">—</span>'}</td>
             <td class="td-actions"><button class="btn-row btn-row-edit" onclick="editInstaller(${u.id})">✎ Modifica</button><button class="btn-row btn-row-del" onclick="deleteInstaller(${u.id})">🗑 Elimina</button></td>
-        </tr>`;
+         </tr>`;
     }).join('');
 }
 
