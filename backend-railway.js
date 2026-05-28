@@ -1247,15 +1247,13 @@ app.post('/api/ping', async (req, res) => {
                  ORDER BY created_at ASC LIMIT 1`,
                 [machine_id]
             );
-            if (cmdResult.rows.length > 0) {
-                const cmd = cmdResult.rows[0];
-                await queryWithRetry(
-                    `UPDATE commands SET status = 'sent' WHERE id = $1`,
-                    [cmd.id]
-                );
-                command = { id: cmd.id, type: cmd.type, payload: cmd.payload };
-                console.log(`📤 Comando inviato a macchina ${machine_id}: ${cmd.type}`);
-            }
+                    if (cmdResult.rows.length  > 0) {
+            const cmd = cmdResult.rows[0];
+            // ✅ NON impostare 'sent' qui. L'ESP32 confermerà esplicitamente via /api/command/:id/confirm
+            // Se la rete cade o l'ESP crasha, il comando resta 'pending' e viene riproposto al ping successivo
+            command = { id: cmd.id, type: cmd.type, payload: cmd.payload };
+            console.log(`📤 Comando in attesa di conferma: ${cmd.type} (ID ${cmd.id})`);
+         }
         }
 
         res.json({ success: true, command, paused: machine?.paused || false, pause_until: machine?.pause_until || null });
@@ -1300,7 +1298,7 @@ app.post('/api/machines/:id/command', authenticateToken, async (req, res) => {
         const result = await queryWithRetry(
             `INSERT INTO commands (machine_id, type, payload, created_by)
              VALUES ($1, $2, $3, $4) RETURNING id`,
-            [machineId, type, payload ? JSON.stringify(payload) : null, req.user.id]
+            [machineId, type, payload || null, req.user.id] // ✅ pg gestisce automaticamente JSONB
         );
 
         console.log(`📥 Comando ${type} in coda per macchina ${machineId} (ID cmd: ${result.rows[0].id})`);
@@ -1410,20 +1408,20 @@ app.put('/api/machines/:id/programs', authenticateToken, async (req, res) => {
         }
 
         // Upsert dei programmi nel DB
-        await queryWithRetry(
+                await queryWithRetry(
             `INSERT INTO machine_programs (machine_id, programs, updated_at)
              VALUES ($1, $2, NOW())
              ON CONFLICT (machine_id) DO UPDATE SET
              programs = EXCLUDED.programs, updated_at = NOW()`,
-            [machineId, JSON.stringify(programs)]
+            [machineId, programs] // ✅ Array JS diretto in colonna JSONB
         );
 
         let commandId = null;
         if (sendToDevice === true) {
-            const cmdResult = await queryWithRetry(
+                        const cmdResult = await queryWithRetry(
                 `INSERT INTO commands (machine_id, type, payload, created_by)
                  VALUES ($1, $2, $3, $4) RETURNING id`,
-                [machineId, 'update_programs', JSON.stringify({ programs }), req.user.id]
+                [machineId, 'update_programs', { programs }, req.user.id] // ✅ Oggetto JS diretto
             );
             commandId = cmdResult.rows[0].id;
             console.log(`📥 Comando update_programs accodato per macchina ${machineId} (cmd ${commandId})`);
