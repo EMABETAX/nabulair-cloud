@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        /* (lo stesso stile di prima, nessuna modifica necessaria) */
+        /* ----- STILI ESISTENTI (nessuna modifica, solo aggiunto stile per lo switch) ----- */
         :root {
             --bg:       #0a0e1a;
             --surface:  #111827;
@@ -35,6 +35,44 @@
             color: var(--text);
             min-height: 100vh;
         }
+        /* TOGGLE SWITCH - STILE AGGIUNTO */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #4b5563;
+            transition: .3s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: var(--green);
+        }
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+        /* FINE STILE SWITCH */
         #loginScreen {
             position: fixed; inset: 0;
             background: var(--bg);
@@ -505,7 +543,6 @@
             .filters-bar input, .filters-bar select { min-width: 140px; }
         }
     </style>
-<base target="_blank">
 </head>
 <body>
 
@@ -707,6 +744,240 @@ let allClients  = [];
 let allUsers    = [];
 let filteredMachines = [];
 
+// ==================== GESTIONE PROGRAMMI (CLOUD) ====================
+let currentPrograms = {};
+
+async function loadPrograms(machineId) {
+    const container = document.getElementById(`programs-container-${machineId}`);
+    if (!container) return;
+    container.innerHTML = '<div style="text-align:center; padding:20px;">⏳ Caricamento...</div>';
+    try {
+        const res = await apiGet(`/machines/${machineId}/programs`);
+        if (res.success) {
+            currentPrograms[machineId] = res.programs || [];
+            renderProgramsList(machineId);
+        } else {
+            container.innerHTML = '<div style="color:var(--red); text-align:center;">❌ Errore caricamento</div>';
+        }
+    } catch(e) {
+        container.innerHTML = '<div style="color:var(--red); text-align:center;">❌ Errore di rete</div>';
+    }
+}
+
+function renderProgramsList(machineId) {
+    const container = document.getElementById(`programs-container-${machineId}`);
+    if (!container) return;
+    const programs = currentPrograms[machineId] || [];
+    if (programs.length === 0) {
+        container.innerHTML = '<div style="color:var(--muted); text-align:center; padding:20px;">Nessun programma configurato</div>';
+        return;
+    }
+    let html = '';
+    programs.forEach((p, idx) => {
+        const days = (p.days || []).map(d => ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'][d-1]).join(', ');
+        html += `
+            <div style="border-bottom:1px solid var(--border); padding:12px 0;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong>${esc(p.nome || 'Programma')}</strong> 
+                        <span style="background:${p.attivo ? 'var(--green-dim)' : 'var(--red-dim)'}; color:${p.attivo ? 'var(--green)' : 'var(--red)'}; padding:2px 6px; border-radius:10px; font-size:11px; margin-left:6px;">
+                            ${p.attivo ? 'ON' : 'OFF'}
+                        </span>
+                        ${p.lavaggio ? '<span style="background:var(--blue-dim); color:var(--blue); padding:2px 6px; border-radius:10px; font-size:11px; margin-left:6px;">🚿 Lavaggio</span>' : ''}
+                    </div>
+                    <div>
+                        <button class="btn-row btn-row-edit" onclick="editProgram(${machineId}, ${idx})">✎</button>
+                        <button class="btn-row btn-row-del" onclick="deleteProgram(${machineId}, ${idx})">🗑</button>
+                    </div>
+                </div>
+                <div style="font-size:12px; color:var(--muted); margin-top:6px;">
+                    📅 ${days} | ⏰ ${p.orario || '08:00'} | ⏱️ ${p.durata || 120}s | 🧪 ${p.percentuale || 1.5}%
+                </div>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+function showAddProgramModal(machineId) {
+    const modalHtml = `
+        <div id="programModal" class="modal-bg" style="display:flex;">
+            <div class="modal-box" style="max-width:500px; text-align:left;">
+                <button class="modal-close-btn" onclick="closeProgramModal()">×</button>
+                <h3>➕ Nuovo programma</h3>
+                <div style="margin-bottom:10px;">
+                    <label>Nome programma</label>
+                    <input type="text" id="progName" class="form-input" placeholder="es. Serale" style="width:100%;">
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label>Giorni</label>
+                    <div id="progDays" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:5px;">
+                        ${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map((d,i) => `<button type="button" data-day="${i+1}" class="day-btn" onclick="toggleDay(this)">${d}</button>`).join('')}
+                    </div>
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label>Orario</label>
+                    <input type="time" id="progTime" value="08:00" style="width:100%;">
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label>Durata (secondi) <span id="durataVal">120</span></label>
+                    <input type="range" id="progDurata" min="10" max="1800" step="10" value="120" oninput="document.getElementById('durataVal').innerText=this.value">
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label>Percentuale insetticida (%) <span id="percVal">1.5</span></label>
+                    <input type="range" id="progPerc" min="0.1" max="5.0" step="0.1" value="1.5" oninput="document.getElementById('percVal').innerText=this.value">
+                </div>
+                <div style="margin-bottom:20px;">
+                    <label><input type="checkbox" id="progLavaggio"> Ciclo di lavaggio (solo acqua)</label>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-add" onclick="addProgramToArray(${machineId})">Aggiungi</button>
+                    <button class="btn-cancel" onclick="closeProgramModal()">Annulla</button>
+                </div>
+            </div>
+        </div>
+    `;
+    if (document.getElementById('programModal')) document.getElementById('programModal').remove();
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    window.currentMachineForProgram = machineId;
+}
+
+function closeProgramModal() {
+    const modal = document.getElementById('programModal');
+    if (modal) modal.remove();
+}
+
+function toggleDay(btn) {
+    btn.classList.toggle('active');
+}
+
+function addProgramToArray(machineId) {
+    const name = document.getElementById('progName').value.trim();
+    if (!name) { alert('Inserisci un nome'); return; }
+    const days = Array.from(document.querySelectorAll('#progDays .day-btn.active')).map(btn => parseInt(btn.dataset.day));
+    if (days.length === 0) { alert('Seleziona almeno un giorno'); return; }
+    const time = document.getElementById('progTime').value;
+    const durata = parseInt(document.getElementById('progDurata').value);
+    const percentuale = parseFloat(document.getElementById('progPerc').value);
+    const lavaggio = document.getElementById('progLavaggio').checked;
+    const newProgram = {
+        id: Date.now(),
+        nome: name,
+        attivo: true,
+        days: days,
+        orario: time,
+        durata: durata,
+        percentuale: percentuale,
+        lavaggio: lavaggio
+    };
+    if (!currentPrograms[machineId]) currentPrograms[machineId] = [];
+    currentPrograms[machineId].push(newProgram);
+    renderProgramsList(machineId);
+    closeProgramModal();
+    saveProgramsToCloud(machineId, false);
+}
+
+function editProgram(machineId, index) {
+    const prog = currentPrograms[machineId][index];
+    if (!prog) return;
+    const modalHtml = `
+        <div id="programModal" class="modal-bg" style="display:flex;">
+            <div class="modal-box" style="max-width:500px; text-align:left;">
+                <button class="modal-close-btn" onclick="closeProgramModal()">×</button>
+                <h3>✏️ Modifica programma</h3>
+                <div style="margin-bottom:10px;">
+                    <label>Nome programma</label>
+                    <input type="text" id="progName" class="form-input" value="${esc(prog.nome)}" style="width:100%;">
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label>Giorni</label>
+                    <div id="progDays" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:5px;">
+                        ${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map((d,i) => `<button type="button" data-day="${i+1}" class="day-btn ${prog.days.includes(i+1) ? 'active' : ''}" onclick="toggleDay(this)">${d}</button>`).join('')}
+                    </div>
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label>Orario</label>
+                    <input type="time" id="progTime" value="${prog.orario}" style="width:100%;">
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label>Durata (secondi) <span id="durataVal">${prog.durata}</span></label>
+                    <input type="range" id="progDurata" min="10" max="1800" step="10" value="${prog.durata}" oninput="document.getElementById('durataVal').innerText=this.value">
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label>Percentuale insetticida (%) <span id="percVal">${prog.percentuale}</span></label>
+                    <input type="range" id="progPerc" min="0.1" max="5.0" step="0.1" value="${prog.percentuale}" oninput="document.getElementById('percVal').innerText=this.value">
+                </div>
+                <div style="margin-bottom:20px;">
+                    <label><input type="checkbox" id="progLavaggio" ${prog.lavaggio ? 'checked' : ''}> Ciclo di lavaggio (solo acqua)</label>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-add" onclick="updateProgramInArray(${machineId}, ${index})">Salva modifiche</button>
+                    <button class="btn-cancel" onclick="closeProgramModal()">Annulla</button>
+                </div>
+            </div>
+        </div>
+    `;
+    if (document.getElementById('programModal')) document.getElementById('programModal').remove();
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    window.currentMachineForProgram = machineId;
+    window.currentEditIndex = index;
+}
+
+function updateProgramInArray(machineId, index) {
+    const name = document.getElementById('progName').value.trim();
+    if (!name) { alert('Inserisci un nome'); return; }
+    const days = Array.from(document.querySelectorAll('#progDays .day-btn.active')).map(btn => parseInt(btn.dataset.day));
+    if (days.length === 0) { alert('Seleziona almeno un giorno'); return; }
+    const time = document.getElementById('progTime').value;
+    const durata = parseInt(document.getElementById('progDurata').value);
+    const percentuale = parseFloat(document.getElementById('progPerc').value);
+    const lavaggio = document.getElementById('progLavaggio').checked;
+    currentPrograms[machineId][index] = {
+        ...currentPrograms[machineId][index],
+        nome: name,
+        days: days,
+        orario: time,
+        durata: durata,
+        percentuale: percentuale,
+        lavaggio: lavaggio
+    };
+    renderProgramsList(machineId);
+    closeProgramModal();
+    saveProgramsToCloud(machineId, false);
+}
+
+function deleteProgram(machineId, index) {
+    if (confirm('Eliminare questo programma?')) {
+        currentPrograms[machineId].splice(index, 1);
+        renderProgramsList(machineId);
+        saveProgramsToCloud(machineId, false);
+    }
+}
+
+async function saveProgramsToCloud(machineId, sendToDevice) {
+    const programs = currentPrograms[machineId] || [];
+    const formatted = programs.map(p => ({
+        id: p.id,
+        nome: p.nome,
+        attivo: p.attivo,
+        days: p.days,
+        orario: p.orario,
+        durata: p.durata,
+        percentuale: p.percentuale,
+        lavaggio: p.lavaggio || false
+    }));
+    try {
+        const res = await apiPut(`/machines/${machineId}/programs`, { programs: formatted, sendToDevice });
+        if (res.success) {
+            alert(res.message);
+        } else {
+            alert('Errore: ' + (res.message || 'Salvataggio fallito'));
+        }
+    } catch(e) {
+        alert('Errore di connessione');
+    }
+}
+
 // ==================== FUNZIONI DI TEST CONNESSIONE LOCALE ====================
 async function testLocalConnection(ip, machineId) {
     const statusSpan = document.getElementById(`local-test-${machineId}`);
@@ -716,13 +987,8 @@ async function testLocalConnection(ip, machineId) {
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000);
-        // Tentiamo una fetch verso l'endpoint /status (o qualsiasi rotta che risponda velocemente)
-        // Usiamo mode: 'no-cors' per evitare problemi CORS, ma non potremo leggere la risposta.
-        // Per avere un vero test, idealmente l'ESP risponde con un piccolo JSON.
-        // In mancanza, proviamo a vedere se la connessione TCP viene stabilita.
-        const res = await fetch(`http://${ip}/status`, { signal: controller.signal, mode: 'no-cors' });
+        await fetch(`http://${ip}/status`, { signal: controller.signal, mode: 'no-cors' });
         clearTimeout(timeoutId);
-        // Con 'no-cors', la risposta è opaca e non possiamo leggere lo status, ma se non c'è eccezione la connessione è ok.
         statusSpan.textContent = '✅ Raggiungibile (stessa LAN)';
         statusSpan.style.color = 'var(--green)';
     } catch(e) {
@@ -731,6 +997,43 @@ async function testLocalConnection(ip, machineId) {
     }
 }
 
+// ============ TOGGLE CONTROLLO REMOTO (CLOUD ENABLE/DISABLE) ============
+async function toggleCloudEnable(machineId, enabled) {
+    const statusEl = document.getElementById(`cmd-status-${machineId}`);
+    if (statusEl) {
+        statusEl.textContent = '⏳ Aggiornamento stato remoto...';
+        statusEl.className = 'cmd-status wait';
+    }
+    try {
+        const res = await apiPost(`/machines/${machineId}/command`, {
+            type: 'cloud_enable',
+            payload: { enabled: enabled }
+        });
+        if (res.success) {
+            if (statusEl) {
+                statusEl.textContent = enabled ? '✅ Controllo remoto attivato' : '⏸️ Controllo remoto disattivato';
+                statusEl.className = 'cmd-status ok';
+            }
+        } else {
+            if (statusEl) {
+                statusEl.textContent = '❌ ' + (res.message || 'Errore');
+                statusEl.className = 'cmd-status err';
+            }
+            // ripristina il toggle allo stato precedente
+            const toggle = document.getElementById(`cloud-toggle-${machineId}`);
+            if (toggle) toggle.checked = !enabled;
+        }
+    } catch(e) {
+        if (statusEl) {
+            statusEl.textContent = '❌ Errore di connessione';
+            statusEl.className = 'cmd-status err';
+        }
+        const toggle = document.getElementById(`cloud-toggle-${machineId}`);
+        if (toggle) toggle.checked = !enabled;
+    }
+}
+
+// ==================== LOGIN & CORE ====================
 async function doLogin() {
     const u = document.getElementById('loginUser').value.trim();
     const p = document.getElementById('loginPass').value;
@@ -767,7 +1070,6 @@ function bootApp() {
     document.getElementById('appShell').style.display    = 'block';
 
     const role = currentUser.role;
-    // Client redirect removed - client can access dashboard to see their machines
     document.getElementById('topUsername').textContent   = currentUser.username;
     const badge = document.getElementById('topRoleBadge');
     badge.textContent  = role === 'admin' ? 'Admin' : role === 'installer' ? 'Installatore' : 'Cliente';
@@ -868,7 +1170,7 @@ async function loadMachines() {
             renderTopPills(data.machines);
         }
     } catch(e) {
-        document.getElementById('machinesTbody').innerHTML = '<tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">❌</div><p>Errore di connessione</p></td></td>';
+        document.getElementById('machinesTbody').innerHTML = '<tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">❌</div><p>Errore di connessione</p></td>';
     }
 }
 
@@ -936,10 +1238,10 @@ function renderMachinesTable(machines) {
             <td><strong>${esc(m.machine_name || 'Impianto')}</strong></td>
             <td class="td-mono">${m.mac_address || '—'}</td>
             <td><span class="td-status"><span class="td-dot ${online?'online':'offline'}"></span>${online?'Online':'Offline'}</span></td>
-            <td><span class="td-sensor ${waterOk?'ok':'err'}">💧 ${waterOk?'OK':'❌'}</span><span class="td-sensor ${insOk?'ok':'err'}">🧪 ${insOk?'OK':'❌'}</span></td>
-            <td>${esc(clientName)}</td>
-            <td>${esc(instName)}</td>
-            <td class="td-actions">${actions}</td>
+            <td><span class="td-sensor ${waterOk?'ok':'err'}">💧 ${waterOk?'OK':'❌'}</span><span class="td-sensor ${insOk?'ok':'err'}">🧪 ${insOk?'OK':'❌'}</span></span></td>
+            <td>${esc(clientName)}</span></td>
+            <td>${esc(instName)}</span></td>
+            <td class="td-actions">${actions}</span></td>
         </tr>`;
     }).join('');
 }
@@ -985,8 +1287,8 @@ function openDetail(id) {
                 <span class="label">IP Locale</span>
                 <span class="value td-mono" id="device-ip-${m.id}">${m.sta_ip || '—'}</span>
                 ${m.sta_ip ? `<button class="btn-save-sm" style="margin-left:10px;" onclick="testLocalConnection('${m.sta_ip}', ${m.id})">🔍 Test</button>
+                              <a href="/remote?machineId=${m.id}" target="_blank" class="btn-save-sm" style="text-decoration:none;">🌐 Controllo Remoto</a>
                               <span id="local-test-${m.id}" style="margin-left:8px;"></span>` : ''}
-                <a href="/remote?machineId=${m.id}" target="_blank" class="btn-save-sm" style="text-decoration:none; margin-left:10px;">🌐 Controllo Remoto</a>
             </div>
         </div>
         <div class="detail-section">
@@ -1050,6 +1352,14 @@ function openDetail(id) {
                 <button class="btn-cmd btn-cmd-programs" onclick="sendMachineCmd(${m.id},'start_cycle')">💨 Avvia ciclo manuale</button>
                 <button class="btn-cmd btn-cmd-reboot" onclick="sendMachineCmd(${m.id},'reboot')">🔄 Riavvia</button>
                 <button class="btn-cmd btn-cmd-ota" onclick="toggleOtaPanel(${m.id})">⬆️ OTA Firmware</button>
+                <!-- TOGGLE CONTROLLO REMOTO (cloud enable/disable) -->
+                <div class="cloud-toggle" style="grid-column: span 2; display: flex; justify-content: space-between; align-items: center; background: var(--surface); padding: 6px 12px; border-radius: 60px;">
+                    <span style="font-size:13px;">🌐 Controllo remoto</span>
+                    <label class="switch">
+                        <input type="checkbox" id="cloud-toggle-${m.id}" onchange="toggleCloudEnable(${m.id}, this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
             </div>
             <div class="cmd-status" id="cmd-status-${m.id}"></div>
             <div class="ota-panel" id="ota-panel-${m.id}">
@@ -1059,6 +1369,22 @@ function openDetail(id) {
                 <div class="info-note">
                     💡 L'OTA via cloud funziona sempre, anche da remoto. Usa questa sezione per aggiornare l'ESP32 ovunque si trovi.
                 </div>
+            </div>
+        </div>
+        
+        <div class="detail-section">
+            <h4>📅 Programmi di nebulizzazione</h4>
+            <div id="programs-container-${m.id}">
+                <div style="text-align:center; padding:20px;">Caricamento programmi...</div>
+            </div>
+            <button class="btn-add" style="margin-top:12px; width:100%;" onclick="showAddProgramModal(${m.id})">➕ Aggiungi programma</button>
+            <div style="display:flex; gap:8px; margin-top:12px;">
+                <button class="btn-save-sm" onclick="saveProgramsToCloud(${m.id}, false)">💾 Salva solo nel cloud</button>
+                <button class="btn-save-sm" onclick="saveProgramsToCloud(${m.id}, true)">📡 Salva e invia all'ESP32</button>
+            </div>
+            <div class="info-note" style="margin-top:12px;">
+                📌 <strong>Nota sull'OTA</strong>: Se l'ESP32 è connesso a una rete Wi-Fi (STA), l'aggiornamento OTA tramite cloud funziona sempre.<br>
+                Per l'accesso locale all'interfaccia web dell'ESP, usa il link "Apri web ESP" sopra (solo se sei sulla stessa LAN).
             </div>
         </div>
         `;
@@ -1075,7 +1401,10 @@ function openDetail(id) {
 
     document.getElementById('detailBody').innerHTML = left + right;
     document.getElementById('detailModal').classList.add('open');
-
+    
+    if (!isClient) {
+        loadPrograms(m.id);
+    }
 }
 
 function closeDetail() { document.getElementById('detailModal').classList.remove('open'); currentDetailId = null; }
@@ -1131,7 +1460,7 @@ async function loadClients() {
 function renderClientsTable() {
     const tbody = document.getElementById('clientsTbody');
     if (!tbody) return;
-    if (!allClients.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state" style="padding:20px;">Nessun cliente registrato</td></tr>'; return; }
+    if (!allClients.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state" style="padding:20px;">Nessun cliente registrato</td></td>'; return; }
     const isAdmin = currentUser.role === 'admin';
     const isInstaller = currentUser.role === 'installer';
     tbody.innerHTML = allClients.map(c => {
@@ -1144,7 +1473,7 @@ function renderClientsTable() {
             <td class="td-mono">${esc(c.phone||'—')}</td>
             <td>${userExists ? `<span style="color:var(--green);">✅ ${esc(c.username)}</span>` : '<span style="color:var(--amber);">⚠️ Nessun account</span>'}</td>
             <td>${c.telegram_chat_id ? `<span style="color:var(--green); font-size:12px;">✅ ${esc(c.telegram_chat_id)}</span>` : '<span style="color:var(--muted); font-size:12px;">—</span>'}</td>
-            <td class="td-actions">${actions}</td>
+            <td class="td-actions">${actions}</span></td>
         </tr>`;
     }).join('');
 }
@@ -1331,7 +1660,7 @@ async function preregisterMachine() {
     if (!installerId) return alert('Seleziona un installatore');
     const res = await apiPost('/machines/preregister', { mac_address: mac, machine_name: name || null, installer_id: parseInt(installerId) });
     if (res.success) {
-        alert(`✅ Macchina pre-registrata!\n\nQuando l'installatore la accenderà, apparirà automaticamente nel suo pannello.`);
+        alert('✅ Macchina pre-registrata!\n\nQuando l\'installatore la accenderà, apparirà automaticamente nel suo pannello.');
         document.getElementById('preregMac').value = '';
         document.getElementById('preregName').value = '';
         document.getElementById('preregInstaller').value = '';
