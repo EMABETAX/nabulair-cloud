@@ -328,7 +328,7 @@
     </div>
 
     <div class="cloud-notice">
-        ☁️ <span>Modalità <strong>Cloud</strong> — i comandi vengono recapitati all'ESP32 al prossimo ping (entro ~60 secondi)</span>
+        ☁️ <span>Modalità <strong>Cloud</strong> — i comandi vengono recapitati a Nabulair al prossimo ping (entro ~60 secondi)</span>
     </div>
 
     <!-- Stats -->
@@ -416,10 +416,10 @@
         <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
             <button class="btn-cmd btn-start" style="flex:1; min-width:140px;" onclick="showAddProgramModal()">➕ Nuovo programma</button>
             <button class="btn-cmd btn-sync" style="flex:1; min-width:140px;" onclick="savePrograms(false)">💾 Salva nel cloud</button>
-            <button class="btn-cmd btn-start" style="flex:1; min-width:180px;" onclick="savePrograms(true)">📡 Salva e invia all'ESP32</button>
+            <button class="btn-cmd btn-start" style="flex:1; min-width:180px;" onclick="savePrograms(true)">📡 Salva e invia a Nabulair</button>
         </div>
         <div class="info-note">
-            📌 "Salva nel cloud" conserva i programmi sul server. "Salva e invia" li invia anche all'ESP32 al prossimo ping.
+            📌 "Salva nel cloud" conserva i programmi sul server. "Salva e invia" li invia anche a Nabulair al prossimo ping.
         </div>
     </div>
 
@@ -587,8 +587,8 @@
 
             if (data.success) {
                 pendingCmdId = data.command_id;
-                showCmdStatus('sent', `📡 Comando <strong>${cmdLabel(type)}</strong> in attesa di conferma dall'ESP32...`);
-                showToast(`📡 ${cmdLabel(type)} — in attesa dell'ESP32`);
+                showCmdStatus('sent', `📡 Comando <strong>${cmdLabel(type)}</strong> in attesa di conferma di Nabulair...`);
+                showToast(`📡 ${cmdLabel(type)} — in attesa di Nabulair`);
                 // poll finché non eseguito
                 startCmdPoll(data.command_id);
             } else {
@@ -631,7 +631,7 @@
     }
 
     async function confirmReboot() {
-        if (!confirm('Riavviare l\'ESP32? La macchina andrà offline per ~30 secondi.')) return;
+        if (!confirm('Riavviare l\'Nabulair? La macchina andrà offline per ~30 secondi.')) return;
         sendCmd('reboot');
     }
 
@@ -770,7 +770,7 @@
             if (data.success) {
                 showToast('✅ ' + data.message);
                 if (sendToDevice && data.command_id) {
-                    showCmdStatus('sent', `📡 <strong>Aggiorna programmi</strong> in attesa di conferma dall'ESP32...`);
+                    showCmdStatus('sent', `📡 <strong>Aggiorna programmi</strong> in attesa di conferma dall'Nabulair...`);
                     startCmdPoll(data.command_id);
                 }
             } else {
