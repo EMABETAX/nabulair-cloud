@@ -1,1256 +1,1033 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>NabulAir — Controllo Impianto</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<style>
-:root {
-  --bg:       #040d1a;
-  --surface:  #071224;
-  --card:     rgba(255,255,255,0.04);
-  --border:   rgba(255,255,255,0.07);
-  --border-c: rgba(0,229,204,0.25);
-  --accent:   #00e5cc;
-  --accent2:  #0099ff;
-  --success:  #39ff7e;
-  --warn:     #ffb340;
-  --danger:   #ff4757;
-  --muted:    rgba(255,255,255,0.38);
-  --text:     #ddeeff;
-  --mono:     'JetBrains Mono', monospace;
-  --sans:     'Exo 2', sans-serif;
-}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>NabulAir PRO - Controllo Remoto</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            color: #fff;
+        }
 
-html, body { height: 100%; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes pulse { 0%,100%{transform:scale(1);opacity:1;} 50%{transform:scale(1.05);opacity:.8;} }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes ripple { 0%{transform:scale(0);opacity:.5;} 100%{transform:scale(4);opacity:0;} }
+        @keyframes cmdPulse { 0%,100%{opacity:1;} 50%{opacity:.5;} }
 
-body {
-  font-family: var(--sans);
-  background: var(--bg);
-  color: var(--text);
-  overflow-x: hidden;
-  min-height: 100vh;
-}
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
 
-/* ── GRID BACKGROUND ── */
-body::before {
-  content: '';
-  position: fixed; inset: 0; z-index: 0;
-  background-image:
-    linear-gradient(rgba(0,229,204,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,229,204,0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
-  pointer-events: none;
-}
-body::after {
-  content: '';
-  position: fixed; inset: 0; z-index: 0;
-  background: radial-gradient(ellipse 70% 60% at 15% 10%, rgba(0,229,204,0.07) 0%, transparent 60%),
-              radial-gradient(ellipse 50% 50% at 85% 85%, rgba(0,153,255,0.06) 0%, transparent 60%);
-  pointer-events: none;
-}
+        /* Header */
+        .glass-header {
+            background: rgba(255,255,255,.1);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            padding: 20px 30px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255,255,255,.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .logo-area { display:flex; align-items:center; gap:15px; }
+        .logo-icon {
+            width:50px; height:50px;
+            background: linear-gradient(135deg,#00d4ff,#7b2ff7);
+            border-radius:20px;
+            display:flex; align-items:center; justify-content:center;
+            font-size:28px;
+            box-shadow: 0 8px 32px rgba(0,212,255,.3);
+        }
+        .logo-text h1 {
+            font-size:22px; font-weight:700;
+            background: linear-gradient(135deg,#fff,#00d4ff);
+            -webkit-background-clip:text; background-clip:text; color:transparent;
+        }
+        .logo-text p { font-size:12px; opacity:.7; }
+        .machine-name-badge {
+            font-size:15px; font-weight:600;
+            background:rgba(0,212,255,.15);
+            border:1px solid rgba(0,212,255,.3);
+            padding:6px 16px; border-radius:50px;
+            color:#00d4ff;
+        }
+        .connection-status {
+            display:flex; align-items:center; gap:10px;
+            background:rgba(0,0,0,.3);
+            padding:10px 20px; border-radius:50px;
+        }
+        .status-led {
+            width:12px; height:12px; border-radius:50%;
+            background:#e53e3e; animation:pulse 2s infinite;
+        }
+        .status-led.online { background:#00e676; box-shadow:0 0 10px #00e676; }
+        .status-text { font-size:14px; font-weight:600; }
+        .btn-back {
+            background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2);
+            color:#fff; padding:8px 18px; border-radius:50px;
+            cursor:pointer; font-size:13px; text-decoration:none;
+            display:inline-flex; align-items:center; gap:6px;
+            transition:all .2s;
+        }
+        .btn-back:hover { background:rgba(255,255,255,.2); }
 
-/* ── ANIMATIONS ── */
-@keyframes fadeUp   { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
-@keyframes fadeIn   { from { opacity:0; } to { opacity:1; } }
-@keyframes spin     { to { transform: rotate(360deg); } }
-@keyframes pulse    { 0%,100%{opacity:1;} 50%{opacity:.4;} }
-@keyframes glow     { 0%,100%{box-shadow:0 0 8px var(--accent);} 50%{box-shadow:0 0 20px var(--accent), 0 0 40px rgba(0,229,204,.3);} }
-@keyframes ripple   { 0%{transform:scale(0);opacity:.5;} 100%{transform:scale(4);opacity:0;} }
-@keyframes slideIn  { from{transform:translateX(-12px);opacity:0;} to{transform:translateX(0);opacity:1;} }
-@keyframes scanline { 0%{top:-20%;} 100%{top:120%;} }
+        /* Cloud notice */
+        .cloud-notice {
+            background:rgba(0,212,255,.08);
+            border:1px solid rgba(0,212,255,.25);
+            border-radius:16px; padding:12px 20px;
+            font-size:13px; color:rgba(255,255,255,.8);
+            margin-bottom:24px;
+            display:flex; align-items:center; gap:10px;
+        }
+        .cloud-notice strong { color:#00d4ff; }
 
-/* ── CONTAINER ── */
-.wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+        /* Stats */
+        .stats-grid {
+            display:grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap:16px; margin-bottom:24px;
+        }
+        .stat-card {
+            background:rgba(255,255,255,.05);
+            backdrop-filter:blur(10px);
+            border-radius:20px; padding:22px;
+            border:1px solid rgba(255,255,255,.1);
+            transition:all .3s ease;
+            position:relative; overflow:hidden;
+        }
+        .stat-card:hover { transform:translateY(-4px); border-color:rgba(0,212,255,.4); }
+        .stat-icon { font-size:36px; margin-bottom:12px; }
+        .stat-label { font-size:12px; opacity:.6; text-transform:uppercase; letter-spacing:1px; }
+        .stat-value {
+            font-size:28px; font-weight:800; margin-top:8px;
+            background:linear-gradient(135deg,#fff,#00d4ff);
+            -webkit-background-clip:text; background-clip:text; color:transparent;
+        }
+        .stat-unit { font-size:13px; opacity:.5; }
+        .stat-ok { color:#00e676 !important; -webkit-text-fill-color:#00e676; }
+        .stat-err { color:#ff5252 !important; -webkit-text-fill-color:#ff5252; }
 
-/* ══════════════════════════════════════════
-   LOGIN SCREEN
-══════════════════════════════════════════ */
-#screenLogin {
-  position: fixed; inset: 0; z-index: 100;
-  display: flex; align-items: center; justify-content: center;
-  padding: 24px;
-}
-.login-card {
-  background: rgba(7,18,36,0.95);
-  border: 1px solid var(--border-c);
-  border-radius: 24px;
-  padding: 48px 44px;
-  width: 100%; max-width: 420px;
-  box-shadow: 0 0 60px rgba(0,229,204,0.08), 0 40px 80px rgba(0,0,0,0.6);
-  animation: fadeUp .5s ease;
-  position: relative; overflow: hidden;
-}
-.login-card::before {
-  content: '';
-  position: absolute; left: 0; top: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-}
-.login-scan {
-  position: absolute; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(0,229,204,0.4), transparent);
-  animation: scanline 3s ease-in-out infinite;
-  pointer-events: none;
-}
-.login-logo {
-  display: flex; align-items: center; gap: 14px;
-  margin-bottom: 36px;
-}
-.login-icon {
-  width: 52px; height: 52px; border-radius: 16px;
-  background: linear-gradient(135deg, rgba(0,229,204,0.2), rgba(0,153,255,0.2));
-  border: 1px solid var(--border-c);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 26px;
-  animation: glow 3s ease-in-out infinite;
-}
-.login-brand { font-size: 24px; font-weight: 800; letter-spacing: -.5px; }
-.login-brand span { color: var(--accent); }
-.login-sub { font-size: 12px; color: var(--muted); font-family: var(--mono); margin-top: 3px; }
-.login-title { font-size: 14px; font-weight: 500; color: var(--muted); margin-bottom: 24px; letter-spacing: .5px; text-transform: uppercase; }
-.field { margin-bottom: 16px; }
-.field label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 8px; }
-.field input {
-  width: 100%; padding: 13px 16px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--border);
-  border-radius: 12px; color: var(--text);
-  font-family: var(--sans); font-size: 15px;
-  transition: border-color .2s, box-shadow .2s;
-  outline: none;
-}
-.field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,229,204,0.1); }
-.field input::placeholder { color: rgba(255,255,255,0.2); }
-.btn-login {
-  width: 100%; padding: 15px;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  border: none; border-radius: 12px;
-  color: #040d1a; font-family: var(--sans);
-  font-size: 15px; font-weight: 700; letter-spacing: .5px;
-  cursor: pointer; margin-top: 8px;
-  transition: transform .15s, filter .2s;
-  position: relative; overflow: hidden;
-}
-.btn-login:hover { filter: brightness(1.1); transform: translateY(-1px); }
-.btn-login:active { transform: scale(.98); }
-.btn-login:disabled { opacity:.6; cursor:not-allowed; transform:none; }
-.login-err {
-  margin-top: 14px; padding: 12px 14px;
-  background: rgba(255,71,87,0.12); border: 1px solid rgba(255,71,87,0.3);
-  border-radius: 10px; font-size: 13px; color: var(--danger); display: none;
-}
+        /* Panels */
+        .panel {
+            background:rgba(255,255,255,.05);
+            backdrop-filter:blur(10px);
+            border-radius:20px; padding:24px;
+            margin-bottom:20px;
+            border:1px solid rgba(255,255,255,.1);
+            animation:fadeIn .4s ease;
+        }
+        .panel-title {
+            font-size:18px; font-weight:600;
+            margin-bottom:18px;
+            display:flex; align-items:center; gap:10px;
+        }
 
-/* ══════════════════════════════════════════
-   MACHINE SELECTOR
-══════════════════════════════════════════ */
-#screenMachines { display: none; }
-.machines-header { text-align: center; margin-bottom: 40px; padding-top: 20px; }
-.machines-header h1 { font-size: 30px; font-weight: 800; margin-bottom: 8px; }
-.machines-header p { color: var(--muted); font-size: 14px; }
-.machines-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
-}
-.machine-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 20px; padding: 24px;
-  cursor: pointer; transition: all .25s;
-  animation: fadeUp .4s ease both;
-  position: relative; overflow: hidden;
-}
-.machine-card:hover { border-color: var(--border-c); transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
-.machine-card::after { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(0,229,204,0.04),transparent); opacity:0; transition:opacity .2s; }
-.machine-card:hover::after { opacity:1; }
-.mc-name { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
-.mc-mac { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-bottom: 16px; }
-.mc-status { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
-.led { width: 9px; height: 9px; border-radius: 50%; background: #555; }
-.led.on { background: var(--success); box-shadow: 0 0 8px var(--success); animation: glow 2s infinite; }
-.led.off { background: var(--danger); }
+        /* Command buttons */
+        .cmd-grid {
+            display:grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px,1fr));
+            gap:12px;
+        }
+        .btn-cmd {
+            padding:16px 20px; border:none; border-radius:16px;
+            color:#fff; font-size:14px; font-weight:600;
+            cursor:pointer; transition:all .2s;
+            position:relative; overflow:hidden;
+            display:flex; align-items:center; justify-content:center; gap:8px;
+        }
+        .btn-cmd:hover { transform:translateY(-2px); filter:brightness(1.15); }
+        .btn-cmd:active { transform:scale(.97); }
+        .btn-cmd:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+        .btn-cmd::after {
+            content:''; position:absolute;
+            width:40px; height:40px; background:rgba(255,255,255,.3);
+            border-radius:50%; top:50%; left:50%;
+            transform:translate(-50%,-50%) scale(0);
+        }
+        .btn-cmd:active::after { animation:ripple .4s linear; }
 
-/* ══════════════════════════════════════════
-   HEADER
-══════════════════════════════════════════ */
-#screenRemote { display: none; }
-.top-bar {
-  background: rgba(7,18,36,0.8);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--border);
-  border-radius: 18px; padding: 16px 24px;
-  margin-bottom: 20px;
-  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
-  position: sticky; top: 12px; z-index: 50;
-}
-.tb-left { display: flex; align-items: center; gap: 16px; }
-.tb-icon {
-  width: 44px; height: 44px; border-radius: 14px;
-  background: linear-gradient(135deg, rgba(0,229,204,0.15), rgba(0,153,255,0.15));
-  border: 1px solid var(--border-c);
-  display: flex; align-items: center; justify-content: center; font-size: 22px;
-}
-.tb-name { font-size: 18px; font-weight: 700; }
-.tb-mac { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 2px; }
-.tb-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.status-pill {
-  display: flex; align-items: center; gap: 8px;
-  background: rgba(0,0,0,0.4); border: 1px solid var(--border);
-  padding: 8px 16px; border-radius: 50px;
-  font-size: 13px; font-weight: 600;
-  font-family: var(--mono);
-}
-.status-pill.online  { border-color: rgba(57,255,126,0.3); color: var(--success); }
-.status-pill.offline { border-color: rgba(255,71,87,0.3);  color: var(--danger); }
-.btn-back, .btn-logout {
-  background: rgba(255,255,255,0.06); border: 1px solid var(--border);
-  color: var(--text); padding: 8px 16px; border-radius: 50px;
-  cursor: pointer; font-size: 13px; font-family: var(--sans);
-  text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
-  transition: background .2s;
-}
-.btn-back:hover, .btn-logout:hover { background: rgba(255,255,255,0.12); }
+        .btn-start   { background:linear-gradient(135deg,#00e676,#00b248); }
+        .btn-stop    { background:linear-gradient(135deg,#ff5252,#c62828); }
+        .btn-sync    { background:linear-gradient(135deg,#f59e0b,#b45309); }
+        .btn-reboot  { background:linear-gradient(135deg,#64748b,#334155); }
 
-/* ══════════════════════════════════════════
-   CLOUD BADGE
-══════════════════════════════════════════ */
-.cloud-badge {
-  background: rgba(0,229,204,0.06);
-  border: 1px solid rgba(0,229,204,0.15);
-  border-radius: 12px; padding: 10px 18px;
-  font-size: 12px; color: rgba(255,255,255,0.6);
-  margin-bottom: 20px;
-  display: flex; align-items: center; gap: 10px;
-  font-family: var(--mono);
-}
-.cloud-badge strong { color: var(--accent); }
+        /* Command status box */
+        .cmd-status-box {
+            margin-top:16px; padding:14px 18px;
+            border-radius:14px; font-size:13px;
+            display:none; align-items:center; gap:10px;
+        }
+        .cmd-status-box.pending {
+            display:flex;
+            background:rgba(245,158,11,.15);
+            border:1px solid rgba(245,158,11,.3);
+            color:#f59e0b;
+        }
+        .cmd-status-box.sent {
+            display:flex;
+            background:rgba(56,189,248,.15);
+            border:1px solid rgba(56,189,248,.3);
+            color:#38bdf8;
+        }
+        .cmd-status-box.executed {
+            display:flex;
+            background:rgba(0,230,118,.15);
+            border:1px solid rgba(0,230,118,.3);
+            color:#00e676;
+        }
+        .cmd-status-box.failed {
+            display:flex;
+            background:rgba(255,82,82,.15);
+            border:1px solid rgba(255,82,82,.3);
+            color:#ff5252;
+        }
+        .cmd-spinner {
+            width:16px; height:16px; border-radius:50%;
+            border:2px solid rgba(245,158,11,.3);
+            border-top-color:#f59e0b;
+            animation:spin .8s linear infinite; flex-shrink:0;
+        }
+        .cmd-spinner.blue { border-color:rgba(56,189,248,.3); border-top-color:#38bdf8; }
+        
+        /* Command history */
+        .cmd-history { margin-top:14px; }
+        .cmd-history-title { font-size:12px; opacity:.5; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+        .cmd-row {
+            display:flex; justify-content:space-between; align-items:center;
+            padding:8px 12px; border-radius:10px;
+            background:rgba(255,255,255,.04); margin-bottom:6px;
+            font-size:12px;
+        }
+        .cmd-row-type { font-weight:600; }
+        .cmd-row-status {
+            padding:2px 8px; border-radius:50px; font-size:11px; font-weight:700;
+            text-transform:uppercase;
+        }
+        .status-pending  { background:rgba(245,158,11,.2); color:#f59e0b; }
+        .status-sent     { background:rgba(56,189,248,.2); color:#38bdf8; }
+        .status-executed { background:rgba(0,230,118,.2);  color:#00e676; }
+        .status-failed   { background:rgba(255,82,82,.2);  color:#ff5252; }
+        .status-cancelled{ background:rgba(100,116,139,.2);color:#94a3b8; }
+        .cmd-row-time { color:rgba(255,255,255,.4); }
 
-/* ══════════════════════════════════════════
-   STATS
-══════════════════════════════════════════ */
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
-  gap: 14px; margin-bottom: 20px;
-}
-.stat {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 18px; padding: 22px;
-  transition: border-color .2s, transform .2s;
-  animation: fadeUp .4s ease both;
-  position: relative; overflow: hidden;
-}
-.stat:hover { border-color: var(--border-c); transform: translateY(-2px); }
-.stat-icon { font-size: 28px; margin-bottom: 12px; display: block; }
-.stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
-.stat-val {
-  font-size: 26px; font-weight: 800; margin-top: 6px;
-  font-family: var(--mono);
-  background: linear-gradient(135deg, #fff, var(--accent));
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-}
-.stat-val.ok  { background: var(--success); -webkit-background-clip:text; background-clip:text; }
-.stat-val.err { background: var(--danger);  -webkit-background-clip:text; background-clip:text; }
-.stat-unit { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+        /* Programs */
+        .program-item {
+            display:flex; justify-content:space-between; align-items:center;
+            padding:14px 16px; border-radius:14px;
+            background:rgba(255,255,255,.05);
+            border:1px solid rgba(255,255,255,.08);
+            margin-bottom:10px;
+            transition:all .2s;
+        }
+        .program-item:hover { border-color:rgba(0,212,255,.3); }
+        .program-name { font-weight:600; font-size:15px; margin-bottom:4px; }
+        .program-details { font-size:12px; opacity:.6; display:flex; gap:12px; flex-wrap:wrap; }
+        .program-badge {
+            padding:4px 10px; border-radius:50px; font-size:11px; font-weight:700;
+            background:rgba(255,82,82,.2); color:#ff5252;
+        }
+        .program-badge.active { background:rgba(0,230,118,.2); color:#00e676; }
 
-/* ══════════════════════════════════════════
-   PANEL
-══════════════════════════════════════════ */
-.panel {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 20px; padding: 26px;
-  margin-bottom: 18px;
-  animation: fadeUp .45s ease both;
-}
-.panel-hd {
-  font-size: 13px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 1.2px; color: var(--muted);
-  margin-bottom: 20px;
-  display: flex; align-items: center; gap: 10px;
-}
-.panel-hd::before { content:''; display:block; width:3px; height:14px; background:var(--accent); border-radius:2px; }
+        /* Toast */
+        .toast {
+            position:fixed; bottom:30px; left:50%; transform:translateX(-50%);
+            background:#1e1e2e; border-left:4px solid #00e676;
+            padding:14px 22px; border-radius:12px;
+            font-size:14px; font-weight:500;
+            opacity:0; transition:opacity .3s;
+            z-index:9999; white-space:nowrap;
+            box-shadow:0 8px 32px rgba(0,0,0,.4);
+            max-width:90vw; text-overflow:ellipsis; overflow:hidden;
+        }
+        .toast.show { opacity:1; }
 
-/* ══════════════════════════════════════════
-   COMMAND BUTTONS
-══════════════════════════════════════════ */
-.cmd-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
-  gap: 12px;
-}
-.btn-cmd {
-  padding: 18px 16px; border: none; border-radius: 16px;
-  color: #fff; font-family: var(--sans); font-size: 14px; font-weight: 600;
-  cursor: pointer; transition: transform .15s, filter .15s;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  position: relative; overflow: hidden;
-}
-.btn-cmd:hover   { transform: translateY(-2px); filter: brightness(1.15); }
-.btn-cmd:active  { transform: scale(.96); }
-.btn-cmd:disabled { opacity: .45; cursor: not-allowed; transform: none; }
-.btn-cmd::after {
-  content: ''; position: absolute;
-  width: 40px; height: 40px; border-radius: 50%;
-  background: rgba(255,255,255,0.4);
-  top: 50%; left: 50%;
-  transform: translate(-50%,-50%) scale(0);
-}
-.btn-cmd:not(:disabled):active::after { animation: ripple .4s linear; }
-.c-start  { background: linear-gradient(135deg,#00e676,#00a651); }
-.c-stop   { background: linear-gradient(135deg,#ff4757,#c0392b); }
-.c-sync   { background: linear-gradient(135deg,#ffb340,#e67e00); }
-.c-reboot { background: linear-gradient(135deg,#64748b,#2d3a4a); }
-.c-wash   { background: linear-gradient(135deg,#00d4ff,#0070c0); }
-.c-test   { background: linear-gradient(135deg,#9b59b6,#6c3483); }
-.c-ota    { background: linear-gradient(135deg,#2ecc71,#1a7a43); }
+        /* Error screen */
+        #errorScreen {
+            display:none; position:fixed; inset:0;
+            background:linear-gradient(135deg,#0f0c29,#302b63);
+            flex-direction:column; align-items:center; justify-content:center;
+            gap:16px; z-index:9999; padding:24px;
+        }
+        #errorScreen .err-icon { font-size:64px; }
+        #errorScreen h2 { font-size:22px; font-weight:700; }
+        #errorScreen p { opacity:.6; font-size:14px; text-align:center; }
 
-/* Command feedback */
-.cmd-feedback {
-  margin-top: 16px; padding: 13px 16px; border-radius: 12px;
-  font-size: 13px; font-family: var(--mono);
-  display: none; align-items: center; gap: 10px; flex-wrap: wrap;
-}
-.cmd-feedback.pending  { display:flex; background:rgba(255,179,64,.1);  border:1px solid rgba(255,179,64,.25); color:var(--warn); }
-.cmd-feedback.sent     { display:flex; background:rgba(0,153,255,.1);   border:1px solid rgba(0,153,255,.25);  color:var(--accent2); }
-.cmd-feedback.ok       { display:flex; background:rgba(57,255,126,.08); border:1px solid rgba(57,255,126,.2);  color:var(--success); }
-.cmd-feedback.fail     { display:flex; background:rgba(255,71,87,.1);   border:1px solid rgba(255,71,87,.25);  color:var(--danger); }
-.mini-spin {
-  width:15px; height:15px; border-radius:50%;
-  border:2px solid rgba(255,255,255,0.2);
-  border-top-color: currentColor;
-  animation: spin .7s linear infinite; flex-shrink:0;
-}
+        /* Loading */
+        .loading-overlay {
+            position:fixed; inset:0; background:rgba(0,0,0,.6);
+            display:none; align-items:center; justify-content:center; z-index:9998;
+        }
+        .loading-spinner {
+            width:48px; height:48px; border-radius:50%;
+            border:4px solid rgba(255,255,255,.2);
+            border-top-color:#00d4ff;
+            animation:spin .8s linear infinite;
+        }
 
-/* OTA */
-.ota-box {
-  display:none; margin-top:14px; padding:16px;
-  background:rgba(0,0,0,0.3); border-radius:14px;
-  border:1px solid var(--border);
-}
-.ota-box input {
-  width:100%; padding:11px 14px; border-radius:10px;
-  background:rgba(255,255,255,0.06); border:1px solid var(--border);
-  color:var(--text); font-size:13px; font-family:var(--mono);
-  margin-bottom:10px; outline:none;
-  transition: border-color .2s;
-}
-.ota-box input:focus { border-color: var(--accent); }
-.ota-box input::placeholder { color:rgba(255,255,255,.2); }
+        /* Info note */
+        .info-note {
+            margin-top:12px; padding:12px 16px;
+            background:rgba(0,0,0,.2); border-radius:12px;
+            font-size:12px; opacity:.7; line-height:1.6;
+        }
 
-/* ══════════════════════════════════════════
-   COMMAND HISTORY
-══════════════════════════════════════════ */
-.history { margin-top: 18px; }
-.history-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 10px; font-family: var(--mono); }
-.history-row {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 14px; border-radius: 10px;
-  background: rgba(255,255,255,0.03);
-  margin-bottom: 6px; gap: 10px; flex-wrap: wrap;
-  animation: slideIn .25s ease;
-}
-.hr-type  { font-size: 13px; font-weight: 600; }
-.hr-time  { font-size: 11px; color:var(--muted); font-family:var(--mono); }
-.hr-badge {
-  font-size: 10px; font-weight: 700; text-transform: uppercase;
-  padding: 3px 9px; border-radius: 50px;
-}
-.b-pending  { background:rgba(255,179,64,.15); color:var(--warn); }
-.b-sent     { background:rgba(0,153,255,.15);  color:var(--accent2); }
-.b-executed { background:rgba(57,255,126,.12); color:var(--success); }
-.b-failed   { background:rgba(255,71,87,.15);  color:var(--danger); }
-.b-cancelled{ background:rgba(100,116,139,.15);color:#94a3b8; }
-
-/* ══════════════════════════════════════════
-   PROGRAMS
-══════════════════════════════════════════ */
-.prog-list { display: flex; flex-direction: column; gap: 10px; }
-.prog-item {
-  display: flex; align-items: center; gap: 14px;
-  padding: 16px 18px; border-radius: 14px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid var(--border);
-  transition: border-color .2s;
-  flex-wrap: wrap;
-}
-.prog-item:hover { border-color: var(--border-c); }
-.prog-dot {
-  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
-  background: var(--muted);
-}
-.prog-dot.on { background: var(--success); box-shadow: 0 0 6px var(--success); }
-.prog-info { flex: 1; min-width: 0; }
-.prog-name { font-weight: 700; font-size: 15px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.prog-meta { font-size: 12px; color: var(--muted); font-family: var(--mono); display: flex; gap: 12px; flex-wrap: wrap; }
-.prog-actions { display: flex; gap: 7px; flex-shrink: 0; }
-.btn-sm {
-  padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
-  cursor: pointer; border: 1px solid var(--border); background: rgba(255,255,255,0.06);
-  color: var(--text); font-family: var(--sans); transition: background .15s;
-}
-.btn-sm:hover { background: rgba(255,255,255,0.14); }
-.btn-sm.danger { border-color:rgba(255,71,87,.3); color:var(--danger); background:rgba(255,71,87,.08); }
-.btn-sm.danger:hover { background:rgba(255,71,87,.18); }
-.prog-badge {
-  font-size: 10px; font-weight: 700; text-transform: uppercase;
-  padding: 3px 9px; border-radius: 50px; flex-shrink: 0;
-}
-.prog-badge.on  { background:rgba(57,255,126,.12); color:var(--success); }
-.prog-badge.off { background:rgba(255,71,87,.1);   color:var(--danger); }
-.prog-tag {
-  font-size: 10px; padding: 2px 8px; border-radius: 50px;
-  background: rgba(0,153,255,.15); color: var(--accent2);
-}
-.btn-add-prog {
-  margin-top: 14px; width: 100%; padding: 14px;
-  background: transparent; border: 1px dashed rgba(0,229,204,0.3);
-  border-radius: 14px; color: var(--accent);
-  font-family: var(--sans); font-size: 14px; font-weight: 600;
-  cursor: pointer; transition: all .2s;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-}
-.btn-add-prog:hover { background: rgba(0,229,204,0.06); border-color: var(--accent); }
-.prog-save-row { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
-.btn-prog-save {
-  flex: 1; min-width: 140px; padding: 13px 16px; border: none; border-radius: 12px;
-  font-family: var(--sans); font-size: 13px; font-weight: 700; cursor: pointer;
-  transition: filter .15s, transform .15s;
-}
-.btn-prog-save:hover { filter: brightness(1.1); transform: translateY(-1px); }
-.btn-prog-save.cloud  { background: rgba(255,255,255,0.1); color: var(--text); border: 1px solid var(--border); }
-.btn-prog-save.device { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #040d1a; }
-.prog-note {
-  margin-top: 12px; padding: 12px 16px;
-  background: rgba(0,0,0,0.25); border-radius: 10px;
-  font-size: 12px; color: var(--muted); line-height: 1.6;
-  font-family: var(--mono);
-}
-
-/* ══════════════════════════════════════════
-   MODAL
-══════════════════════════════════════════ */
-.modal-bg {
-  position: fixed; inset: 0; z-index: 200;
-  background: rgba(4,13,26,0.85);
-  backdrop-filter: blur(8px);
-  display: none; align-items: center; justify-content: center;
-  padding: 24px;
-}
-.modal-bg.open { display: flex; }
-.modal-box {
-  background: #071224;
-  border: 1px solid var(--border-c);
-  border-radius: 22px; padding: 32px;
-  width: 100%; max-width: 480px;
-  animation: fadeUp .3s ease;
-  position: relative; max-height: 90vh; overflow-y: auto;
-}
-.modal-box::before {
-  content:''; position:absolute; left:0; top:0; right:0; height:1px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-}
-.modal-title { font-size: 18px; font-weight: 800; margin-bottom: 24px; }
-.modal-close {
-  position: absolute; top: 18px; right: 18px;
-  background: rgba(255,255,255,0.07); border: 1px solid var(--border);
-  color: var(--text); width: 30px; height: 30px; border-radius: 8px;
-  cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;
-  transition: background .2s;
-}
-.modal-close:hover { background: rgba(255,255,255,.15); }
-.mf { margin-bottom: 18px; }
-.mf label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 8px; }
-.mf input, .mf select {
-  width: 100%; padding: 12px 14px; border-radius: 10px;
-  background: rgba(255,255,255,0.05); border: 1px solid var(--border);
-  color: var(--text); font-family: var(--sans); font-size: 14px; outline: none;
-  transition: border-color .2s;
-}
-.mf input:focus, .mf select:focus { border-color: var(--accent); }
-.mf input[type=range] { padding: 6px 0; background: transparent; border: none; }
-.mf select option { background: #0a1628; }
-.mf-val { font-family: var(--mono); font-size: 13px; color: var(--accent); font-weight: 700; margin-left: 8px; }
-.days-row { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 6px; }
-.day-btn {
-  padding: 7px 11px; border-radius: 8px;
-  background: rgba(255,255,255,0.05); border: 1px solid var(--border);
-  color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer;
-  transition: all .15s; font-family: var(--sans);
-}
-.day-btn.on { background: rgba(0,229,204,0.15); border-color: var(--border-c); color: var(--accent); }
-.mf-check { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; }
-.mf-check input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); }
-.modal-actions { display: flex; gap: 10px; margin-top: 24px; }
-.btn-modal-cancel {
-  flex: 1; padding: 13px; border-radius: 12px;
-  background: rgba(255,255,255,.07); border: 1px solid var(--border);
-  color: var(--text); font-family: var(--sans); font-size: 14px; font-weight: 600;
-  cursor: pointer; transition: background .15s;
-}
-.btn-modal-cancel:hover { background: rgba(255,255,255,.13); }
-.btn-modal-ok {
-  flex: 2; padding: 13px; border-radius: 12px; border: none;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  color: #040d1a; font-family: var(--sans); font-size: 14px; font-weight: 700;
-  cursor: pointer; transition: filter .15s;
-}
-.btn-modal-ok:hover { filter: brightness(1.08); }
-
-/* ══════════════════════════════════════════
-   EMPTY + LOADING
-══════════════════════════════════════════ */
-.empty { text-align: center; padding: 36px 20px; color: var(--muted); }
-.empty-icon { font-size: 40px; margin-bottom: 12px; }
-.empty-text { font-size: 14px; }
-.loading-overlay {
-  position: fixed; inset: 0; z-index: 999;
-  background: rgba(4,13,26,0.7); backdrop-filter: blur(4px);
-  display: none; align-items: center; justify-content: center;
-}
-.spinner {
-  width: 42px; height: 42px; border-radius: 50%;
-  border: 3px solid rgba(0,229,204,0.15);
-  border-top-color: var(--accent);
-  animation: spin .7s linear infinite;
-}
-
-/* ══════════════════════════════════════════
-   TOAST
-══════════════════════════════════════════ */
-.toast {
-  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
-  background: #0d1e36; border-left: 3px solid var(--accent);
-  padding: 13px 22px; border-radius: 12px;
-  font-size: 13px; font-weight: 500; font-family: var(--mono);
-  opacity: 0; transition: opacity .25s; z-index: 9999;
-  white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis;
-  box-shadow: 0 8px 32px rgba(0,0,0,.5);
-  pointer-events: none;
-}
-.toast.show { opacity: 1; }
-.toast.err  { border-left-color: var(--danger); }
-
-/* ══════════════════════════════════════════
-   ERROR SCREEN
-══════════════════════════════════════════ */
-#screenError {
-  display: none; position: fixed; inset: 0; z-index: 300;
-  flex-direction: column; align-items: center; justify-content: center;
-  gap: 14px; text-align: center; padding: 24px;
-}
-#screenError .err-icon { font-size: 64px; }
-#screenError h2 { font-size: 22px; font-weight: 800; }
-#screenError p  { color: var(--muted); font-size: 14px; max-width: 300px; }
-#screenError a  { color: var(--accent); text-decoration: none; font-size: 14px; margin-top: 8px; }
-
-/* ══════════════════════════════════════════
-   RESPONSIVE
-══════════════════════════════════════════ */
-@media (max-width: 600px) {
-  .top-bar { padding: 14px 16px; border-radius: 14px; }
-  .login-card { padding: 36px 28px; }
-  .cmd-grid { grid-template-columns: 1fr 1fr; }
-  .stats-row { grid-template-columns: 1fr 1fr; }
-  .prog-meta { gap: 8px; }
-}
-</style>
+        @media(max-width:600px){
+            .glass-header { padding:16px 20px; }
+            .cmd-grid { grid-template-columns:1fr 1fr; }
+        }
+    </style>
+<base target="_blank">
 </head>
 <body>
 
-<!-- ═══ ERROR ═══ -->
-<div id="screenError">
-  <div class="err-icon">⚠️</div>
-  <h2 id="errTitle">Errore</h2>
-  <p id="errMsg">Si è verificato un errore.</p>
-  <a href="/dashboard">← Torna alla dashboard</a>
+<div id="errorScreen">
+    <div class="err-icon">🔐</div>
+    <h2 id="errTitle">Accesso non autorizzato</h2>
+    <p id="errMsg">Nessuna sessione attiva trovata. Effettua il login dalla dashboard.</p>
+    <a href="/dashboard" style="color:#00d4ff; font-size:14px; text-decoration:none; margin-top:8px;">← Torna alla dashboard</a>
 </div>
 
-<!-- ═══ LOADING ═══ -->
-<div class="loading-overlay" id="loadingOverlay">
-  <div class="spinner"></div>
+<div class="loading-overlay" id="loading">
+    <div class="loading-spinner"></div>
 </div>
 
-<!-- ═══ TOAST ═══ -->
 <div class="toast" id="toast"></div>
 
-<!-- ═══════════════════════════════════════
-     LOGIN
-═══════════════════════════════════════ -->
-<div id="screenLogin">
-  <div class="login-card">
-    <div class="login-scan"></div>
-    <div class="login-logo">
-      <div class="login-icon">💨</div>
-      <div>
-        <div class="login-brand">Nab<span>ul</span>Air</div>
-        <div class="login-sub">SISTEMA DI CONTROLLO v2.0</div>
-      </div>
-    </div>
-    <div class="login-title">Accesso al pannello</div>
-    <div class="field">
-      <label>Username</label>
-      <input type="text" id="loginUser" placeholder="username" autocomplete="username">
-    </div>
-    <div class="field">
-      <label>Password</label>
-      <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
-    </div>
-    <button class="btn-login" id="btnLogin" onclick="doLogin()">Accedi →</button>
-    <div class="login-err" id="loginErr"></div>
-  </div>
-</div>
+<div class="container" id="mainContent" style="display:none;">
 
-<!-- ═══════════════════════════════════════
-     MACHINE SELECTOR
-═══════════════════════════════════════ -->
-<div id="screenMachines">
-  <div class="wrap">
-    <div class="machines-header">
-      <h1>💨 I tuoi impianti</h1>
-      <p>Seleziona l'impianto da gestire</p>
-    </div>
-    <div class="machines-grid" id="machinesList"></div>
-    <div style="text-align:center; margin-top:28px;">
-      <a href="#" onclick="doLogout()" style="color:var(--muted); font-size:13px; font-family:var(--mono);">← Esci</a>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════
-     REMOTE CONTROL
-═══════════════════════════════════════ -->
-<div id="screenRemote">
-  <div class="wrap">
-
-    <!-- Header -->
-    <div class="top-bar">
-      <div class="tb-left">
-        <div class="tb-icon">💨</div>
-        <div>
-          <div class="tb-name" id="tbName">—</div>
-          <div class="tb-mac" id="tbMac">—</div>
+    <div class="glass-header">
+        <div class="logo-area">
+            <div class="logo-icon">💨</div>
+            <div class="logo-text">
+                <h1>NabulAir PRO</h1>
+                <p>Controllo Remoto Cloud</p>
+            </div>
         </div>
-      </div>
-      <div class="tb-right">
-        <div class="status-pill" id="statusPill">
-          <div class="led" id="statusLed"></div>
-          <span id="statusTxt">—</span>
+        <span class="machine-name-badge" id="machineName">Caricamento...</span>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <div class="connection-status">
+                <div class="status-led" id="statusLed"></div>
+                <span class="status-text" id="statusText">Verifica...</span>
+            </div>
+            <a href="/dashboard" class="btn-back">← Dashboard</a>
         </div>
-        <a href="/dashboard" class="btn-back" id="btnBack">← Dashboard</a>
-        <button class="btn-logout" onclick="doLogout()">⏏ Esci</button>
-      </div>
     </div>
 
-    <div class="cloud-badge">
-      ☁️ &nbsp;<span>Modalità <strong>Cloud</strong> — i comandi vengono recapitati all'ESP32 al prossimo ping <strong>(max ~60s)</strong></span>
+    <!-- Banner per admin/installer -->
+    <div id="adminBanner" style="display:none; background:rgba(245,158,11,.15); border:1px solid rgba(245,158,11,.3); border-radius:16px; padding:12px 20px; margin-bottom:20px; font-size:13px; color:#f59e0b; display:flex; align-items:center; gap:10px;">
+        <span>👤</span>
+        <span>Sei in modalità <strong>Admin/Installatore</strong>. Per manutenzione (OTA, reboot, sync ora) vai alla <a href="/dashboard" style="color:#f59e0b; text-decoration:underline;">Dashboard</a>.</span>
+    </div>
+
+    <div class="cloud-notice">
+        ☁️ <span>Modalità <strong>Cloud</strong> — i comandi vengono recapitati all'ESP32 al prossimo ping (entro ~60 secondi)</span>
     </div>
 
     <!-- Stats -->
-    <div class="stats-row">
-      <div class="stat" style="animation-delay:.05s">
-        <span class="stat-icon">💧</span>
-        <div class="stat-label">Acqua</div>
-        <div class="stat-val" id="stWater">—</div>
-      </div>
-      <div class="stat" style="animation-delay:.1s">
-        <span class="stat-icon">🧪</span>
-        <div class="stat-label">Insetticida</div>
-        <div class="stat-val" id="stIns">—</div>
-      </div>
-      <div class="stat" style="animation-delay:.15s">
-        <span class="stat-icon">🌊</span>
-        <div class="stat-label">Portata</div>
-        <div class="stat-val" id="stFlow">—</div>
-      </div>
-      <div class="stat" style="animation-delay:.2s">
-        <span class="stat-icon">📡</span>
-        <div class="stat-label">Ultimo ping</div>
-        <div class="stat-val" style="font-size:16px; background:var(--text); -webkit-background-clip:text; background-clip:text;" id="stSeen">—</div>
-      </div>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">💧</div>
+            <div class="stat-label">Acqua</div>
+            <div class="stat-value" id="waterStatus">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🧪</div>
+            <div class="stat-label">Insetticida</div>
+            <div class="stat-value" id="insecticideStatus">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🌊</div>
+            <div class="stat-label">Portata acqua</div>
+            <div class="stat-value" id="flowRate">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🕐</div>
+            <div class="stat-label">Ultimo ping</div>
+            <div class="stat-value" style="font-size:16px; -webkit-text-fill-color:#fff;" id="lastSeen">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📡</div>
+            <div class="stat-label">IP Locale / LAN</div>
+            <div class="stat-value" style="font-size:14px; -webkit-text-fill-color:#fff;" id="localIp">—</div>
+            <div style="margin-top:8px; font-size:11px; opacity:.5;" id="localConnStatus"></div>
+            <button onclick="testLocalConnection()" style="margin-top:8px; background:rgba(0,212,255,.15); border:1px solid rgba(0,212,255,.3); color:#00d4ff; padding:4px 12px; border-radius:20px; cursor:pointer; font-size:11px;">🔍 Test</button>
+        </div>
     </div>
 
-    <!-- Commands -->
-    <div class="panel" style="animation-delay:.25s">
-      <div class="panel-hd">🎮 Comandi</div>
-      <div class="cmd-grid" id="cmdGrid">
-        <!-- populated by JS based on role -->
-      </div>
-      <div class="ota-box" id="otaBox">
-        <input type="text" id="otaUrl" placeholder="https://.../firmware.bin">
-        <button class="btn-cmd c-ota" style="width:100%" onclick="sendCmd('ota_firmware')">🚀 Avvia aggiornamento OTA</button>
-      </div>
-      <div class="cmd-feedback" id="cmdFeedback">
-        <div class="mini-spin" id="cmdSpin"></div>
-        <span id="cmdMsg"></span>
-      </div>
-      <div class="history" id="cmdHistory"></div>
+    <!-- Comandi -->
+    <div class="panel">
+        <div class="panel-title">🎮 Comandi Macchina</div>
+        <div class="cmd-grid" style="grid-template-columns: 1fr 1fr;">
+            <button class="btn-cmd btn-start"  id="btnStart"  onclick="sendCmd('start_cycle')">💨 Avvia ciclo</button>
+            <button class="btn-cmd btn-stop"   id="btnStop"   onclick="sendCmd('stop_cycle')">⏹ Ferma ciclo</button>
+        </div>
+
+        <div class="cmd-status-box" id="cmdStatusBox">
+            <div class="cmd-spinner" id="cmdSpinner"></div>
+            <span id="cmdStatusText"></span>
+        </div>
+
+        <!-- Storico comandi -->
+        <div class="cmd-history" id="cmdHistory"></div>
     </div>
 
-    <!-- Programs -->
-    <div class="panel" style="animation-delay:.3s">
-      <div class="panel-hd">📅 Programmi di nebulizzazione</div>
-      <div class="prog-list" id="progList">
-        <div class="empty"><div class="empty-icon">⏳</div><div class="empty-text">Caricamento...</div></div>
-      </div>
-      <button class="btn-add-prog" onclick="openProgModal()">＋ Aggiungi programma</button>
-      <div class="prog-save-row">
-        <button class="btn-prog-save cloud"  onclick="savePrograms(false)">💾 Salva nel cloud</button>
-        <button class="btn-prog-save device" onclick="savePrograms(true)">📡 Salva e invia all'ESP32</button>
-      </div>
-      <div class="prog-note">
-        💾 "Salva nel cloud" conserva i programmi sul server.<br>
-        📡 "Salva e invia" li trasmette all'ESP32 al prossimo ping.
-      </div>
+    <!-- Pausa Globale -->
+    <div class="panel">
+        <div class="panel-title">⏸️ Pausa Programmi</div>
+        <div id="pausePanel">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+                <div>
+                    <div style="font-size:15px; font-weight:600; margin-bottom:4px;">Modalità Vacanza</div>
+                    <div style="font-size:12px; opacity:.6;">Sospendi tutti i programmi per un periodo</div>
+                </div>
+                <label class="toggle-switch" style="position:relative; display:inline-block; width:52px; height:28px;">
+                    <input type="checkbox" id="pauseToggle" onchange="togglePause()" style="opacity:0; width:0; height:0;">
+                    <span id="pauseSlider" style="position:absolute; cursor:pointer; inset:0; background:rgba(255,255,255,.2); border-radius:28px; transition:.3s;"></span>
+                </label>
+            </div>
+            <div id="pauseDateBox" style="display:none;">
+                <label style="font-size:12px; opacity:.6; margin-bottom:6px; display:block;">Riprendi automaticamente il:</label>
+                <input type="date" id="pauseUntil" style="width:100%; padding:10px 14px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:10px; color:#fff; font-size:14px; margin-bottom:10px;" onchange="savePause()">
+                <div style="font-size:12px; opacity:.5;">Lascia vuoto per pausa indefinita (riattiva manualmente)</div>
+            </div>
+            <div id="pauseStatus" style="margin-top:10px; font-size:13px; font-weight:600;"></div>
+        </div>
+        <style>
+            #pauseToggle:checked + #pauseSlider { background: #f59e0b; }
+            #pauseToggle:checked + #pauseSlider::before { transform: translateX(24px); }
+            #pauseSlider::before { content:''; position:absolute; height:22px; width:22px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.3s; }
+        </style>
     </div>
 
-  </div>
-</div>
+    <!-- Programmi -->
+    <div class="panel">
+        <div class="panel-title">📅 Programmi di Nebulizzazione</div>
+        <div id="programsList">
+            <div style="text-align:center; padding:30px; opacity:.6;">⏳ Caricamento programmi...</div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
+            <button class="btn-cmd btn-start" style="flex:1; min-width:140px;" onclick="showAddProgramModal()">➕ Nuovo programma</button>
+            <button class="btn-cmd btn-sync" style="flex:1; min-width:140px;" onclick="savePrograms(false)">💾 Salva nel cloud</button>
+            <button class="btn-cmd btn-start" style="flex:1; min-width:180px;" onclick="savePrograms(true)">📡 Salva e invia all'ESP32</button>
+        </div>
+        <div class="info-note">
+            📌 "Salva nel cloud" conserva i programmi sul server. "Salva e invia" li invia anche all'ESP32 al prossimo ping.
+        </div>
+    </div>
 
-<!-- ═══════════════════════════════════════
-     PROGRAM MODAL
-═══════════════════════════════════════ -->
-<div class="modal-bg" id="progModal">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closeProgModal()">×</button>
-    <div class="modal-title" id="progModalTitle">Nuovo programma</div>
-    <div class="mf">
-      <label>Nome programma</label>
-      <input type="text" id="pNome" placeholder="es. Serale">
-    </div>
-    <div class="mf">
-      <label>Giorni</label>
-      <div class="days-row" id="pDays">
-        <button type="button" class="day-btn" data-d="1" onclick="this.classList.toggle('on')">Lun</button>
-        <button type="button" class="day-btn" data-d="2" onclick="this.classList.toggle('on')">Mar</button>
-        <button type="button" class="day-btn" data-d="3" onclick="this.classList.toggle('on')">Mer</button>
-        <button type="button" class="day-btn" data-d="4" onclick="this.classList.toggle('on')">Gio</button>
-        <button type="button" class="day-btn" data-d="5" onclick="this.classList.toggle('on')">Ven</button>
-        <button type="button" class="day-btn" data-d="6" onclick="this.classList.toggle('on')">Sab</button>
-        <button type="button" class="day-btn" data-d="7" onclick="this.classList.toggle('on')">Dom</button>
-      </div>
-    </div>
-    <div class="mf">
-      <label>Orario</label>
-      <input type="time" id="pTime" value="08:00">
-    </div>
-    <div class="mf">
-      <label>Durata (secondi) <span class="mf-val" id="pDurVal">120</span></label>
-      <input type="range" id="pDur" min="10" max="1800" step="10" value="120" oninput="document.getElementById('pDurVal').textContent=this.value">
-    </div>
-    <div class="mf">
-      <label>Percentuale insetticida (%) <span class="mf-val" id="pPercVal">1.5</span></label>
-      <input type="range" id="pPerc" min="0.1" max="5.0" step="0.1" value="1.5" oninput="document.getElementById('pPercVal').textContent=parseFloat(this.value).toFixed(1)">
-    </div>
-    <div class="mf">
-      <label class="mf-check">
-        <input type="checkbox" id="pLav"> Ciclo di lavaggio (solo acqua)
-      </label>
-    </div>
-    <div class="modal-actions">
-      <button class="btn-modal-cancel" onclick="closeProgModal()">Annulla</button>
-      <button class="btn-modal-ok" id="progModalBtn" onclick="saveProgModal()">Aggiungi</button>
-    </div>
-  </div>
 </div>
 
 <script>
-// ═══════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════
-const API      = '/api';
-let token      = localStorage.getItem('nabulair_token');
-let userRole   = localStorage.getItem('nabulair_role') || 'client';
-let machineId  = null;
-let programs   = [];
-let editIdx    = null;
-let pollTimer  = null;
-let cmdPollId  = null;
+    // =============================================
+    // CONFIG
+    // =============================================
+    const API_BASE = '/api';
+    let machineId   = null;
+    let authToken   = null;
+    let programs    = [];
+    let pollTimer   = null;
+    let cmdPollTimer = null;
+    let pendingCmdId = null;
 
-// ═══════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════
-async function init() {
-  const params = new URLSearchParams(window.location.search);
-  machineId = params.get('machineId');
+    // =============================================
+    // INIT
+    // =============================================
+    function init() {
+        // Leggi machineId dall'URL
+        const params = new URLSearchParams(window.location.search);
+        machineId = params.get('machineId');
 
-  if (!token) { showScreen('login'); return; }
+        // Leggi token e user da localStorage (stesso storage della dashboard)
+        authToken = localStorage.getItem('nabulair_token');
+        const user = JSON.parse(localStorage.getItem('nabulair_user') || 'null');
 
-  // If we have a token but no role cached, re-fetch
-  if (!userRole) {
-    try {
-      const me = await apiGet('/me');
-      if (me.success) {
-        userRole = me.user.role;
-        localStorage.setItem('nabulair_role', userRole);
-      } else { doLogout(); return; }
-    } catch(e) { doLogout(); return; }
-  }
+        if (!authToken) {
+            showError('Accesso non autorizzato', 'Nessuna sessione attiva. Effettua il login dalla dashboard.');
+            return;
+        }
+        if (!machineId) {
+            showError('Macchina non specificata', 'Apri questo pannello dalla scheda dettaglio di una macchina nella dashboard.');
+            return;
+        }
 
-  // Client without machineId → find their machine(s)
-  if (!machineId) {
-    if (userRole === 'client') {
-      await loadClientMachines();
-    } else {
-      showErr('Macchina non specificata', 'Apri questo pannello da una macchina nella dashboard.');
+        // Mostra banner se admin o installatore
+        if (user && (user.role === 'admin' || user.role === 'installer')) {
+            document.getElementById('adminBanner').style.display = 'flex';
+        }
+
+        document.getElementById('mainContent').style.display = 'block';
+        loadStatus();
+        loadPrograms();
+        loadCmdHistory();
+        loadPause();
+        pollTimer = setInterval(() => { loadStatus(); loadCmdHistory(); }, 5000);
     }
-    return;
-  }
 
-  // Installer/admin without machineId URL → redirect to dashboard
-  await startRemote();
-}
-
-async function loadClientMachines() {
-  showLoading(true);
-  try {
-    const data = await apiGet('/machines');
-    if (!data.success || !data.machines.length) {
-      showErr('Nessun impianto', 'Non ci sono impianti assegnati al tuo account. Contatta il tuo installatore.');
-      return;
+    function showError(title, msg) {
+        document.getElementById('errTitle').textContent = title;
+        document.getElementById('errMsg').textContent   = msg;
+        document.getElementById('errorScreen').style.display = 'flex';
     }
-    if (data.machines.length === 1) {
-      machineId = data.machines[0].id;
-      await startRemote();
-    } else {
-      renderMachineSelector(data.machines);
-      showScreen('machines');
+
+    // =============================================
+    // API HELPERS
+    // =============================================
+    async function apiGet(endpoint) {
+        const res = await fetch(API_BASE + endpoint, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        if (res.status === 401) {
+            showError('Sessione scaduta', 'Effettua di nuovo il login dalla dashboard.');
+            clearInterval(pollTimer);
+            throw new Error('Unauthorized');
+        }
+        return res.json();
     }
-  } catch(e) { showErr('Errore', 'Impossibile caricare gli impianti.'); }
-  showLoading(false);
-}
 
-function renderMachineSelector(machines) {
-  document.getElementById('machinesList').innerHTML = machines.map((m,i) => {
-    const online = m.status === 'online';
-    return `<div class="machine-card" style="animation-delay:${i*.08}s" onclick="selectMachine(${m.id})">
-      <div class="mc-name">${esc(m.machine_name || 'Impianto')}</div>
-      <div class="mc-mac">${m.mac_address || '—'}</div>
-      <div class="mc-status">
-        <div class="led ${online?'on':'off'}"></div>
-        <span>${online ? 'Online' : 'Offline'}</span>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-async function selectMachine(id) {
-  machineId = id;
-  await startRemote();
-}
-
-async function startRemote() {
-  showScreen('remote');
-  buildCmdGrid();
-  await loadStatus();
-  await loadPrograms();
-  await loadHistory();
-  // Back button: if came from dashboard (installer/admin), show it; client hides it
-  if (userRole === 'client') {
-    document.getElementById('btnBack').style.display = 'none';
-  }
-  pollTimer = setInterval(() => {
-    loadStatus();
-    loadHistory();
-  }, 6000);
-}
-
-// ═══════════════════════════════════════
-// LOGIN / LOGOUT
-// ═══════════════════════════════════════
-async function doLogin() {
-  const user = document.getElementById('loginUser').value.trim();
-  const pass = document.getElementById('loginPass').value;
-  if (!user || !pass) return;
-  const btn = document.getElementById('btnLogin');
-  btn.disabled = true; btn.textContent = 'Accesso in corso...';
-  document.getElementById('loginErr').style.display = 'none';
-  try {
-    const res = await fetch(`${API}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: user, password: pass })
-    });
-    const data = await res.json();
-    if (data.success) {
-      token    = data.token;
-      userRole = data.user.role;
-      localStorage.setItem('nabulair_token', token);
-      localStorage.setItem('nabulair_role', userRole);
-      // admin/installer should be in dashboard
-      if (userRole === 'admin' || userRole === 'installer') {
-        const mid = new URLSearchParams(window.location.search).get('machineId');
-        if (!mid) { window.location.href = '/dashboard'; return; }
-      }
-      await init();
-    } else {
-      showLoginErr(data.message || 'Credenziali non valide');
+    async function apiPost(endpoint, body) {
+        const res = await fetch(API_BASE + endpoint, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+        });
+        return res.json();
     }
-  } catch(e) { showLoginErr('Errore di connessione'); }
-  btn.disabled = false; btn.textContent = 'Accedi →';
-}
 
-function showLoginErr(msg) {
-  const el = document.getElementById('loginErr');
-  el.textContent = '❌ ' + msg; el.style.display = 'block';
-}
-
-function doLogout() {
-  clearInterval(pollTimer);
-  localStorage.removeItem('nabulair_token');
-  localStorage.removeItem('nabulair_role');
-  token = null; userRole = 'client';
-  showScreen('login');
-}
-
-// ═══════════════════════════════════════
-// API HELPERS
-// ═══════════════════════════════════════
-async function apiGet(ep) {
-  const r = await fetch(API + ep, { headers: { 'Authorization': `Bearer ${token}` } });
-  if (r.status === 401) { doLogout(); throw new Error('unauth'); }
-  return r.json();
-}
-async function apiPost(ep, body) {
-  const r = await fetch(API + ep, {
-    method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  if (r.status === 401) { doLogout(); throw new Error('unauth'); }
-  return r.json();
-}
-async function apiPut(ep, body) {
-  const r = await fetch(API + ep, {
-    method: 'PUT', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  if (r.status === 401) { doLogout(); throw new Error('unauth'); }
-  return r.json();
-}
-
-// ═══════════════════════════════════════
-// STATUS
-// ═══════════════════════════════════════
-async function loadStatus() {
-  try {
-    const d = await apiGet(`/machine/${machineId}`);
-    if (!d.success) return;
-    const m = d.machine;
-
-    document.getElementById('tbName').textContent = m.machine_name || 'Impianto';
-    document.getElementById('tbMac').textContent  = m.mac_address || '—';
-    document.title = `${m.machine_name || 'NabulAir'} — Controllo`;
-
-    const online = m.status === 'online';
-    const pill   = document.getElementById('statusPill');
-    const led    = document.getElementById('statusLed');
-    pill.className = 'status-pill ' + (online ? 'online' : 'offline');
-    led.className  = 'led ' + (online ? 'on' : 'off');
-    document.getElementById('statusTxt').textContent = online ? 'Online' : 'Offline';
-
-    const wOk = m.water_ok !== false;
-    const iOk = m.insecticide_ok !== false;
-
-    const sw = document.getElementById('stWater');
-    sw.textContent = wOk ? 'OK' : 'BASSO';
-    sw.className   = 'stat-val ' + (wOk ? 'ok' : 'err');
-
-    const si = document.getElementById('stIns');
-    si.textContent = iOk ? 'OK' : 'ESAURITO';
-    si.className   = 'stat-val ' + (iOk ? 'ok' : 'err');
-
-    const flow = parseFloat(m.flow || 0);
-    document.getElementById('stFlow').innerHTML = `${flow.toFixed(2)} <span class="stat-unit">L/min</span>`;
-
-    const ss = document.getElementById('stSeen');
-    ss.textContent = m.last_seen ? ago(m.last_seen) : 'Mai';
-  } catch(e) { if (e.message !== 'unauth') {} }
-}
-
-// ═══════════════════════════════════════
-// COMMANDS
-// ═══════════════════════════════════════
-function buildCmdGrid() {
-  const isInstaller = userRole === 'installer' || userRole === 'admin';
-  let btns = `
-    <button class="btn-cmd c-start" onclick="sendCmd('start_cycle')">💨 Avvia ciclo</button>
-    <button class="btn-cmd c-stop"  onclick="sendCmd('stop_cycle')">⏹ Ferma ciclo</button>
-    <button class="btn-cmd c-sync"  onclick="sendCmd('sync_time')">🕒 Sincronizza ora</button>
-  `;
-  if (isInstaller) {
-    btns += `
-      <button class="btn-cmd c-wash"   onclick="sendCmd('wash_cycle')">🚿 Lavaggio</button>
-      <button class="btn-cmd c-test"   onclick="sendCmd('test_cycle')">🔬 Test (1%)</button>
-      <button class="btn-cmd c-reboot" onclick="confirmReboot()">🔄 Riavvia</button>
-      <button class="btn-cmd c-ota"    onclick="toggleOta()">⬆️ OTA Firmware</button>
-    `;
-  }
-  document.getElementById('cmdGrid').innerHTML = btns;
-}
-
-function toggleOta() {
-  const b = document.getElementById('otaBox');
-  b.style.display = b.style.display === 'block' ? 'none' : 'block';
-}
-
-function confirmReboot() {
-  if (confirm('Riavviare l\'ESP32? La macchina andrà offline per ~30 secondi.')) sendCmd('reboot');
-}
-
-async function sendCmd(type) {
-  if (type === 'ota_firmware') {
-    const url = document.getElementById('otaUrl').value.trim();
-    if (!url || !url.startsWith('http')) { toast('❌ URL firmware non valido', true); return; }
-  }
-  disableCmds(true);
-  feedback('pending', `⏳ ${cmdLabel(type)} — invio in corso...`);
-  try {
-    const body = { type };
-    if (type === 'ota_firmware') body.payload = { url: document.getElementById('otaUrl').value.trim() };
-    const d = await apiPost(`/machines/${machineId}/command`, body);
-    if (d.success) {
-      feedback('sent', `📡 ${cmdLabel(type)} — in attesa dell'ESP32...`);
-      toast(`📡 ${cmdLabel(type)} inviato`);
-      if (type === 'ota_firmware') document.getElementById('otaBox').style.display = 'none';
-      pollCmd(d.command_id, type);
-    } else {
-      feedback('fail', `❌ ${d.message || 'Errore'}`);
-      toast('❌ ' + (d.message || 'Errore'), true);
+    async function apiPut(endpoint, body) {
+        const res = await fetch(API_BASE + endpoint, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+        });
+        return res.json();
     }
-  } catch(e) { feedback('fail', '❌ Errore di rete'); }
-  disableCmds(false);
-}
 
-function pollCmd(cmdId, type) {
-  if (cmdPollId) clearInterval(cmdPollId);
-  let attempts = 0;
-  cmdPollId = setInterval(async () => {
-    attempts++;
-    try {
-      const d = await apiGet(`/machines/${machineId}/commands`);
-      if (!d.success) return;
-      const cmd = d.commands.find(c => c.id === cmdId);
-      if (!cmd) return;
-      if (cmd.status === 'executed') {
-        feedback('ok', `✅ ${cmdLabel(type)} eseguito con successo`);
-        toast(`✅ ${cmdLabel(type)} completato!`);
-        clearInterval(cmdPollId);
-        loadHistory();
-      } else if (cmd.status === 'failed') {
-        feedback('fail', `❌ ${cmdLabel(type)} fallito`);
-        clearInterval(cmdPollId);
-        loadHistory();
-      } else if (attempts > 24) {
-        clearInterval(cmdPollId);
-      }
-    } catch(e) {}
-  }, 5000);
-}
+    // =============================================
+    // STATUS
+    // =============================================
+    async function loadStatus() {
+        try {
+            const data = await apiGet(`/machine/${machineId}`);
+            if (!data.success) return;
+            const m = data.machine;
 
-function disableCmds(v) {
-  document.querySelectorAll('.btn-cmd').forEach(b => b.disabled = v);
-}
+            document.getElementById('machineName').textContent = m.machine_name || 'Macchina';
+            document.title = `${m.machine_name || 'NabulAir'} — Controllo Remoto`;
 
-function feedback(state, msg) {
-  const box  = document.getElementById('cmdFeedback');
-  const spin = document.getElementById('cmdSpin');
-  const txt  = document.getElementById('cmdMsg');
-  box.className = 'cmd-feedback ' + state;
-  txt.textContent = msg;
-  spin.style.display = (state === 'pending' || state === 'sent') ? 'block' : 'none';
-}
+            const online = m.status === 'online';
+            document.getElementById('statusLed').classList.toggle('online', online);
+            document.getElementById('statusText').textContent = online ? '🟢 Online' : '🔴 Offline';
 
-async function loadHistory() {
-  try {
-    const d = await apiGet(`/machines/${machineId}/commands`);
-    if (!d.success || !d.commands.length) return;
-    const h = document.getElementById('cmdHistory');
-    h.innerHTML = '<div class="history-title">Ultimi comandi</div>' +
-      d.commands.slice(0, 8).map(c => `
-        <div class="history-row">
-          <span class="hr-type">${cmdLabel(c.type)}</span>
-          <span class="hr-badge b-${c.status}">${c.status}</span>
-          <span class="hr-time">${ago(c.executed_at || c.created_at)}</span>
-        </div>`).join('');
-  } catch(e) {}
-}
+            const waterOk = m.water_ok !== false;
+            const insOk   = m.insecticide_ok !== false;
 
-function cmdLabel(t) {
-  return {start_cycle:'Avvia ciclo',stop_cycle:'Ferma ciclo',wash_cycle:'Lavaggio',test_cycle:'Test',
-    sync_time:'Sincronizza ora',reboot:'Riavvio',ota_firmware:'OTA Firmware',update_programs:'Aggiorna programmi'}[t] || t;
-}
+            const ws = document.getElementById('waterStatus');
+            ws.textContent = waterOk ? '✅ OK' : '❌ BASSO';
+            ws.className = 'stat-value ' + (waterOk ? 'stat-ok' : 'stat-err');
 
-// ═══════════════════════════════════════
-// PROGRAMS
-// ═══════════════════════════════════════
-async function loadPrograms() {
-  try {
-    const d = await apiGet(`/machines/${machineId}/programs`);
-    if (d.success) { programs = d.programs || []; renderPrograms(); }
-  } catch(e) {}
-}
+            const is = document.getElementById('insecticideStatus');
+            is.textContent = insOk ? '✅ OK' : '❌ ESAURITO';
+            is.className = 'stat-value ' + (insOk ? 'stat-ok' : 'stat-err');
 
-function renderPrograms() {
-  const el = document.getElementById('progList');
-  if (!programs.length) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Nessun programma configurato</div></div>';
-    return;
-  }
-  const days = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
-  el.innerHTML = programs.map((p, i) => {
-    const d = (p.days||[]).map(x => days[x-1]).join(' · ');
-    return `<div class="prog-item">
-      <div class="prog-dot ${p.attivo?'on':''}"></div>
-      <div class="prog-info">
-        <div class="prog-name">${esc(p.nome||'Programma')}</div>
-        <div class="prog-meta">
-          <span>${d||'—'}</span>
-          <span>⏰ ${p.orario||'--:--'}</span>
-          <span>⏱ ${p.durata||120}s</span>
-          <span>🧪 ${p.percentuale||1.5}%</span>
-          ${p.lavaggio ? '<span class="prog-tag">🚿 Lavaggio</span>' : ''}
+            const fr = document.getElementById('flowRate');
+            const flow = parseFloat(m.flow || 0);
+            fr.innerHTML = flow.toFixed(2) + ' <span class="stat-unit">L/min</span>';
+
+            const ls = document.getElementById('lastSeen');
+            if (m.last_seen) {
+                const ago = Math.round((Date.now() - new Date(m.last_seen)) / 1000);
+                ls.textContent = ago < 60 ? `${ago}s fa` : ago < 3600 ? `${Math.round(ago/60)}min fa` : `${Math.round(ago/3600)}h fa`;
+            } else {
+                ls.textContent = 'Mai visto';
+            }
+
+            // IP locale e test connessione
+            const ipEl = document.getElementById('localIp');
+            const connStatus = document.getElementById('localConnStatus');
+            if (m.sta_ip) {
+                ipEl.textContent = m.sta_ip;
+                currentIp = m.sta_ip;
+                connStatus.textContent = 'Clicca Test per verificare LAN';
+            } else {
+                ipEl.textContent = '—';
+                currentIp = null;
+                connStatus.textContent = '';
+            }
+
+        } catch(e) {
+            if (e.message !== 'Unauthorized') console.error('Status error:', e);
+        }
+    }
+
+    // =============================================
+    // COMMANDS
+    // =============================================
+    async function sendCmd(type, payload = null) {
+        setBtnDisabled(true);
+        showCmdStatus('pending', `⏳ Comando <strong>${cmdLabel(type)}</strong> in coda...`);
+
+        try {
+            const body = { type };
+            if (payload) body.payload = payload;
+            const data = await apiPost(`/machines/${machineId}/command`, body);
+
+            if (data.success) {
+                pendingCmdId = data.command_id;
+                showCmdStatus('sent', `📡 Comando <strong>${cmdLabel(type)}</strong> in attesa di conferma dall'ESP32...`);
+                showToast(`📡 ${cmdLabel(type)} — in attesa dell'ESP32`);
+                // poll finché non eseguito
+                startCmdPoll(data.command_id);
+            } else {
+                showCmdStatus('failed', `❌ Errore: ${data.message}`);
+                showToast('❌ ' + (data.message || 'Errore comando'), 'error');
+            }
+        } catch(e) {
+            showCmdStatus('failed', '❌ Errore di rete');
+            showToast('❌ Errore di rete', 'error');
+        }
+
+        setBtnDisabled(false);
+    }
+
+    function startCmdPoll(cmdId) {
+        if (cmdPollTimer) clearInterval(cmdPollTimer);
+        let attempts = 0;
+        cmdPollTimer = setInterval(async () => {
+            attempts++;
+            try {
+                const data = await apiGet(`/machines/${machineId}/commands`);
+                if (!data.success) return;
+                const cmd = data.commands.find(c => c.id === cmdId);
+                if (!cmd) return;
+                if (cmd.status === 'executed') {
+                    showCmdStatus('executed', `✅ <strong>${cmdLabel(cmd.type)}</strong> eseguito con successo!`);
+                    showToast(`✅ ${cmdLabel(cmd.type)} completato!`);
+                    clearInterval(cmdPollTimer);
+                    loadCmdHistory();
+                } else if (cmd.status === 'failed') {
+                    showCmdStatus('failed', `❌ <strong>${cmdLabel(cmd.type)}</strong> fallito.`);
+                    clearInterval(cmdPollTimer);
+                    loadCmdHistory();
+                } else if (attempts > 24) { // 2 min timeout
+                    showCmdStatus('sent', `⏳ <strong>${cmdLabel(cmd.type)}</strong> ancora in attesa...`);
+                    clearInterval(cmdPollTimer);
+                }
+            } catch(e) {}
+        }, 5000);
+    }
+
+    async function confirmReboot() {
+        if (!confirm('Riavviare l\'ESP32? La macchina andrà offline per ~30 secondi.')) return;
+        sendCmd('reboot');
+    }
+
+    function cmdLabel(type) {
+        const labels = {
+            start_cycle:'Avvia ciclo', stop_cycle:'Ferma ciclo',
+            sync_time:'Sincronizza ora', reboot:'Riavvio',
+            update_programs:'Aggiorna programmi'
+        };
+        return labels[type] || type;
+    }
+
+    let currentIp = null;
+
+    async function testLocalConnection() {
+        const statusSpan = document.getElementById('localConnStatus');
+        if (!statusSpan || !currentIp) {
+            showToast('❌ IP non disponibile', 'error');
+            return;
+        }
+        statusSpan.textContent = '⏳ testing...';
+        statusSpan.style.color = '#f59e0b';
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3000);
+            await fetch(`http://${currentIp}/status`, { signal: controller.signal, mode: 'no-cors' });
+            clearTimeout(timeoutId);
+            statusSpan.textContent = '✅ Raggiungibile (stessa LAN)';
+            statusSpan.style.color = '#00e676';
+        } catch(e) {
+            statusSpan.textContent = '❌ Non raggiungibile o firewall';
+            statusSpan.style.color = '#ff5252';
+        }
+    }
+
+    function showCmdStatus(state, html) {
+        const box = document.getElementById('cmdStatusBox');
+        const spin = document.getElementById('cmdSpinner');
+        const text = document.getElementById('cmdStatusText');
+        box.className = 'cmd-status-box ' + state;
+        text.innerHTML = html;
+        spin.style.display = (state === 'pending' || state === 'sent') ? 'block' : 'none';
+        if (state === 'sent') spin.className = 'cmd-spinner blue';
+        else spin.className = 'cmd-spinner';
+    }
+
+    function setBtnDisabled(disabled) {
+        document.querySelectorAll('.btn-cmd').forEach(b => b.disabled = disabled);
+    }
+
+    async function loadCmdHistory() {
+        try {
+            const data = await apiGet(`/machines/${machineId}/commands`);
+            if (!data.success || !data.commands.length) return;
+            const h = document.getElementById('cmdHistory');
+            h.innerHTML = `<div class="cmd-history-title">Ultimi comandi</div>` +
+                data.commands.slice(0, 8).map(c => {
+                    const ago = c.executed_at
+                        ? formatAgo(c.executed_at)
+                        : formatAgo(c.created_at);
+                    return `<div class="cmd-row">
+                        <span class="cmd-row-type">${cmdLabel(c.type)}</span>
+                        <span class="cmd-row-status status-${c.status}">${c.status}</span>
+                        <span class="cmd-row-time">${ago}</span>
+                    </div>`;
+                }).join('');
+        } catch(e) {}
+    }
+
+    function formatAgo(isoStr) {
+        if (!isoStr) return '';
+        const secs = Math.round((Date.now() - new Date(isoStr)) / 1000);
+        if (secs < 60)   return `${secs}s fa`;
+        if (secs < 3600) return `${Math.round(secs/60)}min fa`;
+        return `${Math.round(secs/3600)}h fa`;
+    }
+
+    // =============================================
+    // PROGRAMS
+    // =============================================
+    async function loadPrograms() {
+        try {
+            const data = await apiGet(`/machines/${machineId}/programs`);
+            if (data.success) {
+                programs = data.programs || [];
+                renderPrograms();
+            }
+        } catch(e) {}
+    }
+
+    function renderPrograms() {
+        const container = document.getElementById('programsList');
+        if (!programs.length) {
+            container.innerHTML = '<div style="text-align:center; padding:30px; opacity:.6;">📭 Nessun programma configurato</div>';
+            return;
+        }
+        const daysMap = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
+        container.innerHTML = programs.map((p, i) => {
+            const days = (p.days||[]).map(d => daysMap[d-1]).join(', ');
+            return `<div class="program-item">
+                <div class="program-info" style="flex:1;">
+                    <div class="program-name">${esc(p.nome || 'Programma')}</div>
+                    <div class="program-details">
+                        <span>⏰ ${p.orario||'--:--'}</span>
+                        <span>⏱️ ${p.durata||120}s</span>
+                        <span>🧪 ${p.percentuale||1.5}%</span>
+                        <span>📅 ${days||'—'}</span>
+                        ${p.lavaggio?'<span>🚿 Lavaggio</span>':''}
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="program-badge ${p.attivo?'active':''}">${p.attivo?'✅ ON':'⭕ OFF'}</span>
+                    <button onclick="editProgram(${i})" style="background:rgba(56,189,248,.15); border:1px solid rgba(56,189,248,.3); color:#38bdf8; padding:4px 10px; border-radius:8px; cursor:pointer; font-size:12px;">✎</button>
+                    <button onclick="toggleProgram(${i})" style="background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); color:#fff; padding:4px 10px; border-radius:8px; cursor:pointer; font-size:12px;">${p.attivo?'Disattiva':'Attiva'}</button>
+                    <button onclick="deleteProgram(${i})" style="background:rgba(255,82,82,.2); border:1px solid rgba(255,82,82,.3); color:#ff5252; padding:4px 10px; border-radius:8px; cursor:pointer; font-size:12px;">🗑</button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function toggleProgram(i) {
+        programs[i].attivo = !programs[i].attivo;
+        renderPrograms();
+    }
+
+    function deleteProgram(i) {
+        if (!confirm(`Eliminare il programma "${programs[i].nome}"?`)) return;
+        programs.splice(i, 1);
+        renderPrograms();
+    }
+
+    async function savePrograms(sendToDevice) {
+        showLoading(true);
+        try {
+            const data = await apiPut(`/machines/${machineId}/programs`, { programs, sendToDevice });
+            if (data.success) {
+                showToast('✅ ' + data.message);
+                if (sendToDevice && data.command_id) {
+                    showCmdStatus('sent', `📡 <strong>Aggiorna programmi</strong> in attesa di conferma dall'ESP32...`);
+                    startCmdPoll(data.command_id);
+                }
+            } else {
+                showToast('❌ ' + (data.message || 'Errore salvataggio'), 'error');
+            }
+        } catch(e) {
+            showToast('❌ Errore di rete', 'error');
+        }
+        showLoading(false);
+    }
+
+    // =============================================
+    // UI UTILS
+    // =============================================
+    function showToast(message, type = 'success') {
+        const t = document.getElementById('toast');
+        t.textContent = message;
+        t.style.borderLeftColor = type === 'error' ? '#ff5252' : '#00e676';
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3500);
+    }
+
+    function showLoading(show) {
+        document.getElementById('loading').style.display = show ? 'flex' : 'none';
+    }
+
+    function esc(text) {
+        const d = document.createElement('div');
+        d.textContent = text || '';
+        return d.innerHTML;
+    }
+
+
+    // =============================================
+    // PAUSA GLOBALE
+    // =============================================
+    async function loadPause() {
+        try {
+            const data = await apiGet(`/machines/${machineId}/pause`);
+            if (data.success) {
+                const paused = data.paused || false;
+                const until = data.pause_until || null;
+                document.getElementById('pauseToggle').checked = paused;
+                const dateBox = document.getElementById('pauseDateBox');
+                const statusEl = document.getElementById('pauseStatus');
+                if (paused) {
+                    dateBox.style.display = 'block';
+                    if (until) {
+                        document.getElementById('pauseUntil').value = until;
+                        statusEl.innerHTML = `<span style="color:#f59e0b;">⏸️ In pausa fino al ${formatDate(until)}</span>`;
+                    } else {
+                        document.getElementById('pauseUntil').value = '';
+                        statusEl.innerHTML = '<span style="color:#f59e0b;">⏸️ In pausa indefinita</span>';
+                    }
+                } else {
+                    dateBox.style.display = 'none';
+                    statusEl.innerHTML = '<span style="color:#00e676;">▶️ Programmi attivi</span>';
+                }
+            }
+        } catch(e) {}
+    }
+
+    function togglePause() {
+        const checked = document.getElementById('pauseToggle').checked;
+        const dateBox = document.getElementById('pauseDateBox');
+        if (checked) {
+            dateBox.style.display = 'block';
+            document.getElementById('pauseStatus').innerHTML = '<span style="color:#f59e0b;">⏸️ Seleziona data di fine pausa o lascia vuoto</span>';
+        } else {
+            dateBox.style.display = 'none';
+            savePause();
+        }
+    }
+
+    async function savePause() {
+        const paused = document.getElementById('pauseToggle').checked;
+        const until = document.getElementById('pauseUntil').value || null;
+        try {
+            const data = await apiPut(`/machines/${machineId}/pause`, { paused, pause_until: until });
+            if (data.success) {
+                showToast(paused ? '⏸️ Pausa attivata' : '▶️ Programmi ripresi');
+                loadPause();
+            } else {
+                showToast('❌ ' + (data.message || 'Errore'), 'error');
+            }
+        } catch(e) {
+            showToast('❌ Errore di rete', 'error');
+        }
+    }
+
+    function formatDate(isoStr) {
+        if (!isoStr) return '';
+        const d = new Date(isoStr);
+        return d.toLocaleDateString('it-IT');
+    }
+
+    // =============================================
+    // PROGRAMMI CRUD (Remote)
+    // =============================================
+    function showAddProgramModal() {
+        const modalHtml = `
+        <div id="programModal" class="modal-bg" style="display:flex;">
+            <div class="modal-box" style="max-width:500px; text-align:left; background:rgba(30,30,46,.95); border:1px solid rgba(255,255,255,.1); border-radius:24px; padding:32px;">
+                <button class="modal-close-btn" onclick="closeProgramModal()" style="position:absolute; top:16px; right:18px; background:none; border:none; color:rgba(255,255,255,.5); font-size:22px; cursor:pointer;">×</button>
+                <h3 style="font-size:18px; font-weight:700; margin-bottom:20px;">➕ Nuovo programma</h3>
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Nome programma</label>
+                    <input type="text" id="progName" placeholder="es. Serale" style="width:100%; padding:12px 14px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:10px; color:#fff; font-size:14px;">
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Giorni</label>
+                    <div id="progDays" style="display:flex; gap:8px; flex-wrap:wrap;">
+                        ${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map((d,i) => `<button type="button" data-day="${i+1}" class="day-btn" onclick="toggleDay(this)" style="background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); color:#fff; padding:6px 12px; border-radius:20px; cursor:pointer; font-size:12px; transition:all .2s;">${d}</button>`).join('')}
+                    </div>
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Orario</label>
+                    <input type="time" id="progTime" value="08:00" style="width:100%; padding:12px 14px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:10px; color:#fff; font-size:14px;">
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Durata (secondi): <span id="durataVal">120</span></label>
+                    <input type="range" id="progDurata" min="10" max="1800" step="10" value="120" oninput="document.getElementById('durataVal').innerText=this.value" style="width:100%;">
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Percentuale insetticida (%): <span id="percVal">1.5</span></label>
+                    <input type="range" id="progPerc" min="0.1" max="5.0" step="0.1" value="1.5" oninput="document.getElementById('percVal').innerText=this.value" style="width:100%;">
+                </div>
+                <div style="margin-bottom:24px;">
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                        <input type="checkbox" id="progLavaggio" style="width:18px; height:18px;">
+                        <span>Ciclo di lavaggio (solo acqua)</span>
+                    </label>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-cmd btn-start" style="flex:1;" onclick="addProgramToArray()">Aggiungi</button>
+                    <button class="btn-cmd btn-stop" style="flex:1; background:linear-gradient(135deg,#64748b,#334155);" onclick="closeProgramModal()">Annulla</button>
+                </div>
+            </div>
         </div>
-      </div>
-      <span class="prog-badge ${p.attivo?'on':'off'}">${p.attivo?'ON':'OFF'}</span>
-      <div class="prog-actions">
-        <button class="btn-sm" onclick="toggleProg(${i})">${p.attivo?'Disattiva':'Attiva'}</button>
-        <button class="btn-sm" onclick="editProg(${i})">✎</button>
-        <button class="btn-sm danger" onclick="delProg(${i})">🗑</button>
-      </div>
-    </div>`;
-  }).join('');
-}
+        <style>
+            .day-btn.active { background: rgba(0,230,118,.25) !important; border-color: #00e676 !important; color: #00e676 !important; }
+        </style>`;
+        if (document.getElementById('programModal')) document.getElementById('programModal').remove();
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
 
-function toggleProg(i) {
-  programs[i].attivo = !programs[i].attivo;
-  renderPrograms();
-  savePrograms(false);
-}
+    function closeProgramModal() {
+        const modal = document.getElementById('programModal');
+        if (modal) modal.remove();
+    }
 
-function delProg(i) {
-  if (!confirm(`Eliminare "${programs[i].nome}"?`)) return;
-  programs.splice(i, 1);
-  renderPrograms();
-  savePrograms(false);
-}
+    function toggleDay(btn) {
+        btn.classList.toggle('active');
+    }
 
-// Modal
-function openProgModal(idx = null) {
-  editIdx = idx;
-  const p = idx !== null ? programs[idx] : null;
-  document.getElementById('progModalTitle').textContent = p ? '✏️ Modifica programma' : '➕ Nuovo programma';
-  document.getElementById('progModalBtn').textContent   = p ? 'Salva modifiche' : 'Aggiungi';
-  document.getElementById('pNome').value    = p ? p.nome    : '';
-  document.getElementById('pTime').value    = p ? p.orario  : '08:00';
-  document.getElementById('pDur').value     = p ? p.durata  : 120;
-  document.getElementById('pPerc').value    = p ? p.percentuale : 1.5;
-  document.getElementById('pLav').checked   = p ? !!p.lavaggio : false;
-  document.getElementById('pDurVal').textContent  = p ? p.durata : 120;
-  document.getElementById('pPercVal').textContent = p ? parseFloat(p.percentuale).toFixed(1) : '1.5';
-  document.querySelectorAll('#pDays .day-btn').forEach(btn => {
-    const d = parseInt(btn.dataset.d);
-    btn.classList.toggle('on', p ? (p.days||[]).includes(d) : false);
-  });
-  document.getElementById('progModal').classList.add('open');
-  document.getElementById('pNome').focus();
-}
+    function addProgramToArray() {
+        const name = document.getElementById('progName').value.trim();
+        if (!name) { showToast('❌ Inserisci un nome', 'error'); return; }
+        const days = Array.from(document.querySelectorAll('#progDays .day-btn.active')).map(btn => parseInt(btn.dataset.day));
+        if (days.length === 0) { showToast('❌ Seleziona almeno un giorno', 'error'); return; }
+        const time = document.getElementById('progTime').value;
+        const durata = parseInt(document.getElementById('progDurata').value);
+        const percentuale = parseFloat(document.getElementById('progPerc').value);
+        const lavaggio = document.getElementById('progLavaggio').checked;
+        const newProgram = {
+            id: Date.now(),
+            nome: name,
+            attivo: true,
+            days: days,
+            orario: time,
+            durata: durata,
+            percentuale: percentuale,
+            lavaggio: lavaggio
+        };
+        programs.push(newProgram);
+        renderPrograms();
+        closeProgramModal();
+        showToast('✅ Programma aggiunto — salva per confermare');
+    }
 
-function editProg(i) { openProgModal(i); }
+    function editProgram(index) {
+        const prog = programs[index];
+        if (!prog) return;
+        const modalHtml = `
+        <div id="programModal" class="modal-bg" style="display:flex;">
+            <div class="modal-box" style="max-width:500px; text-align:left; background:rgba(30,30,46,.95); border:1px solid rgba(255,255,255,.1); border-radius:24px; padding:32px;">
+                <button class="modal-close-btn" onclick="closeProgramModal()" style="position:absolute; top:16px; right:18px; background:none; border:none; color:rgba(255,255,255,.5); font-size:22px; cursor:pointer;">×</button>
+                <h3 style="font-size:18px; font-weight:700; margin-bottom:20px;">✏️ Modifica programma</h3>
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Nome programma</label>
+                    <input type="text" id="progName" value="${esc(prog.nome)}" style="width:100%; padding:12px 14px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:10px; color:#fff; font-size:14px;">
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Giorni</label>
+                    <div id="progDays" style="display:flex; gap:8px; flex-wrap:wrap;">
+                        ${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map((d,i) => `<button type="button" data-day="${i+1}" class="day-btn ${prog.days.includes(i+1)?'active':''}" onclick="toggleDay(this)" style="background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); color:#fff; padding:6px 12px; border-radius:20px; cursor:pointer; font-size:12px; transition:all .2s;">${d}</button>`).join('')}
+                    </div>
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Orario</label>
+                    <input type="time" id="progTime" value="${prog.orario}" style="width:100%; padding:12px 14px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:10px; color:#fff; font-size:14px;">
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Durata (secondi): <span id="durataVal">${prog.durata}</span></label>
+                    <input type="range" id="progDurata" min="10" max="1800" step="10" value="${prog.durata}" oninput="document.getElementById('durataVal').innerText=this.value" style="width:100%;">
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Percentuale insetticida (%): <span id="percVal">${prog.percentuale}</span></label>
+                    <input type="range" id="progPerc" min="0.1" max="5.0" step="0.1" value="${prog.percentuale}" oninput="document.getElementById('percVal').innerText=this.value" style="width:100%;">
+                </div>
+                <div style="margin-bottom:24px;">
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                        <input type="checkbox" id="progLavaggio" ${prog.lavaggio?'checked':''} style="width:18px; height:18px;">
+                        <span>Ciclo di lavaggio (solo acqua)</span>
+                    </label>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-cmd btn-start" style="flex:1;" onclick="updateProgramInArray(${index})">Salva modifiche</button>
+                    <button class="btn-cmd btn-stop" style="flex:1; background:linear-gradient(135deg,#64748b,#334155);" onclick="closeProgramModal()">Annulla</button>
+                </div>
+            </div>
+        </div>
+        <style>
+            .day-btn.active { background: rgba(0,230,118,.25) !important; border-color: #00e676 !important; color: #00e676 !important; }
+        </style>`;
+        if (document.getElementById('programModal')) document.getElementById('programModal').remove();
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        window.currentEditIndex = index;
+    }
 
-function closeProgModal() {
-  document.getElementById('progModal').classList.remove('open');
-  editIdx = null;
-}
+    function updateProgramInArray(index) {
+        const name = document.getElementById('progName').value.trim();
+        if (!name) { showToast('❌ Inserisci un nome', 'error'); return; }
+        const days = Array.from(document.querySelectorAll('#progDays .day-btn.active')).map(btn => parseInt(btn.dataset.day));
+        if (days.length === 0) { showToast('❌ Seleziona almeno un giorno', 'error'); return; }
+        const time = document.getElementById('progTime').value;
+        const durata = parseInt(document.getElementById('progDurata').value);
+        const percentuale = parseFloat(document.getElementById('progPerc').value);
+        const lavaggio = document.getElementById('progLavaggio').checked;
+        programs[index] = {
+            ...programs[index],
+            nome: name,
+            days: days,
+            orario: time,
+            durata: durata,
+            percentuale: percentuale,
+            lavaggio: lavaggio
+        };
+        renderPrograms();
+        closeProgramModal();
+        showToast('✅ Programma modificato — salva per confermare');
+    }
 
-function saveProgModal() {
-  const nome = document.getElementById('pNome').value.trim();
-  if (!nome) { toast('❌ Inserisci un nome', true); return; }
-  const selDays = Array.from(document.querySelectorAll('#pDays .day-btn.on')).map(b => parseInt(b.dataset.d));
-  if (!selDays.length) { toast('❌ Seleziona almeno un giorno', true); return; }
-  const prog = {
-    id: editIdx !== null ? programs[editIdx].id : Date.now(),
-    nome, attivo: editIdx !== null ? programs[editIdx].attivo : true,
-    days: selDays,
-    orario:      document.getElementById('pTime').value,
-    durata:      parseInt(document.getElementById('pDur').value),
-    percentuale: parseFloat(document.getElementById('pPerc').value),
-    lavaggio:    document.getElementById('pLav').checked
-  };
-  if (editIdx !== null) programs[editIdx] = prog;
-  else programs.push(prog);
-  renderPrograms();
-  closeProgModal();
-  savePrograms(false);
-}
-
-async function savePrograms(sendToDevice) {
-  showLoading(true);
-  try {
-    const d = await apiPut(`/machines/${machineId}/programs`, { programs, sendToDevice });
-    if (d.success) {
-      toast('✅ ' + d.message);
-      if (sendToDevice && d.command_id) {
-        feedback('sent', '📡 Aggiorna programmi — in attesa dell\'ESP32...');
-        pollCmd(d.command_id, 'update_programs');
-      }
-    } else { toast('❌ ' + (d.message || 'Errore'), true); }
-  } catch(e) { toast('❌ Errore di rete', true); }
-  showLoading(false);
-}
-
-// ═══════════════════════════════════════
-// UTILS
-// ═══════════════════════════════════════
-function showScreen(name) {
-  document.getElementById('screenLogin').style.display   = name === 'login'   ? 'flex' : 'none';
-  document.getElementById('screenMachines').style.display = name === 'machines' ? 'block' : 'none';
-  document.getElementById('screenRemote').style.display  = name === 'remote'  ? 'block' : 'none';
-}
-
-function showErr(title, msg) {
-  document.getElementById('errTitle').textContent = title;
-  document.getElementById('errMsg').textContent   = msg;
-  document.getElementById('screenError').style.display = 'flex';
-}
-
-function showLoading(v) {
-  document.getElementById('loadingOverlay').style.display = v ? 'flex' : 'none';
-}
-
-function toast(msg, err = false) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast' + (err ? ' err' : '') + ' show';
-  setTimeout(() => t.className = 'toast' + (err ? ' err' : ''), 3500);
-}
-
-function ago(iso) {
-  if (!iso) return '—';
-  const s = Math.round((Date.now() - new Date(iso)) / 1000);
-  if (s < 60) return s + 's fa';
-  if (s < 3600) return Math.round(s/60) + 'min fa';
-  return Math.round(s/3600) + 'h fa';
-}
-
-function esc(t) {
-  const d = document.createElement('div'); d.textContent = t||''; return d.innerHTML;
-}
-
-// Enter key on login
-document.getElementById('loginPass').addEventListener('keydown', e => {
-  if (e.key === 'Enter') doLogin();
-});
-document.getElementById('loginUser').addEventListener('keydown', e => {
-  if (e.key === 'Enter') document.getElementById('loginPass').focus();
-});
-
-// Start
-init();
+    // =============================================
+    // START
+    // =============================================
+    init();
 </script>
 </body>
 </html>
