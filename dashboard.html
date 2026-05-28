@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        /* STILI IDENTICI ALL'ORIGINALE (non modificati) */
+        /* (lo stesso stile di prima, nessuna modifica necessaria) */
         :root {
             --bg:       #0a0e1a;
             --surface:  #111827;
@@ -361,7 +361,7 @@
         .sensor-big.ok { background: var(--green-dim); color: var(--green); }
         .sensor-big.err { background: var(--red-dim); color: var(--red); }
         .cmd-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
             gap: 10px; margin-bottom: 12px;
         }
         .btn-cmd {
@@ -505,6 +505,7 @@
             .filters-bar input, .filters-bar select { min-width: 140px; }
         }
     </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -705,57 +706,6 @@ let allMachines = [];
 let allClients  = [];
 let allUsers    = [];
 let filteredMachines = [];
-
-// ==================== FUNZIONI DI TEST CONNESSIONE LOCALE ====================
-async function testLocalConnection(ip, machineId) {
-    const statusSpan = document.getElementById(`local-test-${machineId}`);
-    if (!statusSpan) return;
-    statusSpan.textContent = '⏳ testing...';
-    statusSpan.style.color = 'var(--amber)';
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
-        await fetch(`http://${ip}/status`, { signal: controller.signal, mode: 'no-cors' });
-        clearTimeout(timeoutId);
-        statusSpan.textContent = '✅ Raggiungibile (stessa LAN)';
-        statusSpan.style.color = 'var(--green)';
-    } catch(e) {
-        statusSpan.textContent = '❌ Non raggiungibile o firewall';
-        statusSpan.style.color = 'var(--red)';
-    }
-}
-
-// ==================== COMANDI MANUTENZIONE ====================
-async function sendMaintenanceCmd(machineId, cmd, payload = null) {
-    const statusEl = document.getElementById(`cmd-status-${machineId}`);
-    if (statusEl) {
-        statusEl.textContent = '⏳ Invio comando...';
-        statusEl.className = 'cmd-status wait';
-    }
-    try {
-        const body = { type: cmd };
-        if (payload) body.payload = payload;
-        const res = await apiPost(`/machines/${machineId}/command`, body);
-        if (res.success) {
-            if (statusEl) {
-                statusEl.textContent = '✅ Comando inviato';
-                statusEl.className = 'cmd-status ok';
-            }
-        } else {
-            if (statusEl) {
-                statusEl.textContent = '❌ ' + (res.message || 'Errore');
-                statusEl.className = 'cmd-status err';
-            }
-        }
-    } catch(e) {
-        if (statusEl) {
-            statusEl.textContent = '❌ Errore di connessione';
-            statusEl.className = 'cmd-status err';
-        }
-    }
-}
-
-function toggleOtaPanel(id) { document.getElementById(`ota-panel-${id}`).classList.toggle('open'); }
 
 // ==================== GESTIONE PROGRAMMI (CLOUD) ====================
 let currentPrograms = {};
@@ -991,7 +941,30 @@ async function saveProgramsToCloud(machineId, sendToDevice) {
     }
 }
 
-// ==================== LOGIN & CORE ====================
+// ==================== FUNZIONI DI TEST CONNESSIONE LOCALE ====================
+async function testLocalConnection(ip, machineId) {
+    const statusSpan = document.getElementById(`local-test-${machineId}`);
+    if (!statusSpan) return;
+    statusSpan.textContent = '⏳ testing...';
+    statusSpan.style.color = 'var(--amber)';
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        // Tentiamo una fetch verso l'endpoint /status (o qualsiasi rotta che risponda velocemente)
+        // Usiamo mode: 'no-cors' per evitare problemi CORS, ma non potremo leggere la risposta.
+        // Per avere un vero test, idealmente l'ESP risponde con un piccolo JSON.
+        // In mancanza, proviamo a vedere se la connessione TCP viene stabilita.
+        const res = await fetch(`http://${ip}/status`, { signal: controller.signal, mode: 'no-cors' });
+        clearTimeout(timeoutId);
+        // Con 'no-cors', la risposta è opaca e non possiamo leggere lo status, ma se non c'è eccezione la connessione è ok.
+        statusSpan.textContent = '✅ Raggiungibile (stessa LAN)';
+        statusSpan.style.color = 'var(--green)';
+    } catch(e) {
+        statusSpan.textContent = '❌ Non raggiungibile o firewall';
+        statusSpan.style.color = 'var(--red)';
+    }
+}
+
 async function doLogin() {
     const u = document.getElementById('loginUser').value.trim();
     const p = document.getElementById('loginPass').value;
@@ -1128,7 +1101,7 @@ async function loadMachines() {
             renderTopPills(data.machines);
         }
     } catch(e) {
-        document.getElementById('machinesTbody').innerHTML = '<tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">❌</div><p>Errore di connessione</p></td>';
+        document.getElementById('machinesTbody').innerHTML = '<tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">❌</div><p>Errore di connessione</p></td></td>';
     }
 }
 
@@ -1197,10 +1170,10 @@ function renderMachinesTable(machines) {
             <td class="td-mono">${m.mac_address || '—'}</td>
             <td><span class="td-status"><span class="td-dot ${online?'online':'offline'}"></span>${online?'Online':'Offline'}</span></td>
             <td><span class="td-sensor ${waterOk?'ok':'err'}">💧 ${waterOk?'OK':'❌'}</span><span class="td-sensor ${insOk?'ok':'err'}">🧪 ${insOk?'OK':'❌'}</span></td>
-            <td>${esc(clientName)}</span></td>
-            <td>${esc(instName)}</span></td>
-            <td class="td-actions">${actions}</span></td>
-        </table>`;
+            <td>${esc(clientName)}</td>
+            <td>${esc(instName)}</td>
+            <td class="td-actions">${actions}</td>
+        </tr>`;
     }).join('');
 }
 
@@ -1244,8 +1217,9 @@ function openDetail(id) {
             <div class="detail-row">
                 <span class="label">IP Locale</span>
                 <span class="value td-mono" id="device-ip-${m.id}">${m.sta_ip || '—'}</span>
-                ${m.sta_ip ? `<button class="btn-save-sm" style="margin-left:10px;" onclick="testLocalConnection('${m.sta_ip}', ${m.id})">🔍 Test</button>` : ''}
-                <span id="local-test-${m.id}" style="margin-left:8px;"></span>
+                ${m.sta_ip ? `<button class="btn-save-sm" style="margin-left:10px;" onclick="testLocalConnection('${m.sta_ip}', ${m.id})">🔍 Test</button>
+                              <a href="/remote?machineId=${m.id}" target="_blank" class="btn-save-sm" style="text-decoration:none;">🌐 Controllo Remoto</a>
+                              <span id="local-test-${m.id}" style="margin-left:8px;"></span>` : ''}
             </div>
         </div>
         <div class="detail-section">
@@ -1299,34 +1273,42 @@ function openDetail(id) {
     telegramSection += `</div>`;
     left += telegramSection;
 
-    // Sezione MANUTENZIONE (per tutti tranne client)
     let right = '';
     if (!isClient) {
         right = `
         <div class="detail-section">
-            <h4>🛠 Manutenzione</h4>
-            <div class="cmd-grid">
-                <button class="btn-cmd btn-cmd-programs" onclick="sendMaintenanceCmd(${m.id},'sync_time')">🕒 Sincronizza ora</button>
-                <button class="btn-cmd btn-cmd-reboot" onclick="if(confirm('Riavviare l\\'ESP32?')) sendMaintenanceCmd(${m.id},'reboot')">🔄 Riavvia ESP32</button>
-                <button class="btn-cmd btn-cmd-ota" onclick="toggleOtaPanel(${m.id})">⬆️ OTA Firmware</button>
+            <h4>🎮 Pannello Operativo</h4>
+            <div style="background:var(--green-dim); border:1px solid rgba(34,197,94,0.3); border-radius:14px; padding:16px; margin-bottom:12px;">
+                <div style="font-size:13px; font-weight:600; color:var(--green); margin-bottom:6px;">🎯 Controllo macchina</div>
+                <div style="font-size:12px; color:var(--muted); margin-bottom:12px;">Avvia cicli, gestisci programmi, metti in pausa — tutto dal pannello operativo.</div>
+                <a href="/remote?machineId=${m.id}" target="_blank" class="btn-qr-big" style="text-decoration:none;">🎮 Apri Pannello Operativo</a>
             </div>
-            <div class="ota-panel" id="ota-panel-${m.id}">
-                <label style="font-size:12px; color:var(--muted);">URL firmware (.bin)</label>
-                <input type="text" id="ota-url-${m.id}" placeholder="https://.../firmware.bin">
-                <button class="btn-cmd btn-cmd-ota" style="width:100%" onclick="sendMaintenanceCmd(${m.id},'ota_firmware', {url: document.getElementById('ota-url-${m.id}').value.trim()})">🚀 Avvia aggiornamento</button>
-                <div class="info-note">
-                    💡 L'OTA via cloud funziona sempre, anche da remoto. Il file deve essere accessibile pubblicamente.
-                </div>
-            </div>
-            <div class="cmd-status" id="cmd-status-${m.id}"></div>
         </div>
 
         <div class="detail-section">
-            <h4>🎮 Controllo operativo</h4>
-            <a href="/remote.html?machineId=${m.id}" target="_blank" class="btn-add" style="display:block; text-align:center; text-decoration:none;">🌐 Apri pannello operativo (Remote)</a>
-            <div class="info-note" style="margin-top:12px;">
-                Il pannello remoto permette di avviare/fermare cicli, gestire programmi e attivare la pausa globale.
+            <h4>🛠 Manutenzione</h4>
+            <div class="cmd-grid">
+                <button class="btn-cmd btn-cmd-programs" onclick="sendMachineCmd(${m.id},'sync_time')">🕒 Sincronizza ora</button>
+                <button class="btn-cmd btn-cmd-reboot" onclick="sendMachineCmd(${m.id},'reboot')">🔄 Riavvia ESP</button>
+                <button class="btn-cmd btn-cmd-ota" onclick="toggleOtaPanel(${m.id})">⬆️ OTA Firmware</button>
             </div>
+            <div class="cmd-status" id="cmd-status-${m.id}"></div>
+            <div class="ota-panel" id="ota-panel-${m.id}">
+                <label style="font-size:12px; color:var(--muted);">URL firmware (.bin)</label>
+                <input type="text" id="ota-url-${m.id}" placeholder="https://.../firmware.bin">
+                <button class="btn-cmd btn-cmd-ota" style="width:100%" onclick="sendMachineCmd(${m.id},'ota_firmware')">🚀 Avvia aggiornamento</button>
+                <div class="info-note">
+                    💡 L'OTA via cloud funziona sempre, anche da remoto.
+                </div>
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <h4>📜 Storico Comandi</h4>
+            <div id="cmd-history-${m.id}" style="max-height:200px; overflow-y:auto;">
+                <div style="text-align:center; padding:12px; color:var(--muted); font-size:12px;">⏳ Caricamento...</div>
+            </div>
+            <button class="btn-save-sm" style="margin-top:10px;" onclick="loadCmdHistory(${m.id})">🔄 Aggiorna storico</button>
         </div>
         `;
     }
@@ -1342,6 +1324,10 @@ function openDetail(id) {
 
     document.getElementById('detailBody').innerHTML = left + right;
     document.getElementById('detailModal').classList.add('open');
+    
+    if (!isClient) {
+        loadCmdHistory(m.id);
+    }
 }
 
 function closeDetail() { document.getElementById('detailModal').classList.remove('open'); currentDetailId = null; }
@@ -1358,6 +1344,60 @@ async function saveDetailAssignInstaller(machineId) {
     const res = await apiPut(`/machines/${machineId}/assign`, { client_id: clientId||null, installer_id: null });
     if (res.success) { await loadMachines(); openDetail(machineId); } else alert(res.message || 'Errore salvataggio');
 }
+
+async function sendMachineCmd(machineId, cmd) {
+    const statusEl = document.getElementById(`cmd-status-${machineId}`);
+    statusEl.textContent = '⏳ Invio comando...';
+    statusEl.className = 'cmd-status wait';
+    let payload = {};
+    if (cmd === 'ota_firmware') {
+        const url = document.getElementById(`ota-url-${machineId}`)?.value.trim();
+        if (!url) { statusEl.textContent = '❌ Inserisci URL firmware'; statusEl.className='cmd-status err'; return; }
+        payload.url = url;
+    }
+    try {
+        const res = await apiPost(`/machines/${machineId}/command`, { type: cmd, payload });
+        if (res.success) { statusEl.textContent = '✅ Comando inviato'; statusEl.className = 'cmd-status ok'; }
+        else { statusEl.textContent = '❌ ' + (res.message || 'Errore'); statusEl.className = 'cmd-status err'; }
+    } catch(e) { statusEl.textContent = '❌ Errore di connessione'; statusEl.className = 'cmd-status err'; }
+}
+
+
+async function loadCmdHistory(machineId) {
+    const container = document.getElementById(`cmd-history-${machineId}`);
+    if (!container) return;
+    container.innerHTML = '<div style="text-align:center; padding:12px; color:var(--muted); font-size:12px;">⏳ Caricamento...</div>';
+    try {
+        const data = await apiGet(`/machines/${machineId}/commands`);
+        if (data.success && data.commands && data.commands.length > 0) {
+            const rows = data.commands.slice(0, 10).map(c => {
+                const ago = c.executed_at ? timeAgo(c.executed_at) : (c.created_at ? timeAgo(c.created_at) : '');
+                const statusColor = c.status === 'executed' ? 'var(--green)' : c.status === 'failed' ? 'var(--red)' : 'var(--amber)';
+                const cmdLabels = { start_cycle: 'Avvia ciclo', stop_cycle: 'Ferma ciclo', sync_time: 'Sync ora', reboot: 'Riavvio', ota_firmware: 'OTA' };
+                return `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:12px;">
+                    <span><strong>${cmdLabels[c.type] || c.type}</strong> <span style="color:var(--muted);">${ago}</span></span>
+                    <span style="color:${statusColor}; font-weight:600; text-transform:uppercase; font-size:11px;">${c.status}</span>
+                </div>`;
+            }).join('');
+            container.innerHTML = rows;
+        } else {
+            container.innerHTML = '<div style="text-align:center; padding:12px; color:var(--muted); font-size:12px;">Nessun comando recente</div>';
+        }
+    } catch(e) {
+        container.innerHTML = '<div style="text-align:center; padding:12px; color:var(--red); font-size:12px;">❌ Errore caricamento</div>';
+    }
+}
+
+function timeAgo(isoStr) {
+    if (!isoStr) return '';
+    const secs = Math.round((Date.now() - new Date(isoStr)) / 1000);
+    if (secs < 60) return `${secs}s fa`;
+    if (secs < 3600) return `${Math.round(secs/60)}min fa`;
+    if (secs < 86400) return `${Math.round(secs/3600)}h fa`;
+    return `${Math.round(secs/86400)}g fa`;
+}
+
+function toggleOtaPanel(id) { document.getElementById(`ota-panel-${id}`).classList.toggle('open'); }
 
 async function openQR(machineId, machineName) {
     const res = await apiPost(`/machines/${machineId}/qr`, {});
@@ -1378,7 +1418,7 @@ async function loadClients() {
 function renderClientsTable() {
     const tbody = document.getElementById('clientsTbody');
     if (!tbody) return;
-    if (!allClients.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state" style="padding:20px;">Nessun cliente registrato</td></table>'; return; }
+    if (!allClients.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state" style="padding:20px;">Nessun cliente registrato</td></tr>'; return; }
     const isAdmin = currentUser.role === 'admin';
     const isInstaller = currentUser.role === 'installer';
     tbody.innerHTML = allClients.map(c => {
@@ -1391,7 +1431,7 @@ function renderClientsTable() {
             <td class="td-mono">${esc(c.phone||'—')}</td>
             <td>${userExists ? `<span style="color:var(--green);">✅ ${esc(c.username)}</span>` : '<span style="color:var(--amber);">⚠️ Nessun account</span>'}</td>
             <td>${c.telegram_chat_id ? `<span style="color:var(--green); font-size:12px;">✅ ${esc(c.telegram_chat_id)}</span>` : '<span style="color:var(--muted); font-size:12px;">—</span>'}</td>
-            <td class="td-actions">${actions}</span></td>
+            <td class="td-actions">${actions}</td>
         </tr>`;
     }).join('');
 }
