@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        /* ----- STILI ESISTENTI (nessuna modifica, solo aggiunto stile per lo switch) ----- */
+        /* (lo stesso stile di prima, nessuna modifica necessaria) */
         :root {
             --bg:       #0a0e1a;
             --surface:  #111827;
@@ -35,44 +35,6 @@
             color: var(--text);
             min-height: 100vh;
         }
-        /* TOGGLE SWITCH - STILE AGGIUNTO */
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 48px;
-            height: 24px;
-        }
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #4b5563;
-            transition: .3s;
-            border-radius: 24px;
-        }
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: .3s;
-            border-radius: 50%;
-        }
-        input:checked + .slider {
-            background-color: var(--green);
-        }
-        input:checked + .slider:before {
-            transform: translateX(24px);
-        }
-        /* FINE STILE SWITCH */
         #loginScreen {
             position: fixed; inset: 0;
             background: var(--bg);
@@ -543,6 +505,7 @@
             .filters-bar input, .filters-bar select { min-width: 140px; }
         }
     </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -987,8 +950,13 @@ async function testLocalConnection(ip, machineId) {
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000);
-        await fetch(`http://${ip}/status`, { signal: controller.signal, mode: 'no-cors' });
+        // Tentiamo una fetch verso l'endpoint /status (o qualsiasi rotta che risponda velocemente)
+        // Usiamo mode: 'no-cors' per evitare problemi CORS, ma non potremo leggere la risposta.
+        // Per avere un vero test, idealmente l'ESP risponde con un piccolo JSON.
+        // In mancanza, proviamo a vedere se la connessione TCP viene stabilita.
+        const res = await fetch(`http://${ip}/status`, { signal: controller.signal, mode: 'no-cors' });
         clearTimeout(timeoutId);
+        // Con 'no-cors', la risposta è opaca e non possiamo leggere lo status, ma se non c'è eccezione la connessione è ok.
         statusSpan.textContent = '✅ Raggiungibile (stessa LAN)';
         statusSpan.style.color = 'var(--green)';
     } catch(e) {
@@ -997,43 +965,6 @@ async function testLocalConnection(ip, machineId) {
     }
 }
 
-// ============ TOGGLE CONTROLLO REMOTO (CLOUD ENABLE/DISABLE) ============
-async function toggleCloudEnable(machineId, enabled) {
-    const statusEl = document.getElementById(`cmd-status-${machineId}`);
-    if (statusEl) {
-        statusEl.textContent = '⏳ Aggiornamento stato remoto...';
-        statusEl.className = 'cmd-status wait';
-    }
-    try {
-        const res = await apiPost(`/machines/${machineId}/command`, {
-            type: 'cloud_enable',
-            payload: { enabled: enabled }
-        });
-        if (res.success) {
-            if (statusEl) {
-                statusEl.textContent = enabled ? '✅ Controllo remoto attivato' : '⏸️ Controllo remoto disattivato';
-                statusEl.className = 'cmd-status ok';
-            }
-        } else {
-            if (statusEl) {
-                statusEl.textContent = '❌ ' + (res.message || 'Errore');
-                statusEl.className = 'cmd-status err';
-            }
-            // ripristina il toggle allo stato precedente
-            const toggle = document.getElementById(`cloud-toggle-${machineId}`);
-            if (toggle) toggle.checked = !enabled;
-        }
-    } catch(e) {
-        if (statusEl) {
-            statusEl.textContent = '❌ Errore di connessione';
-            statusEl.className = 'cmd-status err';
-        }
-        const toggle = document.getElementById(`cloud-toggle-${machineId}`);
-        if (toggle) toggle.checked = !enabled;
-    }
-}
-
-// ==================== LOGIN & CORE ====================
 async function doLogin() {
     const u = document.getElementById('loginUser').value.trim();
     const p = document.getElementById('loginPass').value;
@@ -1170,7 +1101,7 @@ async function loadMachines() {
             renderTopPills(data.machines);
         }
     } catch(e) {
-        document.getElementById('machinesTbody').innerHTML = '<tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">❌</div><p>Errore di connessione</p></td>';
+        document.getElementById('machinesTbody').innerHTML = '<tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">❌</div><p>Errore di connessione</p></td></td>';
     }
 }
 
@@ -1238,10 +1169,10 @@ function renderMachinesTable(machines) {
             <td><strong>${esc(m.machine_name || 'Impianto')}</strong></td>
             <td class="td-mono">${m.mac_address || '—'}</td>
             <td><span class="td-status"><span class="td-dot ${online?'online':'offline'}"></span>${online?'Online':'Offline'}</span></td>
-            <td><span class="td-sensor ${waterOk?'ok':'err'}">💧 ${waterOk?'OK':'❌'}</span><span class="td-sensor ${insOk?'ok':'err'}">🧪 ${insOk?'OK':'❌'}</span></span></td>
-            <td>${esc(clientName)}</span></td>
-            <td>${esc(instName)}</span></td>
-            <td class="td-actions">${actions}</span></td>
+            <td><span class="td-sensor ${waterOk?'ok':'err'}">💧 ${waterOk?'OK':'❌'}</span><span class="td-sensor ${insOk?'ok':'err'}">🧪 ${insOk?'OK':'❌'}</span></td>
+            <td>${esc(clientName)}</td>
+            <td>${esc(instName)}</td>
+            <td class="td-actions">${actions}</td>
         </tr>`;
     }).join('');
 }
@@ -1346,20 +1277,20 @@ function openDetail(id) {
     if (!isClient) {
         right = `
         <div class="detail-section">
-            <h4>🛠 Comandi remoti</h4>
+            <h4>🎮 Pannello Operativo</h4>
+            <div style="background:var(--green-dim); border:1px solid rgba(34,197,94,0.3); border-radius:14px; padding:16px; margin-bottom:12px;">
+                <div style="font-size:13px; font-weight:600; color:var(--green); margin-bottom:6px;">🎯 Controllo macchina</div>
+                <div style="font-size:12px; color:var(--muted); margin-bottom:12px;">Avvia cicli, gestisci programmi, metti in pausa — tutto dal pannello operativo.</div>
+                <a href="/remote?machineId=${m.id}" target="_blank" class="btn-qr-big" style="text-decoration:none;">🎮 Apri Pannello Operativo</a>
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <h4>🛠 Manutenzione</h4>
             <div class="cmd-grid">
                 <button class="btn-cmd btn-cmd-programs" onclick="sendMachineCmd(${m.id},'sync_time')">🕒 Sincronizza ora</button>
-                <button class="btn-cmd btn-cmd-programs" onclick="sendMachineCmd(${m.id},'start_cycle')">💨 Avvia ciclo manuale</button>
-                <button class="btn-cmd btn-cmd-reboot" onclick="sendMachineCmd(${m.id},'reboot')">🔄 Riavvia</button>
+                <button class="btn-cmd btn-cmd-reboot" onclick="sendMachineCmd(${m.id},'reboot')">🔄 Riavvia ESP</button>
                 <button class="btn-cmd btn-cmd-ota" onclick="toggleOtaPanel(${m.id})">⬆️ OTA Firmware</button>
-                <!-- TOGGLE CONTROLLO REMOTO (cloud enable/disable) -->
-                <div class="cloud-toggle" style="grid-column: span 2; display: flex; justify-content: space-between; align-items: center; background: var(--surface); padding: 6px 12px; border-radius: 60px;">
-                    <span style="font-size:13px;">🌐 Controllo remoto</span>
-                    <label class="switch">
-                        <input type="checkbox" id="cloud-toggle-${m.id}" onchange="toggleCloudEnable(${m.id}, this.checked)">
-                        <span class="slider"></span>
-                    </label>
-                </div>
             </div>
             <div class="cmd-status" id="cmd-status-${m.id}"></div>
             <div class="ota-panel" id="ota-panel-${m.id}">
@@ -1367,25 +1298,17 @@ function openDetail(id) {
                 <input type="text" id="ota-url-${m.id}" placeholder="https://.../firmware.bin">
                 <button class="btn-cmd btn-cmd-ota" style="width:100%" onclick="sendMachineCmd(${m.id},'ota_firmware')">🚀 Avvia aggiornamento</button>
                 <div class="info-note">
-                    💡 L'OTA via cloud funziona sempre, anche da remoto. Usa questa sezione per aggiornare l'Nabulair ovunque si trovi.
+                    💡 L'OTA via cloud funziona sempre, anche da remoto.
                 </div>
             </div>
         </div>
-        
+
         <div class="detail-section">
-            <h4>📅 Programmi di nebulizzazione</h4>
-            <div id="programs-container-${m.id}">
-                <div style="text-align:center; padding:20px;">Caricamento programmi...</div>
+            <h4>📜 Storico Comandi</h4>
+            <div id="cmd-history-${m.id}" style="max-height:200px; overflow-y:auto;">
+                <div style="text-align:center; padding:12px; color:var(--muted); font-size:12px;">⏳ Caricamento...</div>
             </div>
-            <button class="btn-add" style="margin-top:12px; width:100%;" onclick="showAddProgramModal(${m.id})">➕ Aggiungi programma</button>
-            <div style="display:flex; gap:8px; margin-top:12px;">
-                <button class="btn-save-sm" onclick="saveProgramsToCloud(${m.id}, false)">💾 Salva solo nel cloud</button>
-                <button class="btn-save-sm" onclick="saveProgramsToCloud(${m.id}, true)">📡 Salva e invia a Nabulair</button>
-            </div>
-            <div class="info-note" style="margin-top:12px;">
-                📌 <strong>Nota sull'OTA</strong>: Se Nabulair è connesso a una rete Wi-Fi (STA), l'aggiornamento OTA tramite cloud funziona sempre.<br>
-                Per l'accesso locale all'interfaccia web dell'ESP, usa il link "Apri web ESP" sopra (solo se sei sulla stessa LAN).
-            </div>
+            <button class="btn-save-sm" style="margin-top:10px;" onclick="loadCmdHistory(${m.id})">🔄 Aggiorna storico</button>
         </div>
         `;
     }
@@ -1403,7 +1326,7 @@ function openDetail(id) {
     document.getElementById('detailModal').classList.add('open');
     
     if (!isClient) {
-        loadPrograms(m.id);
+        loadCmdHistory(m.id);
     }
 }
 
@@ -1439,6 +1362,41 @@ async function sendMachineCmd(machineId, cmd) {
     } catch(e) { statusEl.textContent = '❌ Errore di connessione'; statusEl.className = 'cmd-status err'; }
 }
 
+
+async function loadCmdHistory(machineId) {
+    const container = document.getElementById(`cmd-history-${machineId}`);
+    if (!container) return;
+    container.innerHTML = '<div style="text-align:center; padding:12px; color:var(--muted); font-size:12px;">⏳ Caricamento...</div>';
+    try {
+        const data = await apiGet(`/machines/${machineId}/commands`);
+        if (data.success && data.commands && data.commands.length > 0) {
+            const rows = data.commands.slice(0, 10).map(c => {
+                const ago = c.executed_at ? timeAgo(c.executed_at) : (c.created_at ? timeAgo(c.created_at) : '');
+                const statusColor = c.status === 'executed' ? 'var(--green)' : c.status === 'failed' ? 'var(--red)' : 'var(--amber)';
+                const cmdLabels = { start_cycle: 'Avvia ciclo', stop_cycle: 'Ferma ciclo', sync_time: 'Sync ora', reboot: 'Riavvio', ota_firmware: 'OTA' };
+                return `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:12px;">
+                    <span><strong>${cmdLabels[c.type] || c.type}</strong> <span style="color:var(--muted);">${ago}</span></span>
+                    <span style="color:${statusColor}; font-weight:600; text-transform:uppercase; font-size:11px;">${c.status}</span>
+                </div>`;
+            }).join('');
+            container.innerHTML = rows;
+        } else {
+            container.innerHTML = '<div style="text-align:center; padding:12px; color:var(--muted); font-size:12px;">Nessun comando recente</div>';
+        }
+    } catch(e) {
+        container.innerHTML = '<div style="text-align:center; padding:12px; color:var(--red); font-size:12px;">❌ Errore caricamento</div>';
+    }
+}
+
+function timeAgo(isoStr) {
+    if (!isoStr) return '';
+    const secs = Math.round((Date.now() - new Date(isoStr)) / 1000);
+    if (secs < 60) return `${secs}s fa`;
+    if (secs < 3600) return `${Math.round(secs/60)}min fa`;
+    if (secs < 86400) return `${Math.round(secs/3600)}h fa`;
+    return `${Math.round(secs/86400)}g fa`;
+}
+
 function toggleOtaPanel(id) { document.getElementById(`ota-panel-${id}`).classList.toggle('open'); }
 
 async function openQR(machineId, machineName) {
@@ -1460,7 +1418,7 @@ async function loadClients() {
 function renderClientsTable() {
     const tbody = document.getElementById('clientsTbody');
     if (!tbody) return;
-    if (!allClients.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state" style="padding:20px;">Nessun cliente registrato</td></td>'; return; }
+    if (!allClients.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state" style="padding:20px;">Nessun cliente registrato</td></tr>'; return; }
     const isAdmin = currentUser.role === 'admin';
     const isInstaller = currentUser.role === 'installer';
     tbody.innerHTML = allClients.map(c => {
@@ -1473,7 +1431,7 @@ function renderClientsTable() {
             <td class="td-mono">${esc(c.phone||'—')}</td>
             <td>${userExists ? `<span style="color:var(--green);">✅ ${esc(c.username)}</span>` : '<span style="color:var(--amber);">⚠️ Nessun account</span>'}</td>
             <td>${c.telegram_chat_id ? `<span style="color:var(--green); font-size:12px;">✅ ${esc(c.telegram_chat_id)}</span>` : '<span style="color:var(--muted); font-size:12px;">—</span>'}</td>
-            <td class="td-actions">${actions}</span></td>
+            <td class="td-actions">${actions}</td>
         </tr>`;
     }).join('');
 }
