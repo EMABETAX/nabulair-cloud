@@ -173,12 +173,6 @@ async function initDatabase() {
             )
         `);
 
-        // Colonne per pausa globale programmi
-        await pool.query(`
-            ALTER TABLE machines ADD COLUMN IF NOT EXISTS paused BOOLEAN DEFAULT FALSE;
-            ALTER TABLE machines ADD COLUMN IF NOT EXISTS pause_until DATE;
-        `).catch(e => console.log('Colonne pausa già esistenti'));
-
         console.log('✅ Database inizializzato correttamente');
     } catch (err) {
         console.error('❌ Errore init database:', err.message);
@@ -482,8 +476,6 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
                 m.flow,
                 m.client_id,
                 m.installer_id,
-                m.paused,
-                m.pause_until,
                 c.name as client_name,
                 c.telegram_chat_id
             FROM machines m
@@ -605,10 +597,6 @@ app.get('/api/machine/:id', authenticateToken, async (req, res) => {
                 m.flow,
                 m.client_id,
                 m.installer_id,
-                m.paused,
-                m.pause_until,
-                m.paused,
-                m.pause_until,
                 m.created_at,
                 CASE 
                     WHEN m.last_seen > NOW() - INTERVAL '5 minutes' THEN 'online' 
@@ -1034,9 +1022,10 @@ app.put('/api/machines/:id/assign', authenticateToken, async (req, res) => {
             if (machineCheck.rows[0].installer_id !== req.user.id) {
                 return res.status(403).json({ success: false, message: 'Puoi assegnare solo i tuoi impianti' });
             }
+            // Non toccare installer_id: un installer può solo cambiare il cliente
             await queryWithRetry(
                 'UPDATE machines SET client_id = $1 WHERE id = $2',
-                [client_id || null, id]
+                [client_id !== undefined ? (client_id || null) : machineCheck.rows[0].client_id, id]
             );
         } else if (req.user.role === 'admin') {
             await queryWithRetry(
@@ -1159,7 +1148,7 @@ app.post('/api/ping', async (req, res) => {
         );
         
         const machineResult = await queryWithRetry(
-            'SELECT id, machine_name, client_id, paused, pause_until FROM machines WHERE mac_address = $1',
+            'SELECT id, machine_name, client_id FROM machines WHERE mac_address = $1',
             [mac_address]
         );
         
@@ -1247,16 +1236,18 @@ app.post('/api/ping', async (req, res) => {
                  ORDER BY created_at ASC LIMIT 1`,
                 [machine_id]
             );
-                    if (cmdResult.rows.length  > 0) {
-            const cmd = cmdResult.rows[0];
-            // ✅ NON impostare 'sent' qui. L'ESP32 confermerà esplicitamente via /api/command/:id/confirm
-            // Se la rete cade o l'ESP crasha, il comando resta 'pending' e viene riproposto al ping successivo
-            command = { id: cmd.id, type: cmd.type, payload: cmd.payload };
-            console.log(`📤 Comando in attesa di conferma: ${cmd.type} (ID ${cmd.id})`);
-         }
+            if (cmdResult.rows.length > 0) {
+                const cmd = cmdResult.rows[0];
+                await queryWithRetry(
+                    `UPDATE commands SET status = 'sent' WHERE id = $1`,
+                    [cmd.id]
+                );
+                command = { id: cmd.id, type: cmd.type, payload: cmd.payload };
+                console.log(`📤 Comando inviato a macchina ${machine_id}: ${cmd.type}`);
+            }
         }
 
-        res.json({ success: true, command, paused: machine?.paused || false, pause_until: machine?.pause_until || null });
+        res.json({ success: true, command });
         
     } catch (error) {
         console.error('Errore ping:', error.message);
@@ -1298,7 +1289,7 @@ app.post('/api/machines/:id/command', authenticateToken, async (req, res) => {
         const result = await queryWithRetry(
             `INSERT INTO commands (machine_id, type, payload, created_by)
              VALUES ($1, $2, $3, $4) RETURNING id`,
-            [machineId, type, payload || null, req.user.id] // ✅ pg gestisce automaticamente JSONB
+            [machineId, type, payload ? JSON.stringify(payload) : null, req.user.id]
         );
 
         console.log(`📥 Comando ${type} in coda per macchina ${machineId} (ID cmd: ${result.rows[0].id})`);
@@ -1408,20 +1399,20 @@ app.put('/api/machines/:id/programs', authenticateToken, async (req, res) => {
         }
 
         // Upsert dei programmi nel DB
-                await queryWithRetry(
+        await queryWithRetry(
             `INSERT INTO machine_programs (machine_id, programs, updated_at)
              VALUES ($1, $2, NOW())
              ON CONFLICT (machine_id) DO UPDATE SET
              programs = EXCLUDED.programs, updated_at = NOW()`,
-            [machineId, programs] // ✅ Array JS diretto in colonna JSONB
+            [machineId, JSON.stringify(programs)]
         );
 
         let commandId = null;
         if (sendToDevice === true) {
-                        const cmdResult = await queryWithRetry(
+            const cmdResult = await queryWithRetry(
                 `INSERT INTO commands (machine_id, type, payload, created_by)
                  VALUES ($1, $2, $3, $4) RETURNING id`,
-                [machineId, 'update_programs', { programs }, req.user.id] // ✅ Oggetto JS diretto
+                [machineId, 'update_programs', JSON.stringify({ programs }), req.user.id]
             );
             commandId = cmdResult.rows[0].id;
             console.log(`📥 Comando update_programs accodato per macchina ${machineId} (cmd ${commandId})`);
@@ -1429,100 +1420,13 @@ app.put('/api/machines/:id/programs', authenticateToken, async (req, res) => {
 
         res.json({
             success: true,
+            command_id: commandId || null,
             message: sendToDevice
                 ? `Programmi salvati e invio richiesto (cmd #${commandId})`
                 : 'Programmi salvati nel cloud'
         });
     } catch (error) {
         console.error('Errore PUT programs:', error.message);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-
-// ==================== PAUSA GLOBALE PROGRAMMI ====================
-
-app.get('/api/machines/:id/pause', authenticateToken, async (req, res) => {
-    const machineId = parseInt(req.params.id);
-    try {
-        const machineCheck = await queryWithRetry(
-            'SELECT installer_id, client_id FROM machines WHERE id = $1',
-            [machineId]
-        );
-        if (machineCheck.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Macchina non trovata' });
-        }
-        const machine = machineCheck.rows[0];
-
-        if (req.user.role === 'installer' && machine.installer_id !== req.user.id) {
-            return res.status(403).json({ success: false, message: 'Accesso negato' });
-        }
-        if (req.user.role === 'client' && machine.client_id !== req.user.client_id) {
-            return res.status(403).json({ success: false, message: 'Accesso negato' });
-        }
-
-        const result = await queryWithRetry(
-            'SELECT paused, pause_until FROM machines WHERE id = $1',
-            [machineId]
-        );
-
-        const row = result.rows[0] || { paused: false, pause_until: null };
-
-        // Se c'è una data di scadenza passata, auto-reset
-        if (row.paused && row.pause_until) {
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            const pauseDate = new Date(row.pause_until);
-            if (pauseDate < today) {
-                await queryWithRetry(
-                    'UPDATE machines SET paused = FALSE, pause_until = NULL WHERE id = $1',
-                    [machineId]
-                );
-                return res.json({ success: true, paused: false, pause_until: null, auto_resumed: true });
-            }
-        }
-
-        res.json({ success: true, paused: row.paused || false, pause_until: row.pause_until });
-    } catch (error) {
-        console.error('Errore GET pause:', error.message);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-app.put('/api/machines/:id/pause', authenticateToken, async (req, res) => {
-    const machineId = parseInt(req.params.id);
-    const { paused, pause_until } = req.body;
-
-    if (typeof paused !== 'boolean') {
-        return res.status(400).json({ success: false, message: 'Parametro paused (boolean) obbligatorio' });
-    }
-
-    try {
-        const machineCheck = await queryWithRetry(
-            'SELECT installer_id, client_id FROM machines WHERE id = $1',
-            [machineId]
-        );
-        if (machineCheck.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Macchina non trovata' });
-        }
-        const machine = machineCheck.rows[0];
-
-        if (req.user.role === 'installer' && machine.installer_id !== req.user.id) {
-            return res.status(403).json({ success: false, message: 'Accesso negato' });
-        }
-        if (req.user.role === 'client' && machine.client_id !== req.user.client_id) {
-            return res.status(403).json({ success: false, message: 'Accesso negato' });
-        }
-
-        await queryWithRetry(
-            'UPDATE machines SET paused = $1, pause_until = $2 WHERE id = $3',
-            [paused, pause_until || null, machineId]
-        );
-
-        console.log(`⏸️ Macchina ${machineId}: paused=${paused}, until=${pause_until || 'indefinito'}`);
-        res.json({ success: true, message: paused ? 'Pausa attivata' : 'Programmi ripresi' });
-    } catch (error) {
-        console.error('Errore PUT pause:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
@@ -1556,7 +1460,7 @@ app.get('/', (req, res) => {
         version: '2.8',
         status: 'online',
         ssl_db: false,
-        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry', 'Installer can create and see clients', 'Installer can configure Telegram', 'Offline Detection', 'Machine Pre-registration', 'Full CRUD for machines and users', 'Client login with own password', 'Machine Programs Management', 'Global Pause / Vacation Mode'],
+        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry', 'Installer can create and see clients', 'Installer can configure Telegram', 'Offline Detection', 'Machine Pre-registration', 'Full CRUD for machines and users', 'Client login with own password', 'Machine Programs Management'],
         endpoints: [
             'GET /',
             'GET /health',
@@ -1582,9 +1486,7 @@ app.get('/', (req, res) => {
             'POST /api/register',
             'POST /api/ping',
             'GET /api/machines/:id/programs',
-            'PUT /api/machines/:id/programs',
-            'GET /api/machines/:id/pause',
-            'PUT /api/machines/:id/pause'
+            'PUT /api/machines/:id/programs'
         ]
     });
 });
