@@ -1260,6 +1260,8 @@ function openDetail(id) {
     const online  = m.status === 'online';
     const waterOk = m.water_ok === true;
     const insOk   = m.insecticide_ok === true;
+    const waterNull = m.water_ok === null || m.water_ok === undefined;
+    const insNull   = m.insecticide_ok === null || m.insecticide_ok === undefined;
     const step1done = !!m.client_id;
     const step2done = !!m.telegram_chat_id;
     const isAdmin     = currentUser.role === 'admin';
