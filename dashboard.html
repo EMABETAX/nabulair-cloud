@@ -505,7 +505,6 @@
             .filters-bar input, .filters-bar select { min-width: 140px; }
         }
     </style>
-<base target="_blank">
 </head>
 <body>
 
@@ -929,16 +928,63 @@ async function saveProgramsToCloud(machineId, sendToDevice) {
         percentuale: p.percentuale,
         lavaggio: p.lavaggio || false
     }));
+    // Feedback visivo nell'elemento status comandi del modal aperto
+    const statusEl = document.getElementById(`cmd-status-${machineId}`);
+    if (statusEl) { statusEl.textContent = '⏳ Salvataggio in corso...'; statusEl.className = 'cmd-status wait'; }
     try {
         const res = await apiPut(`/machines/${machineId}/programs`, { programs: formatted, sendToDevice });
         if (res.success) {
-            alert(res.message);
+            if (statusEl) { statusEl.textContent = '✅ ' + res.message; statusEl.className = 'cmd-status ok'; }
+            else showDashToast('✅ ' + res.message);
+            // Se inviato all'ESP32 e abbiamo un command_id, avvia polling
+            if (sendToDevice && res.command_id) {
+                startDashCmdPoll(machineId, res.command_id);
+            }
         } else {
-            alert('Errore: ' + (res.message || 'Salvataggio fallito'));
+            if (statusEl) { statusEl.textContent = '❌ ' + (res.message || 'Salvataggio fallito'); statusEl.className = 'cmd-status err'; }
+            else showDashToast('❌ ' + (res.message || 'Salvataggio fallito'));
         }
     } catch(e) {
-        alert('Errore di connessione');
+        if (statusEl) { statusEl.textContent = '❌ Errore di connessione'; statusEl.className = 'cmd-status err'; }
+        else showDashToast('❌ Errore di connessione');
     }
+}
+
+function showDashToast(msg) {
+    // Fallback semplice quando il status element non è visibile
+    const old = document.getElementById('dashToast');
+    if (old) old.remove();
+    const t = document.createElement('div');
+    t.id = 'dashToast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid rgba(255,255,255,.15);padding:12px 22px;border-radius:12px;font-size:13px;z-index:9999;color:#f1f5f9;box-shadow:0 8px 32px rgba(0,0,0,.5);';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+}
+
+function startDashCmdPoll(machineId, cmdId) {
+    const statusEl = document.getElementById(`cmd-status-${machineId}`);
+    if (statusEl) { statusEl.textContent = '📡 Invio all\'ESP32 in corso...'; statusEl.className = 'cmd-status wait'; }
+    let attempts = 0;
+    const timer = setInterval(async () => {
+        attempts++;
+        try {
+            const data = await apiGet(`/machines/${machineId}/commands`);
+            if (!data.success) return;
+            const cmd = data.commands.find(c => c.id === cmdId);
+            if (!cmd) return;
+            if (cmd.status === 'executed') {
+                if (statusEl) { statusEl.textContent = '✅ Programmi ricevuti dall\'ESP32!'; statusEl.className = 'cmd-status ok'; }
+                clearInterval(timer);
+            } else if (cmd.status === 'failed') {
+                if (statusEl) { statusEl.textContent = '❌ ESP32: invio programmi fallito'; statusEl.className = 'cmd-status err'; }
+                clearInterval(timer);
+            } else if (attempts > 24) {
+                if (statusEl) { statusEl.textContent = '⏳ ESP32 non ancora risposto (max 2 min)'; statusEl.className = 'cmd-status wait'; }
+                clearInterval(timer);
+            }
+        } catch(e) {}
+    }, 5000);
 }
 
 // ==================== FUNZIONI DI TEST CONNESSIONE LOCALE ====================
@@ -1277,19 +1323,11 @@ function openDetail(id) {
     if (!isClient) {
         right = `
         <div class="detail-section">
-            <h4>🎮 Pannello Operativo</h4>
-            <div style="background:var(--green-dim); border:1px solid rgba(34,197,94,0.3); border-radius:14px; padding:16px; margin-bottom:12px;">
-                <div style="font-size:13px; font-weight:600; color:var(--green); margin-bottom:6px;">🎯 Controllo macchina</div>
-                <div style="font-size:12px; color:var(--muted); margin-bottom:12px;">Avvia cicli, gestisci programmi, metti in pausa — tutto dal pannello operativo.</div>
-                <a href="/remote?machineId=${m.id}" target="_blank" class="btn-qr-big" style="text-decoration:none;">🎮 Apri Pannello Operativo</a>
-            </div>
-        </div>
-
-        <div class="detail-section">
-            <h4>🛠 Manutenzione</h4>
+            <h4>🛠 Comandi remoti</h4>
             <div class="cmd-grid">
                 <button class="btn-cmd btn-cmd-programs" onclick="sendMachineCmd(${m.id},'sync_time')">🕒 Sincronizza ora</button>
-                <button class="btn-cmd btn-cmd-reboot" onclick="sendMachineCmd(${m.id},'reboot')">🔄 Riavvia ESP</button>
+                <button class="btn-cmd btn-cmd-programs" onclick="sendMachineCmd(${m.id},'start_cycle')">💨 Avvia ciclo manuale</button>
+                <button class="btn-cmd btn-cmd-reboot" onclick="sendMachineCmd(${m.id},'reboot')">🔄 Riavvia</button>
                 <button class="btn-cmd btn-cmd-ota" onclick="toggleOtaPanel(${m.id})">⬆️ OTA Firmware</button>
             </div>
             <div class="cmd-status" id="cmd-status-${m.id}"></div>
@@ -1298,17 +1336,25 @@ function openDetail(id) {
                 <input type="text" id="ota-url-${m.id}" placeholder="https://.../firmware.bin">
                 <button class="btn-cmd btn-cmd-ota" style="width:100%" onclick="sendMachineCmd(${m.id},'ota_firmware')">🚀 Avvia aggiornamento</button>
                 <div class="info-note">
-                    💡 L'OTA via cloud funziona sempre, anche da remoto.
+                    💡 L'OTA via cloud funziona sempre, anche da remoto. Usa questa sezione per aggiornare l'ESP32 ovunque si trovi.
                 </div>
             </div>
         </div>
-
+        
         <div class="detail-section">
-            <h4>📜 Storico Comandi</h4>
-            <div id="cmd-history-${m.id}" style="max-height:200px; overflow-y:auto;">
-                <div style="text-align:center; padding:12px; color:var(--muted); font-size:12px;">⏳ Caricamento...</div>
+            <h4>📅 Programmi di nebulizzazione</h4>
+            <div id="programs-container-${m.id}">
+                <div style="text-align:center; padding:20px;">Caricamento programmi...</div>
             </div>
-            <button class="btn-save-sm" style="margin-top:10px;" onclick="loadCmdHistory(${m.id})">🔄 Aggiorna storico</button>
+            <button class="btn-add" style="margin-top:12px; width:100%;" onclick="showAddProgramModal(${m.id})">➕ Aggiungi programma</button>
+            <div style="display:flex; gap:8px; margin-top:12px;">
+                <button class="btn-save-sm" onclick="saveProgramsToCloud(${m.id}, false)">💾 Salva solo nel cloud</button>
+                <button class="btn-save-sm" onclick="saveProgramsToCloud(${m.id}, true)">📡 Salva e invia all'ESP32</button>
+            </div>
+            <div class="info-note" style="margin-top:12px;">
+                📌 <strong>Nota sull'OTA</strong>: Se l'ESP32 è connesso a una rete Wi-Fi (STA), l'aggiornamento OTA tramite cloud funziona sempre.<br>
+                Per l'accesso locale all'interfaccia web dell'ESP, usa il link "Apri web ESP" sopra (solo se sei sulla stessa LAN).
+            </div>
         </div>
         `;
     }
@@ -1326,7 +1372,7 @@ function openDetail(id) {
     document.getElementById('detailModal').classList.add('open');
     
     if (!isClient) {
-        loadCmdHistory(m.id);
+        loadPrograms(m.id);
     }
 }
 
@@ -1341,7 +1387,8 @@ async function saveDetailAssign(machineId) {
 
 async function saveDetailAssignInstaller(machineId) {
     const clientId = document.getElementById(`det-client-${machineId}`)?.value || null;
-    const res = await apiPut(`/machines/${machineId}/assign`, { client_id: clientId||null, installer_id: null });
+    // Non passare installer_id: il backend lo ignorerà e manterrà quello esistente
+    const res = await apiPut(`/machines/${machineId}/assign`, { client_id: clientId||null });
     if (res.success) { await loadMachines(); openDetail(machineId); } else alert(res.message || 'Errore salvataggio');
 }
 
@@ -1360,41 +1407,6 @@ async function sendMachineCmd(machineId, cmd) {
         if (res.success) { statusEl.textContent = '✅ Comando inviato'; statusEl.className = 'cmd-status ok'; }
         else { statusEl.textContent = '❌ ' + (res.message || 'Errore'); statusEl.className = 'cmd-status err'; }
     } catch(e) { statusEl.textContent = '❌ Errore di connessione'; statusEl.className = 'cmd-status err'; }
-}
-
-
-async function loadCmdHistory(machineId) {
-    const container = document.getElementById(`cmd-history-${machineId}`);
-    if (!container) return;
-    container.innerHTML = '<div style="text-align:center; padding:12px; color:var(--muted); font-size:12px;">⏳ Caricamento...</div>';
-    try {
-        const data = await apiGet(`/machines/${machineId}/commands`);
-        if (data.success && data.commands && data.commands.length > 0) {
-            const rows = data.commands.slice(0, 10).map(c => {
-                const ago = c.executed_at ? timeAgo(c.executed_at) : (c.created_at ? timeAgo(c.created_at) : '');
-                const statusColor = c.status === 'executed' ? 'var(--green)' : c.status === 'failed' ? 'var(--red)' : 'var(--amber)';
-                const cmdLabels = { start_cycle: 'Avvia ciclo', stop_cycle: 'Ferma ciclo', sync_time: 'Sync ora', reboot: 'Riavvio', ota_firmware: 'OTA' };
-                return `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:12px;">
-                    <span><strong>${cmdLabels[c.type] || c.type}</strong> <span style="color:var(--muted);">${ago}</span></span>
-                    <span style="color:${statusColor}; font-weight:600; text-transform:uppercase; font-size:11px;">${c.status}</span>
-                </div>`;
-            }).join('');
-            container.innerHTML = rows;
-        } else {
-            container.innerHTML = '<div style="text-align:center; padding:12px; color:var(--muted); font-size:12px;">Nessun comando recente</div>';
-        }
-    } catch(e) {
-        container.innerHTML = '<div style="text-align:center; padding:12px; color:var(--red); font-size:12px;">❌ Errore caricamento</div>';
-    }
-}
-
-function timeAgo(isoStr) {
-    if (!isoStr) return '';
-    const secs = Math.round((Date.now() - new Date(isoStr)) / 1000);
-    if (secs < 60) return `${secs}s fa`;
-    if (secs < 3600) return `${Math.round(secs/60)}min fa`;
-    if (secs < 86400) return `${Math.round(secs/3600)}h fa`;
-    return `${Math.round(secs/86400)}g fa`;
 }
 
 function toggleOtaPanel(id) { document.getElementById(`ota-panel-${id}`).classList.toggle('open'); }
