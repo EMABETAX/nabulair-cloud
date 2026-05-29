@@ -130,16 +130,12 @@ async function initDatabase() {
             )
         `);
         
-        await pool.query(`
-            ALTER TABLE machines ADD COLUMN IF NOT EXISTS water_ok BOOLEAN DEFAULT NULL;
-            ALTER TABLE machines ADD COLUMN IF NOT EXISTS insecticide_ok BOOLEAN DEFAULT NULL;
-            ALTER TABLE machines ADD COLUMN IF NOT EXISTS flow FLOAT DEFAULT 0;
-        `).catch(e => console.log('Colonne machines già esistenti'));
+        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS water_ok BOOLEAN DEFAULT NULL`).catch(() => {});
+        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS insecticide_ok BOOLEAN DEFAULT NULL`).catch(() => {});
+        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS flow FLOAT DEFAULT 0`).catch(() => {});
 
-        await pool.query(`
-            ALTER TABLE clients ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(50);
-            ALTER TABLE clients ADD COLUMN IF NOT EXISTS created_by_installer_id INTEGER REFERENCES users(id);
-        `).catch(e => console.log('Colonne clients già esistenti'));
+        await pool.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(50)`).catch(() => {});
+        await pool.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS created_by_installer_id INTEGER REFERENCES users(id)`).catch(() => {});
 
         await pool.query(`
             ALTER TABLE users ADD COLUMN IF NOT EXISTS client_id INTEGER REFERENCES clients(id);
@@ -174,27 +170,16 @@ async function initDatabase() {
         `);
 
         // Colonne per pausa globale programmi
-        await pool.query(`
-            ALTER TABLE machines ADD COLUMN IF NOT EXISTS paused BOOLEAN DEFAULT FALSE;
-            ALTER TABLE machines ADD COLUMN IF NOT EXISTS pause_until DATE;
-        `).catch(e => console.log('Colonne pausa già esistenti'));
+        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS paused BOOLEAN DEFAULT FALSE`).catch(() => {});
+        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS pause_until DATE`).catch(() => {});
 
         // ========== AGGIUNTA COLONNE PER TRACKING SYNC ==========
-        await pool.query(`
-            ALTER TABLE machines ADD COLUMN IF NOT EXISTS last_ntp_sync TIMESTAMP;
-            ALTER TABLE machines ADD COLUMN IF NOT EXISTS last_prog_sync TIMESTAMP;
-        `).catch(e => console.log('Colonne sync già esistenti'));
+        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS last_ntp_sync TIMESTAMP`).catch(() => {});
+        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS last_prog_sync TIMESTAMP`).catch(() => {});
 
-        console.log('✅ Database inizializzato correttamente');
-
-        // ========== MIGRATION: pulisci vecchi valori "true" non confermati ==========
-        await pool.query(`
-            UPDATE machines 
-            SET water_ok = NULL, 
-                insecticide_ok = NULL 
-            WHERE (water_ok = TRUE OR insecticide_ok = TRUE)
-              AND (last_seen IS NULL OR last_seen < NOW() - INTERVAL '1 hour')
-        `).catch(e => console.log('Migration sensori: nessun record da pulire'));
+        // MIGRATION RIMOSSA: non azzerare water_ok/insecticide_ok
+        // I valori vengono aggiornati solo dal ping dell'ESP32
+        console.log('✅ Database inizializzato correttamente (migration sensori disabilitata)');
 
     } catch (err) {
         console.error('❌ Errore init database:', err.message);
@@ -1159,6 +1144,9 @@ app.post('/api/ping', async (req, res) => {
         return res.status(400).json({ success: false });
     }
     
+    // Normalizza MAC in uppercase per coerenza con la pre-registrazione
+    const normalizedMac = mac_address.toUpperCase();
+    
     try {
         // Aggiorna anche i timestamp di sync se forniti
         await queryWithRetry(
@@ -1166,16 +1154,20 @@ app.post('/api/ping', async (req, res) => {
              SET last_seen = NOW(), 
                  sta_ip = COALESCE($1, sta_ip), 
                  status = $2,
-                 water_ok = CASE WHEN $3 IS NOT NULL THEN $3 ELSE water_ok END,
-                 insecticide_ok = CASE WHEN $4 IS NOT NULL THEN $4 ELSE insecticide_ok END,
+                 water_ok = CASE WHEN $3::boolean IS NOT NULL THEN $3::boolean ELSE water_ok END,
+                 insecticide_ok = CASE WHEN $4::boolean IS NOT NULL THEN $4::boolean ELSE insecticide_ok END,
                  flow = COALESCE($5, flow)
              WHERE mac_address = $6`,
-            [ip, status || 'online', water_ok, insecticide_ok, flow, mac_address]
+            [ip || null, status || 'online', 
+             water_ok !== undefined ? water_ok : null,
+             insecticide_ok !== undefined ? insecticide_ok : null,
+             flow !== undefined ? flow : null,
+             normalizedMac]
         );
         
         const machineResult = await queryWithRetry(
             'SELECT id, machine_name, client_id, paused, pause_until, last_ntp_sync, last_prog_sync FROM machines WHERE mac_address = $1',
-            [mac_address]
+            [normalizedMac]
         );
         
         const machine = machineResult.rows[0];
@@ -1207,7 +1199,7 @@ app.post('/api/ping', async (req, res) => {
                     if (clientInfo?.telegram_chat_id) {
                         await sendTelegramMessage(clientInfo.telegram_chat_id,
                             `🚨 <b>Allarme NabulAir</b>\n\n` +
-                            `🏭 Macchina: <b>${machine.machine_name || mac_address}</b>\n` +
+                            `🏭 Macchina: <b>${machine.machine_name || normalizedMac}</b>\n` +
                             `⚠️ Insetticida esaurito\n` +
                             `Verificare il contenitore e rabboccare.`
                         );
@@ -1238,7 +1230,7 @@ app.post('/api/ping', async (req, res) => {
                     if (clientInfo?.telegram_chat_id) {
                         await sendTelegramMessage(clientInfo.telegram_chat_id,
                             `🚨 <b>Allarme NabulAir</b>\n\n` +
-                            `🏭 Macchina: <b>${machine.machine_name || mac_address}</b>\n` +
+                            `🏭 Macchina: <b>${machine.machine_name || normalizedMac}</b>\n` +
                             `💧 Flusso acqua assente\n` +
                             `Verificare la pressione dell'acqua.`
                         );
