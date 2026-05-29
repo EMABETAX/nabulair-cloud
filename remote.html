@@ -284,7 +284,6 @@
             .cmd-grid { grid-template-columns:1fr 1fr; }
         }
     </style>
-<base target="_blank">
 </head>
 <body>
 
@@ -321,14 +320,8 @@
         </div>
     </div>
 
-    <!-- Banner per admin/installer -->
-    <div id="adminBanner" style="display:none; background:rgba(245,158,11,.15); border:1px solid rgba(245,158,11,.3); border-radius:16px; padding:12px 20px; margin-bottom:20px; font-size:13px; color:#f59e0b; display:flex; align-items:center; gap:10px;">
-        <span>👤</span>
-        <span>Sei in modalità <strong>Admin/Installatore</strong>. Per manutenzione (OTA, reboot, sync ora) vai alla <a href="/dashboard" style="color:#f59e0b; text-decoration:underline;">Dashboard</a>.</span>
-    </div>
-
     <div class="cloud-notice">
-        ☁️ <span>Modalità <strong>Cloud</strong> — i comandi vengono recapitati a Nabulair al prossimo ping (entro ~60 secondi)</span>
+        ☁️ <span>Modalità <strong>Cloud</strong> — i comandi vengono recapitati all'ESP32 al prossimo ping (entro ~60 secondi)</span>
     </div>
 
     <!-- Stats -->
@@ -353,21 +346,16 @@
             <div class="stat-label">Ultimo ping</div>
             <div class="stat-value" style="font-size:16px; -webkit-text-fill-color:#fff;" id="lastSeen">—</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon">📡</div>
-            <div class="stat-label">IP Locale / LAN</div>
-            <div class="stat-value" style="font-size:14px; -webkit-text-fill-color:#fff;" id="localIp">—</div>
-            <div style="margin-top:8px; font-size:11px; opacity:.5;" id="localConnStatus"></div>
-            <button onclick="testLocalConnection()" style="margin-top:8px; background:rgba(0,212,255,.15); border:1px solid rgba(0,212,255,.3); color:#00d4ff; padding:4px 12px; border-radius:20px; cursor:pointer; font-size:11px;">🔍 Test</button>
-        </div>
     </div>
 
     <!-- Comandi -->
     <div class="panel">
         <div class="panel-title">🎮 Comandi Macchina</div>
-        <div class="cmd-grid" style="grid-template-columns: 1fr 1fr;">
+        <div class="cmd-grid">
             <button class="btn-cmd btn-start"  id="btnStart"  onclick="sendCmd('start_cycle')">💨 Avvia ciclo</button>
             <button class="btn-cmd btn-stop"   id="btnStop"   onclick="sendCmd('stop_cycle')">⏹ Ferma ciclo</button>
+            <button class="btn-cmd btn-sync"   id="btnSync"   onclick="sendCmd('sync_time')">🕒 Sincronizza ora</button>
+            <button class="btn-cmd btn-reboot" id="btnReboot" onclick="confirmReboot()">🔄 Riavvia</button>
         </div>
 
         <div class="cmd-status-box" id="cmdStatusBox">
@@ -379,34 +367,6 @@
         <div class="cmd-history" id="cmdHistory"></div>
     </div>
 
-    <!-- Pausa Globale -->
-    <div class="panel">
-        <div class="panel-title">⏸️ Pausa Programmi</div>
-        <div id="pausePanel">
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
-                <div>
-                    <div style="font-size:15px; font-weight:600; margin-bottom:4px;">Modalità Vacanza</div>
-                    <div style="font-size:12px; opacity:.6;">Sospendi tutti i programmi per un periodo</div>
-                </div>
-                <label class="toggle-switch" style="position:relative; display:inline-block; width:52px; height:28px;">
-                    <input type="checkbox" id="pauseToggle" onchange="togglePause()" style="opacity:0; width:0; height:0;">
-                    <span id="pauseSlider" style="position:absolute; cursor:pointer; inset:0; background:rgba(255,255,255,.2); border-radius:28px; transition:.3s;"></span>
-                </label>
-            </div>
-            <div id="pauseDateBox" style="display:none;">
-                <label style="font-size:12px; opacity:.6; margin-bottom:6px; display:block;">Riprendi automaticamente il:</label>
-                <input type="date" id="pauseUntil" style="width:100%; padding:10px 14px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:10px; color:#fff; font-size:14px; margin-bottom:10px;" onchange="savePause()">
-                <div style="font-size:12px; opacity:.5;">Lascia vuoto per pausa indefinita (riattiva manualmente)</div>
-            </div>
-            <div id="pauseStatus" style="margin-top:10px; font-size:13px; font-weight:600;"></div>
-        </div>
-        <style>
-            #pauseToggle:checked + #pauseSlider { background: #f59e0b; }
-            #pauseToggle:checked + #pauseSlider::before { transform: translateX(24px); }
-            #pauseSlider::before { content:''; position:absolute; height:22px; width:22px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.3s; }
-        </style>
-    </div>
-
     <!-- Programmi -->
     <div class="panel">
         <div class="panel-title">📅 Programmi di Nebulizzazione</div>
@@ -414,12 +374,11 @@
             <div style="text-align:center; padding:30px; opacity:.6;">⏳ Caricamento programmi...</div>
         </div>
         <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
-            <button class="btn-cmd btn-start" style="flex:1; min-width:140px;" onclick="showAddProgramModal()">➕ Nuovo programma</button>
             <button class="btn-cmd btn-sync" style="flex:1; min-width:140px;" onclick="savePrograms(false)">💾 Salva nel cloud</button>
-            <button class="btn-cmd btn-start" style="flex:1; min-width:180px;" onclick="savePrograms(true)">📡 Salva e invia a Nabulair</button>
+            <button class="btn-cmd btn-start" style="flex:1; min-width:180px;" onclick="savePrograms(true)">📡 Salva e invia all'ESP32</button>
         </div>
         <div class="info-note">
-            📌 "Salva nel cloud" conserva i programmi sul server. "Salva e invia" li invia anche a Nabulair al prossimo ping.
+            📌 "Salva nel cloud" conserva i programmi sul server. "Salva e invia" li invia anche all'ESP32 al prossimo ping.
         </div>
     </div>
 
@@ -445,9 +404,8 @@
         const params = new URLSearchParams(window.location.search);
         machineId = params.get('machineId');
 
-        // Leggi token e user da localStorage (stesso storage della dashboard)
+        // Leggi token da localStorage (stesso storage della dashboard)
         authToken = localStorage.getItem('nabulair_token');
-        const user = JSON.parse(localStorage.getItem('nabulair_user') || 'null');
 
         if (!authToken) {
             showError('Accesso non autorizzato', 'Nessuna sessione attiva. Effettua il login dalla dashboard.');
@@ -458,16 +416,10 @@
             return;
         }
 
-        // Mostra banner se admin o installatore
-        if (user && (user.role === 'admin' || user.role === 'installer')) {
-            document.getElementById('adminBanner').style.display = 'flex';
-        }
-
         document.getElementById('mainContent').style.display = 'block';
         loadStatus();
         loadPrograms();
         loadCmdHistory();
-        loadPause();
         pollTimer = setInterval(() => { loadStatus(); loadCmdHistory(); }, 5000);
     }
 
@@ -555,19 +507,6 @@
                 ls.textContent = 'Mai visto';
             }
 
-            // IP locale e test connessione
-            const ipEl = document.getElementById('localIp');
-            const connStatus = document.getElementById('localConnStatus');
-            if (m.sta_ip) {
-                ipEl.textContent = m.sta_ip;
-                currentIp = m.sta_ip;
-                connStatus.textContent = 'Clicca Test per verificare LAN';
-            } else {
-                ipEl.textContent = '—';
-                currentIp = null;
-                connStatus.textContent = '';
-            }
-
         } catch(e) {
             if (e.message !== 'Unauthorized') console.error('Status error:', e);
         }
@@ -587,8 +526,8 @@
 
             if (data.success) {
                 pendingCmdId = data.command_id;
-                showCmdStatus('sent', `📡 Comando <strong>${cmdLabel(type)}</strong> in attesa di conferma di Nabulair...`);
-                showToast(`📡 ${cmdLabel(type)} — in attesa di Nabulair`);
+                showCmdStatus('sent', `📡 Comando <strong>${cmdLabel(type)}</strong> in attesa di conferma dall'ESP32...`);
+                showToast(`📡 ${cmdLabel(type)} — in attesa dell'ESP32`);
                 // poll finché non eseguito
                 startCmdPoll(data.command_id);
             } else {
@@ -603,7 +542,7 @@
         setBtnDisabled(false);
     }
 
-    function startCmdPoll(cmdId) {
+    function startCmdPoll(cmdId, onSuccess) {
         if (cmdPollTimer) clearInterval(cmdPollTimer);
         let attempts = 0;
         cmdPollTimer = setInterval(async () => {
@@ -618,6 +557,7 @@
                     showToast(`✅ ${cmdLabel(cmd.type)} completato!`);
                     clearInterval(cmdPollTimer);
                     loadCmdHistory();
+                    if (typeof onSuccess === 'function') onSuccess();
                 } else if (cmd.status === 'failed') {
                     showCmdStatus('failed', `❌ <strong>${cmdLabel(cmd.type)}</strong> fallito.`);
                     clearInterval(cmdPollTimer);
@@ -631,7 +571,7 @@
     }
 
     async function confirmReboot() {
-        if (!confirm('Riavviare l\'Nabulair? La macchina andrà offline per ~30 secondi.')) return;
+        if (!confirm('Riavviare l\'ESP32? La macchina andrà offline per ~30 secondi.')) return;
         sendCmd('reboot');
     }
 
@@ -642,29 +582,6 @@
             update_programs:'Aggiorna programmi'
         };
         return labels[type] || type;
-    }
-
-    let currentIp = null;
-
-    async function testLocalConnection() {
-        const statusSpan = document.getElementById('localConnStatus');
-        if (!statusSpan || !currentIp) {
-            showToast('❌ IP non disponibile', 'error');
-            return;
-        }
-        statusSpan.textContent = '⏳ testing...';
-        statusSpan.style.color = '#f59e0b';
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 3000);
-            await fetch(`http://${currentIp}/status`, { signal: controller.signal, mode: 'no-cors' });
-            clearTimeout(timeoutId);
-            statusSpan.textContent = '✅ Raggiungibile (stessa LAN)';
-            statusSpan.style.color = '#00e676';
-        } catch(e) {
-            statusSpan.textContent = '❌ Non raggiungibile o firewall';
-            statusSpan.style.color = '#ff5252';
-        }
     }
 
     function showCmdStatus(state, html) {
@@ -744,7 +661,6 @@
                 </div>
                 <div style="display:flex; align-items:center; gap:8px;">
                     <span class="program-badge ${p.attivo?'active':''}">${p.attivo?'✅ ON':'⭕ OFF'}</span>
-                    <button onclick="editProgram(${i})" style="background:rgba(56,189,248,.15); border:1px solid rgba(56,189,248,.3); color:#38bdf8; padding:4px 10px; border-radius:8px; cursor:pointer; font-size:12px;">✎</button>
                     <button onclick="toggleProgram(${i})" style="background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); color:#fff; padding:4px 10px; border-radius:8px; cursor:pointer; font-size:12px;">${p.attivo?'Disattiva':'Attiva'}</button>
                     <button onclick="deleteProgram(${i})" style="background:rgba(255,82,82,.2); border:1px solid rgba(255,82,82,.3); color:#ff5252; padding:4px 10px; border-radius:8px; cursor:pointer; font-size:12px;">🗑</button>
                 </div>
@@ -770,8 +686,15 @@
             if (data.success) {
                 showToast('✅ ' + data.message);
                 if (sendToDevice && data.command_id) {
-                    showCmdStatus('sent', `📡 <strong>Aggiorna programmi</strong> in attesa di conferma dall'Nabulair...`);
-                    startCmdPoll(data.command_id);
+                    showCmdStatus('sent', `📡 <strong>Aggiorna programmi</strong> in attesa di conferma dall'ESP32...`);
+                    startCmdPoll(data.command_id, () => {
+                        // Ricarica i programmi dal cloud dopo conferma ESP32
+                        loadPrograms();
+                        loadCmdHistory();
+                    });
+                } else if (!sendToDevice) {
+                    // Solo salvataggio cloud: ricarica per conferma
+                    await loadPrograms();
                 }
             } else {
                 showToast('❌ ' + (data.message || 'Errore salvataggio'), 'error');
@@ -801,227 +724,6 @@
         const d = document.createElement('div');
         d.textContent = text || '';
         return d.innerHTML;
-    }
-
-
-    // =============================================
-    // PAUSA GLOBALE
-    // =============================================
-    async function loadPause() {
-        try {
-            const data = await apiGet(`/machines/${machineId}/pause`);
-            if (data.success) {
-                const paused = data.paused || false;
-                const until = data.pause_until || null;
-                document.getElementById('pauseToggle').checked = paused;
-                const dateBox = document.getElementById('pauseDateBox');
-                const statusEl = document.getElementById('pauseStatus');
-                if (paused) {
-                    dateBox.style.display = 'block';
-                    if (until) {
-                        document.getElementById('pauseUntil').value = until;
-                        statusEl.innerHTML = `<span style="color:#f59e0b;">⏸️ In pausa fino al ${formatDate(until)}</span>`;
-                    } else {
-                        document.getElementById('pauseUntil').value = '';
-                        statusEl.innerHTML = '<span style="color:#f59e0b;">⏸️ In pausa indefinita</span>';
-                    }
-                } else {
-                    dateBox.style.display = 'none';
-                    statusEl.innerHTML = '<span style="color:#00e676;">▶️ Programmi attivi</span>';
-                }
-            }
-        } catch(e) {}
-    }
-
-    function togglePause() {
-        const checked = document.getElementById('pauseToggle').checked;
-        const dateBox = document.getElementById('pauseDateBox');
-        if (checked) {
-            dateBox.style.display = 'block';
-            document.getElementById('pauseStatus').innerHTML = '<span style="color:#f59e0b;">⏸️ Seleziona data di fine pausa o lascia vuoto</span>';
-        } else {
-            dateBox.style.display = 'none';
-            savePause();
-        }
-    }
-
-    async function savePause() {
-        const paused = document.getElementById('pauseToggle').checked;
-        const until = document.getElementById('pauseUntil').value || null;
-        try {
-            const data = await apiPut(`/machines/${machineId}/pause`, { paused, pause_until: until });
-            if (data.success) {
-                showToast(paused ? '⏸️ Pausa attivata' : '▶️ Programmi ripresi');
-                loadPause();
-            } else {
-                showToast('❌ ' + (data.message || 'Errore'), 'error');
-            }
-        } catch(e) {
-            showToast('❌ Errore di rete', 'error');
-        }
-    }
-
-    function formatDate(isoStr) {
-        if (!isoStr) return '';
-        const d = new Date(isoStr);
-        return d.toLocaleDateString('it-IT');
-    }
-
-    // =============================================
-    // PROGRAMMI CRUD (Remote)
-    // =============================================
-    function showAddProgramModal() {
-        const modalHtml = `
-        <div id="programModal" class="modal-bg" style="display:flex;">
-            <div class="modal-box" style="max-width:500px; text-align:left; background:rgba(30,30,46,.95); border:1px solid rgba(255,255,255,.1); border-radius:24px; padding:32px;">
-                <button class="modal-close-btn" onclick="closeProgramModal()" style="position:absolute; top:16px; right:18px; background:none; border:none; color:rgba(255,255,255,.5); font-size:22px; cursor:pointer;">×</button>
-                <h3 style="font-size:18px; font-weight:700; margin-bottom:20px;">➕ Nuovo programma</h3>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Nome programma</label>
-                    <input type="text" id="progName" placeholder="es. Serale" style="width:100%; padding:12px 14px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:10px; color:#fff; font-size:14px;">
-                </div>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Giorni</label>
-                    <div id="progDays" style="display:flex; gap:8px; flex-wrap:wrap;">
-                        ${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map((d,i) => `<button type="button" data-day="${i+1}" class="day-btn" onclick="toggleDay(this)" style="background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); color:#fff; padding:6px 12px; border-radius:20px; cursor:pointer; font-size:12px; transition:all .2s;">${d}</button>`).join('')}
-                    </div>
-                </div>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Orario</label>
-                    <input type="time" id="progTime" value="08:00" style="width:100%; padding:12px 14px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:10px; color:#fff; font-size:14px;">
-                </div>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Durata (secondi): <span id="durataVal">120</span></label>
-                    <input type="range" id="progDurata" min="10" max="1800" step="10" value="120" oninput="document.getElementById('durataVal').innerText=this.value" style="width:100%;">
-                </div>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Percentuale insetticida (%): <span id="percVal">1.5</span></label>
-                    <input type="range" id="progPerc" min="0.1" max="5.0" step="0.1" value="1.5" oninput="document.getElementById('percVal').innerText=this.value" style="width:100%;">
-                </div>
-                <div style="margin-bottom:24px;">
-                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                        <input type="checkbox" id="progLavaggio" style="width:18px; height:18px;">
-                        <span>Ciclo di lavaggio (solo acqua)</span>
-                    </label>
-                </div>
-                <div style="display:flex; gap:10px;">
-                    <button class="btn-cmd btn-start" style="flex:1;" onclick="addProgramToArray()">Aggiungi</button>
-                    <button class="btn-cmd btn-stop" style="flex:1; background:linear-gradient(135deg,#64748b,#334155);" onclick="closeProgramModal()">Annulla</button>
-                </div>
-            </div>
-        </div>
-        <style>
-            .day-btn.active { background: rgba(0,230,118,.25) !important; border-color: #00e676 !important; color: #00e676 !important; }
-        </style>`;
-        if (document.getElementById('programModal')) document.getElementById('programModal').remove();
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-    }
-
-    function closeProgramModal() {
-        const modal = document.getElementById('programModal');
-        if (modal) modal.remove();
-    }
-
-    function toggleDay(btn) {
-        btn.classList.toggle('active');
-    }
-
-    function addProgramToArray() {
-        const name = document.getElementById('progName').value.trim();
-        if (!name) { showToast('❌ Inserisci un nome', 'error'); return; }
-        const days = Array.from(document.querySelectorAll('#progDays .day-btn.active')).map(btn => parseInt(btn.dataset.day));
-        if (days.length === 0) { showToast('❌ Seleziona almeno un giorno', 'error'); return; }
-        const time = document.getElementById('progTime').value;
-        const durata = parseInt(document.getElementById('progDurata').value);
-        const percentuale = parseFloat(document.getElementById('progPerc').value);
-        const lavaggio = document.getElementById('progLavaggio').checked;
-        const newProgram = {
-            id: Date.now(),
-            nome: name,
-            attivo: true,
-            days: days,
-            orario: time,
-            durata: durata,
-            percentuale: percentuale,
-            lavaggio: lavaggio
-        };
-        programs.push(newProgram);
-        renderPrograms();
-        closeProgramModal();
-        showToast('✅ Programma aggiunto — salva per confermare');
-    }
-
-    function editProgram(index) {
-        const prog = programs[index];
-        if (!prog) return;
-        const modalHtml = `
-        <div id="programModal" class="modal-bg" style="display:flex;">
-            <div class="modal-box" style="max-width:500px; text-align:left; background:rgba(30,30,46,.95); border:1px solid rgba(255,255,255,.1); border-radius:24px; padding:32px;">
-                <button class="modal-close-btn" onclick="closeProgramModal()" style="position:absolute; top:16px; right:18px; background:none; border:none; color:rgba(255,255,255,.5); font-size:22px; cursor:pointer;">×</button>
-                <h3 style="font-size:18px; font-weight:700; margin-bottom:20px;">✏️ Modifica programma</h3>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Nome programma</label>
-                    <input type="text" id="progName" value="${esc(prog.nome)}" style="width:100%; padding:12px 14px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:10px; color:#fff; font-size:14px;">
-                </div>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Giorni</label>
-                    <div id="progDays" style="display:flex; gap:8px; flex-wrap:wrap;">
-                        ${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map((d,i) => `<button type="button" data-day="${i+1}" class="day-btn ${prog.days.includes(i+1)?'active':''}" onclick="toggleDay(this)" style="background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); color:#fff; padding:6px 12px; border-radius:20px; cursor:pointer; font-size:12px; transition:all .2s;">${d}</button>`).join('')}
-                    </div>
-                </div>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Orario</label>
-                    <input type="time" id="progTime" value="${prog.orario}" style="width:100%; padding:12px 14px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:10px; color:#fff; font-size:14px;">
-                </div>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Durata (secondi): <span id="durataVal">${prog.durata}</span></label>
-                    <input type="range" id="progDurata" min="10" max="1800" step="10" value="${prog.durata}" oninput="document.getElementById('durataVal').innerText=this.value" style="width:100%;">
-                </div>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Percentuale insetticida (%): <span id="percVal">${prog.percentuale}</span></label>
-                    <input type="range" id="progPerc" min="0.1" max="5.0" step="0.1" value="${prog.percentuale}" oninput="document.getElementById('percVal').innerText=this.value" style="width:100%;">
-                </div>
-                <div style="margin-bottom:24px;">
-                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                        <input type="checkbox" id="progLavaggio" ${prog.lavaggio?'checked':''} style="width:18px; height:18px;">
-                        <span>Ciclo di lavaggio (solo acqua)</span>
-                    </label>
-                </div>
-                <div style="display:flex; gap:10px;">
-                    <button class="btn-cmd btn-start" style="flex:1;" onclick="updateProgramInArray(${index})">Salva modifiche</button>
-                    <button class="btn-cmd btn-stop" style="flex:1; background:linear-gradient(135deg,#64748b,#334155);" onclick="closeProgramModal()">Annulla</button>
-                </div>
-            </div>
-        </div>
-        <style>
-            .day-btn.active { background: rgba(0,230,118,.25) !important; border-color: #00e676 !important; color: #00e676 !important; }
-        </style>`;
-        if (document.getElementById('programModal')) document.getElementById('programModal').remove();
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        window.currentEditIndex = index;
-    }
-
-    function updateProgramInArray(index) {
-        const name = document.getElementById('progName').value.trim();
-        if (!name) { showToast('❌ Inserisci un nome', 'error'); return; }
-        const days = Array.from(document.querySelectorAll('#progDays .day-btn.active')).map(btn => parseInt(btn.dataset.day));
-        if (days.length === 0) { showToast('❌ Seleziona almeno un giorno', 'error'); return; }
-        const time = document.getElementById('progTime').value;
-        const durata = parseInt(document.getElementById('progDurata').value);
-        const percentuale = parseFloat(document.getElementById('progPerc').value);
-        const lavaggio = document.getElementById('progLavaggio').checked;
-        programs[index] = {
-            ...programs[index],
-            nome: name,
-            days: days,
-            orario: time,
-            durata: durata,
-            percentuale: percentuale,
-            lavaggio: lavaggio
-        };
-        renderPrograms();
-        closeProgramModal();
-        showToast('✅ Programma modificato — salva per confermare');
     }
 
     // =============================================
