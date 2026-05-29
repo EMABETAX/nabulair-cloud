@@ -2,740 +2,706 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NabulAir PRO - Controllo Remoto</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>NabulAir — Controllo Impianto</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
+        /* Stessa identica estetica di dashboard.html – copiato interamente per coerenza */
+        * { margin:0; padding:0; box-sizing:border-box; }
+        :root {
+            --bg: #0B0E14;
+            --surface: #11161F;
+            --card: #151E2A;
+            --card-hover: #1A2332;
+            --border: rgba(255, 255, 255, 0.06);
+            --border-hover: rgba(255, 255, 255, 0.12);
+            --green: #10B981;
+            --green-dim: rgba(16,185,129,0.12);
+            --red: #EF4444;
+            --red-dim: rgba(239,68,68,0.12);
+            --amber: #F59E0B;
+            --amber-dim: rgba(245,158,11,0.12);
+            --blue: #3B82F6;
+            --blue-dim: rgba(59,130,246,0.12);
+            --text: #EDF2F7;
+            --text-secondary: #94A3B8;
+            --muted: #4B5563;
+            --font-display: 'Syne', sans-serif;
+            --font-body: 'DM Sans', sans-serif;
+        }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--text);
             min-height: 100vh;
-            color: #fff;
         }
+        /* Login screen (stesso stile) */
+        #loginScreen {
+            position: fixed; inset:0;
+            background: var(--bg);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9999;
+        }
+        .login-wrap {
+            width: 90%; max-width: 400px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 32px;
+            padding: 40px 32px;
+        }
+        .login-logo {
+            width: 56px; height: 56px;
+            background: linear-gradient(135deg, var(--green), #059669);
+            border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; margin: 0 auto 20px;
+        }
+        .login-wrap h2 {
+            font-family: var(--font-display);
+            font-size: 24px; font-weight: 800;
+            text-align: center; margin-bottom: 6px;
+        }
+        .login-wrap p {
+            text-align: center; color: var(--text-secondary);
+            font-size: 13px; margin-bottom: 28px;
+        }
+        .login-wrap input {
+            width: 100%; padding: 14px 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            color: var(--text); font-size: 14px;
+            margin-bottom: 12px; outline: none;
+        }
+        .login-wrap input:focus { border-color: var(--blue); background: rgba(255,255,255,0.08); }
+        .btn-login {
+            width: 100%; padding: 14px;
+            background: var(--green);
+            border: none; border-radius: 40px;
+            color: #000; font-weight: 700;
+            cursor: pointer; margin-top: 4px;
+        }
+        .btn-login:hover { opacity: 0.85; }
+        .login-err { color: var(--red); font-size:13px; text-align:center; margin-top:12px; display:none; }
 
-        @keyframes fadeIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
-        @keyframes pulse { 0%,100%{transform:scale(1);opacity:1;} 50%{transform:scale(1.05);opacity:.8;} }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes ripple { 0%{transform:scale(0);opacity:.5;} 100%{transform:scale(4);opacity:0;} }
-        @keyframes cmdPulse { 0%,100%{opacity:1;} 50%{opacity:.5;} }
+        /* App shell */
+        #appShell { display: none; }
 
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-
-        /* Header */
-        .glass-header {
-            background: rgba(255,255,255,.1);
-            backdrop-filter: blur(10px);
-            border-radius: 30px;
-            padding: 20px 30px;
-            margin-bottom: 24px;
-            border: 1px solid rgba(255,255,255,.2);
+        /* Topbar identica */
+        .topbar {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 28px;
+            height: 64px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
+            position: sticky; top:0; z-index:100;
+        }
+        .topbar-left { display:flex; align-items:center; gap:16px; }
+        .top-logo {
+            width: 38px; height: 38px;
+            background: linear-gradient(135deg, var(--green), #059669);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+        }
+        .top-brand {
+            font-family: var(--font-display);
+            font-size: 18px; font-weight: 800;
+        }
+        .topbar-right { display:flex; align-items:center; gap:12px; }
+        .user-chip {
+            display: flex; align-items: center; gap: 8px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            padding: 6px 16px; border-radius: 40px;
+            font-size: 13px;
+        }
+        .btn-icon {
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 6px 14px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        .btn-icon:hover { border-color: var(--blue); color: var(--blue); }
+        .btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+        /* Main layout */
+        .main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 28px;
+        }
+        @media (max-width: 768px) { .main { padding: 20px; } .topbar { padding: 0 16px; } }
+
+        /* Machine selector */
+        .machine-selector {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 16px 24px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 16px;
         }
-        .logo-area { display:flex; align-items:center; gap:15px; }
-        .logo-icon {
-            width:50px; height:50px;
-            background: linear-gradient(135deg,#00d4ff,#7b2ff7);
-            border-radius:20px;
-            display:flex; align-items:center; justify-content:center;
-            font-size:28px;
-            box-shadow: 0 8px 32px rgba(0,212,255,.3);
+        .machine-selector select {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 40px;
+            padding: 10px 20px;
+            color: var(--text);
+            font-size: 14px;
+            font-weight: 500;
+            outline: none;
         }
-        .logo-text h1 {
-            font-size:22px; font-weight:700;
-            background: linear-gradient(135deg,#fff,#00d4ff);
-            -webkit-background-clip:text; background-clip:text; color:transparent;
-        }
-        .logo-text p { font-size:12px; opacity:.7; }
         .machine-name-badge {
-            font-size:15px; font-weight:600;
-            background:rgba(0,212,255,.15);
-            border:1px solid rgba(0,212,255,.3);
-            padding:6px 16px; border-radius:50px;
-            color:#00d4ff;
+            background: var(--green-dim);
+            border: 1px solid rgba(16,185,129,0.3);
+            padding: 6px 18px;
+            border-radius: 40px;
+            color: var(--green);
+            font-weight: 600;
         }
         .connection-status {
-            display:flex; align-items:center; gap:10px;
-            background:rgba(0,0,0,.3);
-            padding:10px 20px; border-radius:50px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         .status-led {
-            width:12px; height:12px; border-radius:50%;
-            background:#e53e3e; animation:pulse 2s infinite;
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: var(--red);
         }
-        .status-led.online { background:#00e676; box-shadow:0 0 10px #00e676; }
-        .status-text { font-size:14px; font-weight:600; }
-        .btn-back {
-            background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2);
-            color:#fff; padding:8px 18px; border-radius:50px;
-            cursor:pointer; font-size:13px; text-decoration:none;
-            display:inline-flex; align-items:center; gap:6px;
-            transition:all .2s;
-        }
-        .btn-back:hover { background:rgba(255,255,255,.2); }
+        .status-led.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+        .status-text { font-size: 13px; font-weight: 500; }
 
-        /* Cloud notice */
-        .cloud-notice {
-            background:rgba(0,212,255,.08);
-            border:1px solid rgba(0,212,255,.25);
-            border-radius:16px; padding:12px 20px;
-            font-size:13px; color:rgba(255,255,255,.8);
-            margin-bottom:24px;
-            display:flex; align-items:center; gap:10px;
-        }
-        .cloud-notice strong { color:#00d4ff; }
-
-        /* Stats */
+        /* Stats grid */
         .stats-grid {
-            display:grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap:16px; margin-bottom:24px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
         }
         .stat-card {
-            background:rgba(255,255,255,.05);
-            backdrop-filter:blur(10px);
-            border-radius:20px; padding:22px;
-            border:1px solid rgba(255,255,255,.1);
-            transition:all .3s ease;
-            position:relative; overflow:hidden;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 20px;
+            transition: all 0.2s;
         }
-        .stat-card:hover { transform:translateY(-4px); border-color:rgba(0,212,255,.4); }
-        .stat-icon { font-size:36px; margin-bottom:12px; }
-        .stat-label { font-size:12px; opacity:.6; text-transform:uppercase; letter-spacing:1px; }
+        .stat-card:hover { border-color: var(--border-hover); }
+        .stat-icon { font-size: 28px; margin-bottom: 8px; }
+        .stat-label { font-size: 11px; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 1px; }
         .stat-value {
-            font-size:28px; font-weight:800; margin-top:8px;
-            background:linear-gradient(135deg,#fff,#00d4ff);
-            -webkit-background-clip:text; background-clip:text; color:transparent;
+            font-size: 24px;
+            font-weight: 800;
+            margin-top: 8px;
+            background: linear-gradient(135deg, #fff, var(--blue));
+            -webkit-background-clip: text; background-clip: text; color: transparent;
         }
-        .stat-unit { font-size:13px; opacity:.5; }
-        .stat-ok { color:#00e676 !important; -webkit-text-fill-color:#00e676; }
-        .stat-err { color:#ff5252 !important; -webkit-text-fill-color:#ff5252; }
+        .stat-value.ok { color: var(--green); -webkit-text-fill-color: var(--green); }
+        .stat-value.err { color: var(--red); -webkit-text-fill-color: var(--red); }
+        .stat-value.unknown { color: var(--text-secondary); -webkit-text-fill-color: var(--text-secondary); }
+        .stat-unit { font-size: 12px; opacity: 0.6; }
 
         /* Panels */
         .panel {
-            background:rgba(255,255,255,.05);
-            backdrop-filter:blur(10px);
-            border-radius:20px; padding:24px;
-            margin-bottom:20px;
-            border:1px solid rgba(255,255,255,.1);
-            animation:fadeIn .4s ease;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 24px;
+            margin-bottom: 24px;
         }
         .panel-title {
-            font-size:18px; font-weight:600;
-            margin-bottom:18px;
-            display:flex; align-items:center; gap:10px;
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         /* Command buttons */
         .cmd-grid {
-            display:grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px,1fr));
-            gap:12px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
         }
         .btn-cmd {
-            padding:16px 20px; border:none; border-radius:16px;
-            color:#fff; font-size:14px; font-weight:600;
-            cursor:pointer; transition:all .2s;
-            position:relative; overflow:hidden;
-            display:flex; align-items:center; justify-content:center; gap:8px;
+            padding: 14px;
+            border: none;
+            border-radius: 16px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
-        .btn-cmd:hover { transform:translateY(-2px); filter:brightness(1.15); }
-        .btn-cmd:active { transform:scale(.97); }
-        .btn-cmd:disabled { opacity:.5; cursor:not-allowed; transform:none; }
-        .btn-cmd::after {
-            content:''; position:absolute;
-            width:40px; height:40px; background:rgba(255,255,255,.3);
-            border-radius:50%; top:50%; left:50%;
-            transform:translate(-50%,-50%) scale(0);
-        }
-        .btn-cmd:active::after { animation:ripple .4s linear; }
+        .btn-cmd:active { transform: scale(0.97); }
+        .btn-start { background: linear-gradient(135deg, var(--green), #059669); color: #000; }
+        .btn-stop { background: linear-gradient(135deg, var(--red), #b91c1c); color: #fff; }
+        .btn-sync { background: linear-gradient(135deg, var(--amber), #b45309); color: #000; }
 
-        .btn-start   { background:linear-gradient(135deg,#00e676,#00b248); }
-        .btn-stop    { background:linear-gradient(135deg,#ff5252,#c62828); }
-        .btn-sync    { background:linear-gradient(135deg,#f59e0b,#b45309); }
-        .btn-reboot  { background:linear-gradient(135deg,#64748b,#334155); }
-
-        /* Command status box */
         .cmd-status-box {
-            margin-top:16px; padding:14px 18px;
-            border-radius:14px; font-size:13px;
-            display:none; align-items:center; gap:10px;
+            margin-top: 16px;
+            padding: 12px 16px;
+            border-radius: 14px;
+            font-size: 13px;
+            display: none;
+            align-items: center;
+            gap: 10px;
         }
-        .cmd-status-box.pending {
-            display:flex;
-            background:rgba(245,158,11,.15);
-            border:1px solid rgba(245,158,11,.3);
-            color:#f59e0b;
-        }
-        .cmd-status-box.sent {
-            display:flex;
-            background:rgba(56,189,248,.15);
-            border:1px solid rgba(56,189,248,.3);
-            color:#38bdf8;
-        }
-        .cmd-status-box.executed {
-            display:flex;
-            background:rgba(0,230,118,.15);
-            border:1px solid rgba(0,230,118,.3);
-            color:#00e676;
-        }
-        .cmd-status-box.failed {
-            display:flex;
-            background:rgba(255,82,82,.15);
-            border:1px solid rgba(255,82,82,.3);
-            color:#ff5252;
-        }
+        .cmd-status-box.show { display: flex; }
+        .cmd-status-box.sent { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(59,130,246,0.3); }
+        .cmd-status-box.executed { background: var(--green-dim); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+        .cmd-status-box.failed { background: var(--red-dim); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
         .cmd-spinner {
-            width:16px; height:16px; border-radius:50%;
-            border:2px solid rgba(245,158,11,.3);
-            border-top-color:#f59e0b;
-            animation:spin .8s linear infinite; flex-shrink:0;
+            width: 16px; height: 16px;
+            border-radius: 50%;
+            border: 2px solid rgba(59,130,246,0.3);
+            border-top-color: var(--blue);
+            animation: spin 0.8s linear infinite;
         }
-        .cmd-spinner.blue { border-color:rgba(56,189,248,.3); border-top-color:#38bdf8; }
-        
-        /* Command history */
-        .cmd-history { margin-top:14px; }
-        .cmd-history-title { font-size:12px; opacity:.5; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
-        .cmd-row {
-            display:flex; justify-content:space-between; align-items:center;
-            padding:8px 12px; border-radius:10px;
-            background:rgba(255,255,255,.04); margin-bottom:6px;
-            font-size:12px;
-        }
-        .cmd-row-type { font-weight:600; }
-        .cmd-row-status {
-            padding:2px 8px; border-radius:50px; font-size:11px; font-weight:700;
-            text-transform:uppercase;
-        }
-        .status-pending  { background:rgba(245,158,11,.2); color:#f59e0b; }
-        .status-sent     { background:rgba(56,189,248,.2); color:#38bdf8; }
-        .status-executed { background:rgba(0,230,118,.2);  color:#00e676; }
-        .status-failed   { background:rgba(255,82,82,.2);  color:#ff5252; }
-        .status-cancelled{ background:rgba(100,116,139,.2);color:#94a3b8; }
-        .cmd-row-time { color:rgba(255,255,255,.4); }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         /* Programs */
         .program-item {
-            display:flex; justify-content:space-between; align-items:center;
-            padding:14px 16px; border-radius:14px;
-            background:rgba(255,255,255,.05);
-            border:1px solid rgba(255,255,255,.08);
-            margin-bottom:10px;
-            transition:all .2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 12px;
         }
-        .program-item:hover { border-color:rgba(0,212,255,.3); }
-        .program-name { font-weight:600; font-size:15px; margin-bottom:4px; }
-        .program-details { font-size:12px; opacity:.6; display:flex; gap:12px; flex-wrap:wrap; }
+        .program-info { flex: 1; }
+        .program-name { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+        .program-details { font-size: 12px; color: var(--text-secondary); display: flex; gap: 12px; flex-wrap: wrap; }
         .program-badge {
-            padding:4px 10px; border-radius:50px; font-size:11px; font-weight:700;
-            background:rgba(255,82,82,.2); color:#ff5252;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 11px;
+            font-weight: 700;
+            background: var(--red-dim);
+            color: var(--red);
         }
-        .program-badge.active { background:rgba(0,230,118,.2); color:#00e676; }
+        .program-badge.active { background: var(--green-dim); color: var(--green); }
+        .program-actions { display: flex; gap: 8px; }
 
-        /* Toast */
-        .toast {
-            position:fixed; bottom:30px; left:50%; transform:translateX(-50%);
-            background:#1e1e2e; border-left:4px solid #00e676;
-            padding:14px 22px; border-radius:12px;
-            font-size:14px; font-weight:500;
-            opacity:0; transition:opacity .3s;
-            z-index:9999; white-space:nowrap;
-            box-shadow:0 8px 32px rgba(0,0,0,.4);
-            max-width:90vw; text-overflow:ellipsis; overflow:hidden;
+        /* Pause toggle */
+        .pause-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 16px;
         }
-        .toast.show { opacity:1; }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 52px;
+            height: 28px;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background: rgba(255,255,255,0.2);
+            border-radius: 28px;
+            transition: 0.3s;
+        }
+        .slider:before {
+            content: "";
+            position: absolute;
+            height: 22px;
+            width: 22px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+        input:checked + .slider { background: var(--amber); }
+        input:checked + .slider:before { transform: translateX(24px); }
+        .pause-date-box { display: none; margin-top: 16px; }
+        .pause-date-box input {
+            padding: 10px 14px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            width: 100%;
+            max-width: 240px;
+        }
 
-        /* Error screen */
-        #errorScreen {
-            display:none; position:fixed; inset:0;
-            background:linear-gradient(135deg,#0f0c29,#302b63);
-            flex-direction:column; align-items:center; justify-content:center;
-            gap:16px; z-index:9999; padding:24px;
+        /* Buttons */
+        .btn-sm {
+            padding: 6px 12px;
+            border-radius: 40px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid;
+            background: none;
         }
-        #errorScreen .err-icon { font-size:64px; }
-        #errorScreen h2 { font-size:22px; font-weight:700; }
-        #errorScreen p { opacity:.6; font-size:14px; text-align:center; }
-
-        /* Loading */
-        .loading-overlay {
-            position:fixed; inset:0; background:rgba(0,0,0,.6);
-            display:none; align-items:center; justify-content:center; z-index:9998;
+        .btn-edit { color: var(--blue); border-color: rgba(59,130,246,0.3); background: var(--blue-dim); }
+        .btn-delete { color: var(--red); border-color: rgba(239,68,68,0.3); background: var(--red-dim); }
+        .btn-add {
+            background: var(--green);
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-weight: 700;
+            cursor: pointer;
         }
-        .loading-spinner {
-            width:48px; height:48px; border-radius:50%;
-            border:4px solid rgba(255,255,255,.2);
-            border-top-color:#00d4ff;
-            animation:spin .8s linear infinite;
-        }
-
-        /* Info note */
         .info-note {
-            margin-top:12px; padding:12px 16px;
-            background:rgba(0,0,0,.2); border-radius:12px;
-            font-size:12px; opacity:.7; line-height:1.6;
+            background: var(--blue-dim);
+            border-left: 4px solid var(--blue);
+            padding: 12px 16px;
+            border-radius: 14px;
+            font-size: 12px;
+            margin-top: 16px;
         }
-
-        @media(max-width:600px){
-            .glass-header { padding:16px 20px; }
-            .cmd-grid { grid-template-columns:1fr 1fr; }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
         }
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface);
+            border-left: 4px solid var(--green);
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-size: 13px;
+            font-weight: 500;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 9999;
+            white-space: nowrap;
+            max-width: 90vw;
+        }
+        .toast.show { opacity: 1; }
     </style>
-<base target="_blank">
-<base target="_blank">
 </head>
 <body>
 
-<div id="errorScreen">
-    <div class="err-icon">🔐</div>
-    <h2 id="errTitle">Accesso non autorizzato</h2>
-    <p id="errMsg">Nessuna sessione attiva trovata. Effettua il login dalla dashboard.</p>
-    <a href="/dashboard" style="color:#00d4ff; font-size:14px; text-decoration:none; margin-top:8px;">← Torna alla dashboard</a>
+<div id="loginScreen">
+    <div class="login-wrap">
+        <div class="login-logo">🌿</div>
+        <h2>NabulAir</h2>
+        <p>Area Clienti</p>
+        <input type="text" id="loginUser" placeholder="Username" autocomplete="username">
+        <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()">
+        <button class="btn-login" onclick="doLogin()">Accedi</button>
+        <div class="login-err" id="loginError"></div>
+    </div>
 </div>
 
-<div class="loading-overlay" id="loading">
-    <div class="loading-spinner"></div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<div class="container" id="mainContent" style="display:none;">
-
-    <div class="glass-header">
-        <div class="logo-area">
-            <div class="logo-icon">💨</div>
-            <div class="logo-text">
-                <h1>NabulAir PRO</h1>
-                <p>Controllo Remoto Cloud</p>
-            </div>
+<div id="appShell">
+    <header class="topbar">
+        <div class="topbar-left">
+            <div class="top-logo">🌿</div>
+            <span class="top-brand">NabulAir · Cliente</span>
         </div>
-        <span class="machine-name-badge" id="machineName">Caricamento...</span>
-        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <div class="topbar-right">
+            <div class="user-chip">
+                <span id="topUsername">—</span>
+            </div>
+            <button class="btn-icon" onclick="refreshAll()">↺ Aggiorna</button>
+            <button class="btn-icon btn-logout" onclick="logout()">Esci</button>
+        </div>
+    </header>
+
+    <div class="main">
+        <!-- Machine selector -->
+        <div class="machine-selector" id="machineSelector" style="display:none;">
+            <div>📟 Seleziona impianto:</div>
+            <select id="machineSelect" onchange="switchMachine()"></select>
             <div class="connection-status">
                 <div class="status-led" id="statusLed"></div>
-                <span class="status-text" id="statusText">Verifica...</span>
+                <span class="status-text" id="statusText">—</span>
             </div>
-            <a href="/dashboard" class="btn-back">← Dashboard</a>
-        </div>
-    </div>
-
-    <!-- Banner per admin/installer -->
-    <div id="adminBanner" style="display:none; background:rgba(245,158,11,.15); border:1px solid rgba(245,158,11,.3); border-radius:16px; padding:12px 20px; margin-bottom:20px; font-size:13px; color:#f59e0b; display:flex; align-items:center; gap:10px;">
-        <span>👤</span>
-        <span>Sei in modalità <strong>Admin/Installatore</strong>. Per manutenzione (OTA, reboot, sync ora) vai alla <a href="/dashboard" style="color:#f59e0b; text-decoration:underline;">Dashboard</a>.</span>
-    </div>
-
-    <div class="cloud-notice">
-        ☁️ <span>Modalità <strong>Cloud</strong> — i comandi vengono recapitati all'ESP32 al prossimo ping (entro ~60 secondi)</span>
-    </div>
-
-    <!-- Stats -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-icon">💧</div>
-            <div class="stat-label">Acqua</div>
-            <div class="stat-value" id="waterStatus">—</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon">🧪</div>
-            <div class="stat-label">Insetticida</div>
-            <div class="stat-value" id="insecticideStatus">—</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon">🌊</div>
-            <div class="stat-label">Portata acqua</div>
-            <div class="stat-value" id="flowRate">—</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon">🕐</div>
-            <div class="stat-label">Ultimo ping</div>
-            <div class="stat-value" style="font-size:16px; -webkit-text-fill-color:#fff;" id="lastSeen">—</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon">📡</div>
-            <div class="stat-label">IP Locale / LAN</div>
-            <div class="stat-value" style="font-size:14px; -webkit-text-fill-color:#fff;" id="localIp">—</div>
-            <div style="margin-top:8px; font-size:11px; opacity:.5;" id="localConnStatus"></div>
-            <button onclick="testLocalConnection()" style="margin-top:8px; background:rgba(0,212,255,.15); border:1px solid rgba(0,212,255,.3); color:#00d4ff; padding:4px 12px; border-radius:20px; cursor:pointer; font-size:11px;">🔍 Test</button>
-        </div>
-    </div>
-
-    <!-- Comandi -->
-    <div class="panel">
-        <div class="panel-title">🎮 Comandi Macchina</div>
-        <div class="cmd-grid" style="grid-template-columns: 1fr 1fr;">
-            <button class="btn-cmd btn-start"  id="btnStart"  onclick="sendCmd('start_cycle')">💨 Avvia ciclo</button>
-            <button class="btn-cmd btn-stop"   id="btnStop"   onclick="sendCmd('stop_cycle')">⏹ Ferma ciclo</button>
         </div>
 
-        <div class="cmd-status-box" id="cmdStatusBox">
-            <div class="cmd-spinner" id="cmdSpinner"></div>
-            <span id="cmdStatusText"></span>
+        <!-- Stats -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card"><div class="stat-icon">💧</div><div class="stat-label">Acqua</div><div class="stat-value" id="waterStatus">—</div></div>
+            <div class="stat-card"><div class="stat-icon">🧪</div><div class="stat-label">Insetticida</div><div class="stat-value" id="insecticideStatus">—</div></div>
+            <div class="stat-card"><div class="stat-icon">⏱️</div><div class="stat-label">Ultimo ping</div><div class="stat-value" id="lastSeen" style="font-size:16px;">—</div></div>
+            <div class="stat-card"><div class="stat-icon">📡</div><div class="stat-label">IP Locale</div><div class="stat-value" id="localIp" style="font-size:14px;">—</div></div>
         </div>
 
-        <!-- Storico comandi -->
-        <div class="cmd-history" id="cmdHistory"></div>
-    </div>
+        <!-- Commands -->
+        <div class="panel">
+            <div class="panel-title">🎮 Comandi</div>
+            <div class="cmd-grid">
+                <button class="btn-cmd btn-start" id="btnStart" onclick="sendCmd('start_cycle')">💨 Avvia ciclo</button>
+                <button class="btn-cmd btn-stop" id="btnStop" onclick="sendCmd('stop_cycle')">⏹ Ferma ciclo</button>
+                <button class="btn-cmd btn-sync" id="btnSync" onclick="sendCmd('sync_time')">🕒 Sincronizza ora</button>
+            </div>
+            <div class="cmd-status-box" id="cmdStatusBox">
+                <div class="cmd-spinner"></div>
+                <span id="cmdStatusText"></span>
+            </div>
+        </div>
 
-    <!-- Pausa Globale -->
-    <div class="panel">
-        <div class="panel-title">⏸️ Pausa Programmi</div>
-        <div id="pausePanel">
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
-                <div>
-                    <div style="font-size:15px; font-weight:600; margin-bottom:4px;">Modalità Vacanza</div>
-                    <div style="font-size:12px; opacity:.6;">Sospendi tutti i programmi per un periodo</div>
-                </div>
-                <label class="toggle-switch" style="position:relative; display:inline-block; width:52px; height:28px;">
-                    <input type="checkbox" id="pauseToggle" onchange="togglePause()" style="opacity:0; width:0; height:0;">
-                    <span id="pauseSlider" style="position:absolute; cursor:pointer; inset:0; background:rgba(255,255,255,.2); border-radius:28px; transition:.3s;"></span>
+        <!-- Pausa vacanza -->
+        <div class="panel">
+            <div class="panel-title">⏸️ Pausa programmi</div>
+            <div class="pause-row">
+                <span>Modalità vacanza – sospendi tutti i programmi</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="pauseToggle" onchange="togglePause()">
+                    <span class="slider"></span>
                 </label>
             </div>
-            <div id="pauseDateBox" style="display:none;">
-                <label style="font-size:12px; opacity:.6; margin-bottom:6px; display:block;">Riprendi automaticamente il:</label>
-                <input type="date" id="pauseUntil" style="width:100%; padding:10px 14px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:10px; color:#fff; font-size:14px; margin-bottom:10px;" onchange="savePause()">
-                <div style="font-size:12px; opacity:.5;">Lascia vuoto per pausa indefinita (riattiva manualmente)</div>
+            <div class="pause-date-box" id="pauseDateBox">
+                <label style="font-size:12px; opacity:0.7;">Riprendi automaticamente il:</label>
+                <input type="date" id="pauseUntil" onchange="savePause()">
+                <div style="font-size:11px; opacity:0.5; margin-top:6px;">Lascia vuoto per pausa indefinita</div>
             </div>
-            <div id="pauseStatus" style="margin-top:10px; font-size:13px; font-weight:600;"></div>
+            <div id="pauseStatus" style="margin-top:10px; font-size:13px;"></div>
         </div>
-        <style>
-            #pauseToggle:checked + #pauseSlider { background: #f59e0b; }
-            #pauseToggle:checked + #pauseSlider::before { transform: translateX(24px); }
-            #pauseSlider::before { content:''; position:absolute; height:22px; width:22px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.3s; }
-        </style>
-    </div>
 
-    <!-- Programmi -->
-    <div class="panel">
-        <div class="panel-title">📅 Programmi di Nebulizzazione</div>
-        <div id="programsList">
-            <div style="text-align:center; padding:30px; opacity:.6;">⏳ Caricamento programmi...</div>
-        </div>
-        <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
-            <button class="btn-cmd btn-start" style="flex:1; min-width:140px;" onclick="showAddProgramModal()">➕ Nuovo programma</button>
-            <button class="btn-cmd btn-sync" style="flex:1; min-width:140px;" onclick="savePrograms(false)">💾 Salva nel cloud</button>
-            <button class="btn-cmd btn-start" style="flex:1; min-width:180px;" onclick="savePrograms(true)">📡 Salva e invia all'ESP32</button>
-        </div>
-        <div class="info-note">
-            📌 "Salva nel cloud" conserva i programmi sul server. "Salva e invia" li invia anche all'ESP32 al prossimo ping.
+        <!-- Programmi -->
+        <div class="panel">
+            <div class="panel-title">📅 Programmi di nebulizzazione</div>
+            <div id="programsList"></div>
+            <div style="display:flex; gap:12px; margin-top:20px; flex-wrap:wrap;">
+                <button class="btn-add" onclick="showAddProgramModal()">➕ Nuovo programma</button>
+                <button class="btn-add" onclick="savePrograms(false)" style="background:var(--blue); color:#fff;">💾 Salva nel cloud</button>
+                <button class="btn-add" onclick="savePrograms(true)" style="background:var(--green);">📡 Salva e invia all'ESP32</button>
+            </div>
+            <div class="info-note">
+                📌 I programmi vengono salvati nel cloud. Usa "Salva e invia" per trasferirli all'ESP32 (entro ~60 secondi).
+            </div>
         </div>
     </div>
-
 </div>
 
 <script>
-    // =============================================
-    // CONFIG
-    // =============================================
-    const API_BASE = '/api';
-    let machineId   = null;
-    let authToken   = null;
-    let programs    = [];
-    let pollTimer   = null;
+    const API = '/api';
+    let token = localStorage.getItem('nabulair_token');
+    let currentUser = JSON.parse(localStorage.getItem('nabulair_user') || 'null');
+    let machines = [];          // macchine del cliente
+    let currentMachineId = null;
+    let programs = [];
     let cmdPollTimer = null;
-    let pendingCmdId = null;
 
-    // =============================================
-    // INIT
-    // =============================================
-    function init() {
-        // Leggi machineId dall'URL
-        const params = new URLSearchParams(window.location.search);
-        machineId = params.get('machineId');
-
-        // Leggi token e user da localStorage (stesso storage della dashboard)
-        authToken = localStorage.getItem('nabulair_token');
-        const user = JSON.parse(localStorage.getItem('nabulair_user') || 'null');
-
-        if (!authToken) {
-            showError('Accesso non autorizzato', 'Nessuna sessione attiva. Effettua il login dalla dashboard.');
-            return;
+    // ==================== LOGIN ====================
+    async function doLogin() {
+        const u = document.getElementById('loginUser').value.trim();
+        const p = document.getElementById('loginPass').value;
+        const err = document.getElementById('loginError');
+        err.style.display = 'none';
+        if (!u || !p) { err.textContent = 'Inserisci username e password'; err.style.display='block'; return; }
+        try {
+            const res = await fetch(`${API}/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:u, password:p}) });
+            const data = await res.json();
+            if (data.success) {
+                token = data.token;
+                currentUser = data.user;
+                localStorage.setItem('nabulair_token', token);
+                localStorage.setItem('nabulair_user', JSON.stringify(currentUser));
+                if (currentUser.role !== 'client') {
+                    window.location.href = '/dashboard.html';
+                    return;
+                }
+                bootApp();
+            } else {
+                err.textContent = data.message || 'Credenziali non valide';
+                err.style.display = 'block';
+            }
+        } catch(e) {
+            err.textContent = 'Impossibile contattare il server';
+            err.style.display = 'block';
         }
-        if (!machineId) {
-            showError('Macchina non specificata', 'Apri questo pannello dalla scheda dettaglio di una macchina nella dashboard.');
-            return;
-        }
-
-        // Mostra banner se admin o installatore
-        if (user && (user.role === 'admin' || user.role === 'installer')) {
-            document.getElementById('adminBanner').style.display = 'flex';
-        }
-
-        document.getElementById('mainContent').style.display = 'block';
-        loadStatus();
-        loadPrograms();
-        loadCmdHistory();
-        loadPause();
-        pollTimer = setInterval(() => { loadStatus(); loadCmdHistory(); }, 5000);
     }
 
-    function showError(title, msg) {
-        document.getElementById('errTitle').textContent = title;
-        document.getElementById('errMsg').textContent   = msg;
-        document.getElementById('errorScreen').style.display = 'flex';
+    function logout() {
+        localStorage.removeItem('nabulair_token');
+        localStorage.removeItem('nabulair_user');
+        location.reload();
     }
 
-    // =============================================
-    // API HELPERS
-    // =============================================
-    async function apiGet(endpoint) {
-        const res = await fetch(API_BASE + endpoint, {
-            headers: { 'Authorization': `Bearer ${authToken}` }
-        });
-        if (res.status === 401) {
-            showError('Sessione scaduta', 'Effettua di nuovo il login dalla dashboard.');
-            clearInterval(pollTimer);
-            throw new Error('Unauthorized');
-        }
+    async function bootApp() {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('appShell').style.display = 'block';
+        document.getElementById('topUsername').textContent = currentUser.username;
+        await loadMachines();
+    }
+
+    // ==================== API ====================
+    async function api(method, endpoint, body) {
+        const opts = { method, headers: { 'Authorization': `Bearer ${token}` } };
+        if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+        const res = await fetch(API + endpoint, opts);
+        if (res.status === 401) { logout(); return { success: false }; }
         return res.json();
     }
+    const apiGet = ep => api('GET', ep);
+    const apiPost = (ep, b) => api('POST', ep, b);
+    const apiPut = (ep, b) => api('PUT', ep, b);
 
-    async function apiPost(endpoint, body) {
-        const res = await fetch(API_BASE + endpoint, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(body)
-        });
-        return res.json();
+    // ==================== LOAD MACHINES ====================
+    async function loadMachines() {
+        try {
+            const data = await apiGet('/machines');
+            if (data.success) {
+                machines = data.machines;
+                if (!machines.length) {
+                    document.getElementById('machineSelector').style.display = 'none';
+                    document.getElementById('statsGrid').innerHTML = '<div class="empty-state" style="grid-column:1/-1;">📭 Nessun impianto associato al tuo account.</div>';
+                    return;
+                }
+                const selector = document.getElementById('machineSelect');
+                selector.innerHTML = machines.map(m => `<option value="${m.id}">${esc(m.machine_name || 'Impianto')} (${m.mac_address || '—'})</option>`).join('');
+                document.getElementById('machineSelector').style.display = 'flex';
+                if (!currentMachineId) currentMachineId = machines[0].id;
+                else if (!machines.find(m => m.id == currentMachineId)) currentMachineId = machines[0].id;
+                selector.value = currentMachineId;
+                await loadMachineData();
+            }
+        } catch(e) { console.error(e); }
     }
 
-    async function apiPut(endpoint, body) {
-        const res = await fetch(API_BASE + endpoint, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(body)
-        });
-        return res.json();
+    function switchMachine() {
+        currentMachineId = parseInt(document.getElementById('machineSelect').value);
+        loadMachineData();
     }
 
-    // =============================================
-    // STATUS
-    // =============================================
+    async function loadMachineData() {
+        if (!currentMachineId) return;
+        await Promise.all([loadStatus(), loadPrograms(), loadPause()]);
+    }
+
     async function loadStatus() {
         try {
-            const data = await apiGet(`/machine/${machineId}`);
+            const data = await apiGet(`/machine/${currentMachineId}`);
             if (!data.success) return;
             const m = data.machine;
-
-            document.getElementById('machineName').textContent = m.machine_name || 'Macchina';
-            document.title = `${m.machine_name || 'NabulAir'} — Controllo Remoto`;
-
             const online = m.status === 'online';
             document.getElementById('statusLed').classList.toggle('online', online);
             document.getElementById('statusText').textContent = online ? '🟢 Online' : '🔴 Offline';
 
-            // ========== CORREZIONE SENSORI ==========
-            // Ora waterOk è true solo se esplicitamente true, altrimenti false (per null o false)
             const waterOk = m.water_ok === true;
-            const insOk   = m.insecticide_ok === true;
-            const isOnline = m.status === 'online';
-
-            const ws = document.getElementById('waterStatus');
-            const is = document.getElementById('insecticideStatus');
-
-            // Acqua
+            const insOk = m.insecticide_ok === true;
+            const isOnline = online;
+            const waterEl = document.getElementById('waterStatus');
+            const insEl = document.getElementById('insecticideStatus');
             if (!isOnline || m.water_ok === null) {
-                ws.textContent = '❓ N/D';
-                ws.style.color = '#64748b';
-                ws.className = 'stat-value';
+                waterEl.textContent = '❓ N/D';
+                waterEl.className = 'stat-value unknown';
             } else {
-                ws.textContent = waterOk ? '✅ OK' : '❌ BASSO';
-                ws.className = 'stat-value ' + (waterOk ? 'stat-ok' : 'stat-err');
-                ws.style.color = '';
+                waterEl.textContent = waterOk ? '✅ OK' : '❌ BASSO';
+                waterEl.className = 'stat-value ' + (waterOk ? 'ok' : 'err');
             }
-
-            // Insetticida
             if (!isOnline || m.insecticide_ok === null) {
-                is.textContent = '❓ N/D';
-                is.style.color = '#64748b';
-                is.className = 'stat-value';
+                insEl.textContent = '❓ N/D';
+                insEl.className = 'stat-value unknown';
             } else {
-                is.textContent = insOk ? '✅ OK' : '❌ ESAURITO';
-                is.className = 'stat-value ' + (insOk ? 'stat-ok' : 'stat-err');
-                is.style.color = '';
+                insEl.textContent = insOk ? '✅ OK' : '❌ ESAURITO';
+                insEl.className = 'stat-value ' + (insOk ? 'ok' : 'err');
             }
-
-            const fr = document.getElementById('flowRate');
-            const flow = parseFloat(m.flow || 0);
-            fr.innerHTML = flow.toFixed(2) + ' <span class="stat-unit">L/min</span>';
-
             const ls = document.getElementById('lastSeen');
             if (m.last_seen) {
                 const ago = Math.round((Date.now() - new Date(m.last_seen)) / 1000);
                 ls.textContent = ago < 60 ? `${ago}s fa` : ago < 3600 ? `${Math.round(ago/60)}min fa` : `${Math.round(ago/3600)}h fa`;
-            } else {
-                ls.textContent = 'Mai visto';
-            }
-
-            // IP locale e test connessione
+                ls.className = 'stat-value';
+            } else { ls.textContent = 'Mai visto'; }
             const ipEl = document.getElementById('localIp');
-            const connStatus = document.getElementById('localConnStatus');
-            if (m.sta_ip) {
-                ipEl.textContent = m.sta_ip;
-                currentIp = m.sta_ip;
-                connStatus.textContent = 'Clicca Test per verificare LAN';
-            } else {
-                ipEl.textContent = '—';
-                currentIp = null;
-                connStatus.textContent = '';
-            }
-
-        } catch(e) {
-            if (e.message !== 'Unauthorized') console.error('Status error:', e);
-        }
+            ipEl.textContent = m.sta_ip || '—';
+        } catch(e) {}
     }
 
-    // =============================================
-    // COMMANDS
-    // =============================================
+    // ==================== COMMANDS ====================
     async function sendCmd(type, payload = null) {
-        setBtnDisabled(true);
-        showCmdStatus('pending', `⏳ Comando <strong>${cmdLabel(type)}</strong> in coda...`);
-
+        setButtonsDisabled(true);
+        showCmdStatus('sent', `⏳ Invio comando ${cmdLabel(type)}...`);
         try {
             const body = { type };
             if (payload) body.payload = payload;
-            const data = await apiPost(`/machines/${machineId}/command`, body);
-
+            const data = await apiPost(`/machines/${currentMachineId}/command`, body);
             if (data.success) {
-                pendingCmdId = data.command_id;
-                showCmdStatus('sent', `📡 Comando <strong>${cmdLabel(type)}</strong> in attesa di conferma dall'ESP32...`);
-                showToast(`📡 ${cmdLabel(type)} — in attesa dell'ESP32`);
-                // poll finché non eseguito
-                startCmdPoll(data.command_id);
+                showCmdStatus('sent', `📡 Comando ${cmdLabel(type)} in attesa di conferma...`);
+                startCmdPoll(data.command_id, type);
             } else {
                 showCmdStatus('failed', `❌ Errore: ${data.message}`);
-                showToast('❌ ' + (data.message || 'Errore comando'), 'error');
             }
         } catch(e) {
             showCmdStatus('failed', '❌ Errore di rete');
-            showToast('❌ Errore di rete', 'error');
         }
-
-        setBtnDisabled(false);
+        setButtonsDisabled(false);
     }
 
-    function startCmdPoll(cmdId) {
+    function startCmdPoll(cmdId, type) {
         if (cmdPollTimer) clearInterval(cmdPollTimer);
         let attempts = 0;
         cmdPollTimer = setInterval(async () => {
             attempts++;
             try {
-                const data = await apiGet(`/machines/${machineId}/commands`);
+                const data = await apiGet(`/machines/${currentMachineId}/commands`);
                 if (!data.success) return;
                 const cmd = data.commands.find(c => c.id === cmdId);
                 if (!cmd) return;
                 if (cmd.status === 'executed') {
-                    showCmdStatus('executed', `✅ <strong>${cmdLabel(cmd.type)}</strong> eseguito con successo!`);
-                    showToast(`✅ ${cmdLabel(cmd.type)} completato!`);
+                    showCmdStatus('executed', `✅ Comando ${cmdLabel(type)} eseguito!`);
                     clearInterval(cmdPollTimer);
-                    loadCmdHistory();
                 } else if (cmd.status === 'failed') {
-                    showCmdStatus('failed', `❌ <strong>${cmdLabel(cmd.type)}</strong> fallito.`);
+                    showCmdStatus('failed', `❌ Comando ${cmdLabel(type)} fallito.`);
                     clearInterval(cmdPollTimer);
-                    loadCmdHistory();
-                } else if (attempts > 24) { // 2 min timeout
-                    showCmdStatus('sent', `⏳ <strong>${cmdLabel(cmd.type)}</strong> ancora in attesa...`);
+                } else if (attempts > 24) {
+                    showCmdStatus('sent', `⏳ Comando ancora in attesa...`);
                     clearInterval(cmdPollTimer);
                 }
             } catch(e) {}
         }, 5000);
     }
 
-    async function confirmReboot() {
-        if (!confirm('Riavviare l\'ESP32? La macchina andrà offline per ~30 secondi.')) return;
-        sendCmd('reboot');
-    }
-
     function cmdLabel(type) {
-        const labels = {
-            start_cycle:'Avvia ciclo', stop_cycle:'Ferma ciclo',
-            sync_time:'Sincronizza ora', reboot:'Riavvio',
-            update_programs:'Aggiorna programmi'
-        };
+        const labels = { start_cycle: 'Avvia ciclo', stop_cycle: 'Ferma ciclo', sync_time: 'Sincronizza ora' };
         return labels[type] || type;
     }
 
-    let currentIp = null;
-
-    async function testLocalConnection() {
-        const statusSpan = document.getElementById('localConnStatus');
-        if (!statusSpan || !currentIp) {
-            showToast('❌ IP non disponibile', 'error');
-            return;
-        }
-        statusSpan.textContent = '⏳ testing...';
-        statusSpan.style.color = '#f59e0b';
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 3000);
-            await fetch(`http://${currentIp}/status`, { signal: controller.signal, mode: 'no-cors' });
-            clearTimeout(timeoutId);
-            statusSpan.textContent = '✅ Raggiungibile (stessa LAN)';
-            statusSpan.style.color = '#00e676';
-        } catch(e) {
-            statusSpan.textContent = '❌ Non raggiungibile o firewall';
-            statusSpan.style.color = '#ff5252';
-        }
-    }
-
-    function showCmdStatus(state, html) {
+    function showCmdStatus(state, text) {
         const box = document.getElementById('cmdStatusBox');
-        const spin = document.getElementById('cmdSpinner');
-        const text = document.getElementById('cmdStatusText');
-        box.className = 'cmd-status-box ' + state;
-        text.innerHTML = html;
-        spin.style.display = (state === 'pending' || state === 'sent') ? 'block' : 'none';
-        if (state === 'sent') spin.className = 'cmd-spinner blue';
-        else spin.className = 'cmd-spinner';
+        const textEl = document.getElementById('cmdStatusText');
+        box.className = `cmd-status-box show ${state}`;
+        textEl.textContent = text;
+        if (state === 'sent') setTimeout(() => { if (box.classList.contains('show') && state === 'sent') box.classList.remove('show'); }, 8000);
     }
 
-    function setBtnDisabled(disabled) {
+    function setButtonsDisabled(disabled) {
         document.querySelectorAll('.btn-cmd').forEach(b => b.disabled = disabled);
     }
 
-    async function loadCmdHistory() {
-        try {
-            const data = await apiGet(`/machines/${machineId}/commands`);
-            if (!data.success || !data.commands.length) return;
-            const h = document.getElementById('cmdHistory');
-            h.innerHTML = `<div class="cmd-history-title">Ultimi comandi</div>` +
-                data.commands.slice(0, 8).map(c => {
-                    const ago = c.executed_at
-                        ? formatAgo(c.executed_at)
-                        : formatAgo(c.created_at);
-                    return `<div class="cmd-row">
-                        <span class="cmd-row-type">${cmdLabel(c.type)}</span>
-                        <span class="cmd-row-status status-${c.status}">${c.status}</span>
-                        <span class="cmd-row-time">${ago}</span>
-                    </div>`;
-                }).join('');
-        } catch(e) {}
-    }
-
-    function formatAgo(isoStr) {
-        if (!isoStr) return '';
-        const secs = Math.round((Date.now() - new Date(isoStr)) / 1000);
-        if (secs < 60)   return `${secs}s fa`;
-        if (secs < 3600) return `${Math.round(secs/60)}min fa`;
-        return `${Math.round(secs/3600)}h fa`;
-    }
-
-    // =============================================
-    // PROGRAMS
-    // =============================================
+    // ==================== PROGRAMS ====================
     async function loadPrograms() {
         try {
-            const data = await apiGet(`/machines/${machineId}/programs`);
+            const data = await apiGet(`/machines/${currentMachineId}/programs`);
             if (data.success) {
                 programs = data.programs || [];
                 renderPrograms();
@@ -746,91 +712,62 @@
     function renderPrograms() {
         const container = document.getElementById('programsList');
         if (!programs.length) {
-            container.innerHTML = '<div style="text-align:center; padding:30px; opacity:.6;">📭 Nessun programma configurato</div>';
+            container.innerHTML = '<div class="empty-state">📭 Nessun programma configurato</div>';
             return;
         }
         const daysMap = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
-        container.innerHTML = programs.map((p, i) => {
+        container.innerHTML = programs.map((p, idx) => {
             const days = (p.days||[]).map(d => daysMap[d-1]).join(', ');
-            return `<div class="program-item">
-                <div class="program-info" style="flex:1;">
-                    <div class="program-name">${esc(p.nome || 'Programma')}</div>
-                    <div class="program-details">
-                        <span>⏰ ${p.orario||'--:--'}</span>
-                        <span>⏱️ ${p.durata||120}s</span>
-                        <span>🧪 ${p.percentuale||1.5}%</span>
-                        <span>📅 ${days||'—'}</span>
-                        ${p.lavaggio?'<span>🚿 Lavaggio</span>':''}
+            return `
+                <div class="program-item">
+                    <div class="program-info">
+                        <div class="program-name">${esc(p.nome || 'Programma')}</div>
+                        <div class="program-details">
+                            <span>⏰ ${p.orario || '--:--'}</span>
+                            <span>⏱️ ${p.durata || 120}s</span>
+                            <span>🧪 ${p.percentuale || 1.5}%</span>
+                            <span>📅 ${days || '—'}</span>
+                            ${p.lavaggio ? '<span>🚿 Lavaggio</span>' : ''}
+                        </div>
+                    </div>
+                    <div class="program-actions">
+                        <span class="program-badge ${p.attivo ? 'active' : ''}">${p.attivo ? '✅ ON' : '⭕ OFF'}</span>
+                        <button class="btn-sm btn-edit" onclick="editProgram(${idx})">✎</button>
+                        <button class="btn-sm btn-delete" onclick="deleteProgram(${idx})">🗑</button>
                     </div>
                 </div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span class="program-badge ${p.attivo?'active':''}">${p.attivo?'✅ ON':'⭕ OFF'}</span>
-                    <button onclick="editProgram(${i})" style="background:rgba(56,189,248,.15); border:1px solid rgba(56,189,248,.3); color:#38bdf8; padding:4px 10px; border-radius:8px; cursor:pointer; font-size:12px;">✎</button>
-                    <button onclick="toggleProgram(${i})" style="background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); color:#fff; padding:4px 10px; border-radius:8px; cursor:pointer; font-size:12px;">${p.attivo?'Disattiva':'Attiva'}</button>
-                    <button onclick="deleteProgram(${i})" style="background:rgba(255,82,82,.2); border:1px solid rgba(255,82,82,.3); color:#ff5252; padding:4px 10px; border-radius:8px; cursor:pointer; font-size:12px;">🗑</button>
-                </div>
-            </div>`;
+            `;
         }).join('');
     }
 
-    function toggleProgram(i) {
-        programs[i].attivo = !programs[i].attivo;
-        renderPrograms();
-    }
-
-    function deleteProgram(i) {
-        if (!confirm(`Eliminare il programma "${programs[i].nome}"?`)) return;
-        programs.splice(i, 1);
+    function deleteProgram(idx) {
+        if (!confirm(`Eliminare il programma "${programs[idx].nome}"?`)) return;
+        programs.splice(idx, 1);
         renderPrograms();
     }
 
     async function savePrograms(sendToDevice) {
-        showLoading(true);
+        showToast('⏳ Salvataggio in corso...');
         try {
-            const data = await apiPut(`/machines/${machineId}/programs`, { programs, sendToDevice });
+            const data = await apiPut(`/machines/${currentMachineId}/programs`, { programs, sendToDevice });
             if (data.success) {
                 showToast('✅ ' + data.message);
                 if (sendToDevice && data.command_id) {
-                    showCmdStatus('sent', `📡 <strong>Aggiorna programmi</strong> in attesa di conferma dall'ESP32...`);
-                    startCmdPoll(data.command_id);
+                    showCmdStatus('sent', '📡 Invio programmi all\'ESP32...');
+                    startCmdPoll(data.command_id, 'update_programs');
                 }
             } else {
-                showToast('❌ ' + (data.message || 'Errore salvataggio'), 'error');
+                showToast('❌ ' + (data.message || 'Errore salvataggio'));
             }
         } catch(e) {
-            showToast('❌ Errore di rete', 'error');
+            showToast('❌ Errore di rete');
         }
-        showLoading(false);
     }
 
-    // =============================================
-    // UI UTILS
-    // =============================================
-    function showToast(message, type = 'success') {
-        const t = document.getElementById('toast');
-        t.textContent = message;
-        t.style.borderLeftColor = type === 'error' ? '#ff5252' : '#00e676';
-        t.classList.add('show');
-        setTimeout(() => t.classList.remove('show'), 3500);
-    }
-
-    function showLoading(show) {
-        document.getElementById('loading').style.display = show ? 'flex' : 'none';
-    }
-
-    function esc(text) {
-        const d = document.createElement('div');
-        d.textContent = text || '';
-        return d.innerHTML;
-    }
-
-
-    // =============================================
-    // PAUSA GLOBALE
-    // =============================================
+    // ==================== PAUSA ====================
     async function loadPause() {
         try {
-            const data = await apiGet(`/machines/${machineId}/pause`);
+            const data = await apiGet(`/machines/${currentMachineId}/pause`);
             if (data.success) {
                 const paused = data.paused || false;
                 const until = data.pause_until || null;
@@ -841,14 +778,14 @@
                     dateBox.style.display = 'block';
                     if (until) {
                         document.getElementById('pauseUntil').value = until;
-                        statusEl.innerHTML = `<span style="color:#f59e0b;">⏸️ In pausa fino al ${formatDate(until)}</span>`;
+                        statusEl.innerHTML = `<span style="color:var(--amber);">⏸️ In pausa fino al ${new Date(until).toLocaleDateString('it-IT')}</span>`;
                     } else {
                         document.getElementById('pauseUntil').value = '';
-                        statusEl.innerHTML = '<span style="color:#f59e0b;">⏸️ In pausa indefinita</span>';
+                        statusEl.innerHTML = '<span style="color:var(--amber);">⏸️ In pausa indefinita</span>';
                     }
                 } else {
                     dateBox.style.display = 'none';
-                    statusEl.innerHTML = '<span style="color:#00e676;">▶️ Programmi attivi</span>';
+                    statusEl.innerHTML = '<span style="color:var(--green);">▶️ Programmi attivi</span>';
                 }
             }
         } catch(e) {}
@@ -856,86 +793,44 @@
 
     function togglePause() {
         const checked = document.getElementById('pauseToggle').checked;
-        const dateBox = document.getElementById('pauseDateBox');
-        if (checked) {
-            dateBox.style.display = 'block';
-            document.getElementById('pauseStatus').innerHTML = '<span style="color:#f59e0b;">⏸️ Seleziona data di fine pausa o lascia vuoto</span>';
-        } else {
-            dateBox.style.display = 'none';
-            savePause();
-        }
+        document.getElementById('pauseDateBox').style.display = checked ? 'block' : 'none';
+        if (!checked) savePause();
     }
 
     async function savePause() {
         const paused = document.getElementById('pauseToggle').checked;
         const until = document.getElementById('pauseUntil').value || null;
         try {
-            const data = await apiPut(`/machines/${machineId}/pause`, { paused, pause_until: until });
+            const data = await apiPut(`/machines/${currentMachineId}/pause`, { paused, pause_until: until });
             if (data.success) {
                 showToast(paused ? '⏸️ Pausa attivata' : '▶️ Programmi ripresi');
                 loadPause();
             } else {
-                showToast('❌ ' + (data.message || 'Errore'), 'error');
+                showToast('❌ ' + (data.message || 'Errore'));
             }
-        } catch(e) {
-            showToast('❌ Errore di rete', 'error');
-        }
+        } catch(e) { showToast('❌ Errore di rete'); }
     }
 
-    function formatDate(isoStr) {
-        if (!isoStr) return '';
-        const d = new Date(isoStr);
-        return d.toLocaleDateString('it-IT');
-    }
-
-    // =============================================
-    // PROGRAMMI CRUD (Remote)
-    // =============================================
+    // ==================== PROGRAMMI MODAL ====================
     function showAddProgramModal() {
         const modalHtml = `
-        <div id="programModal" class="modal-bg" style="display:flex;">
-            <div class="modal-box" style="max-width:500px; text-align:left; background:rgba(30,30,46,.95); border:1px solid rgba(255,255,255,.1); border-radius:24px; padding:32px;">
-                <button class="modal-close-btn" onclick="closeProgramModal()" style="position:absolute; top:16px; right:18px; background:none; border:none; color:rgba(255,255,255,.5); font-size:22px; cursor:pointer;">×</button>
-                <h3 style="font-size:18px; font-weight:700; margin-bottom:20px;">➕ Nuovo programma</h3>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Nome programma</label>
-                    <input type="text" id="progName" placeholder="es. Serale" style="width:100%; padding:12px 14px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:10px; color:#fff; font-size:14px;">
-                </div>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Giorni</label>
-                    <div id="progDays" style="display:flex; gap:8px; flex-wrap:wrap;">
-                        ${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map((d,i) => `<button type="button" data-day="${i+1}" class="day-btn" onclick="toggleDay(this)" style="background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); color:#fff; padding:6px 12px; border-radius:20px; cursor:pointer; font-size:12px; transition:all .2s;">${d}</button>`).join('')}
-                    </div>
-                </div>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Orario</label>
-                    <input type="time" id="progTime" value="08:00" style="width:100%; padding:12px 14px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:10px; color:#fff; font-size:14px;">
-                </div>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Durata (secondi): <span id="durataVal">120</span></label>
-                    <input type="range" id="progDurata" min="10" max="1800" step="10" value="120" oninput="document.getElementById('durataVal').innerText=this.value" style="width:100%;">
-                </div>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Percentuale insetticida (%): <span id="percVal">1.5</span></label>
-                    <input type="range" id="progPerc" min="0.1" max="5.0" step="0.1" value="1.5" oninput="document.getElementById('percVal').innerText=this.value" style="width:100%;">
-                </div>
-                <div style="margin-bottom:24px;">
-                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                        <input type="checkbox" id="progLavaggio" style="width:18px; height:18px;">
-                        <span>Ciclo di lavaggio (solo acqua)</span>
-                    </label>
-                </div>
-                <div style="display:flex; gap:10px;">
-                    <button class="btn-cmd btn-start" style="flex:1;" onclick="addProgramToArray()">Aggiungi</button>
-                    <button class="btn-cmd btn-stop" style="flex:1; background:linear-gradient(135deg,#64748b,#334155);" onclick="closeProgramModal()">Annulla</button>
-                </div>
+        <div id="programModal" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); display:flex; align-items:center; justify-content:center; z-index:10000;">
+            <div style="background:var(--card); border:1px solid var(--border); border-radius:32px; max-width:500px; width:90%; padding:28px; position:relative;">
+                <button onclick="closeProgramModal()" style="position:absolute; top:16px; right:18px; background:none; border:none; color:var(--text-secondary); font-size:24px; cursor:pointer;">×</button>
+                <h3 style="font-size:18px; font-weight:800; margin-bottom:20px;">➕ Nuovo programma</h3>
+                <div style="margin-bottom:14px;"><label>Nome programma</label><input type="text" id="progName" placeholder="es. Serale" style="width:100%; padding:10px; background:var(--surface); border:1px solid var(--border); border-radius:12px; color:var(--text);"></div>
+                <div style="margin-bottom:14px;"><label>Giorni</label><div id="progDays" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map((d,i) => `<button type="button" data-day="${i+1}" class="day-btn" style="background:var(--surface); border:1px solid var(--border); padding:6px 12px; border-radius:40px; cursor:pointer;">${d}</button>`).join('')}</div></div>
+                <div style="margin-bottom:14px;"><label>Orario</label><input type="time" id="progTime" value="08:00" style="width:100%; padding:10px; background:var(--surface); border:1px solid var(--border); border-radius:12px;"></div>
+                <div style="margin-bottom:14px;"><label>Durata (secondi): <span id="durataVal">120</span></label><input type="range" id="progDurata" min="10" max="1800" step="10" value="120" oninput="document.getElementById('durataVal').innerText=this.value" style="width:100%;"></div>
+                <div style="margin-bottom:14px;"><label>Percentuale insetticida (%): <span id="percVal">1.5</span></label><input type="range" id="progPerc" min="0.1" max="5.0" step="0.1" value="1.5" oninput="document.getElementById('percVal').innerText=this.value" style="width:100%;"></div>
+                <div style="margin-bottom:24px;"><label><input type="checkbox" id="progLavaggio"> Ciclo di lavaggio (solo acqua)</label></div>
+                <div style="display:flex; gap:12px;"><button class="btn-add" onclick="addProgramToArray()" style="flex:1;">Aggiungi</button><button class="btn-sm btn-delete" onclick="closeProgramModal()" style="flex:1;">Annulla</button></div>
             </div>
         </div>
-        <style>
-            .day-btn.active { background: rgba(0,230,118,.25) !important; border-color: #00e676 !important; color: #00e676 !important; }
-        </style>`;
+        <style>.day-btn.active { background: var(--green-dim) !important; border-color: var(--green) !important; color: var(--green) !important; }</style>`;
         if (document.getElementById('programModal')) document.getElementById('programModal').remove();
         document.body.insertAdjacentHTML('beforeend', modalHtml);
+        document.querySelectorAll('.day-btn').forEach(btn => btn.onclick = () => btn.classList.toggle('active'));
     }
 
     function closeProgramModal() {
@@ -943,112 +838,76 @@
         if (modal) modal.remove();
     }
 
-    function toggleDay(btn) {
-        btn.classList.toggle('active');
-    }
-
     function addProgramToArray() {
         const name = document.getElementById('progName').value.trim();
-        if (!name) { showToast('❌ Inserisci un nome', 'error'); return; }
+        if (!name) { showToast('❌ Inserisci un nome'); return; }
         const days = Array.from(document.querySelectorAll('#progDays .day-btn.active')).map(btn => parseInt(btn.dataset.day));
-        if (days.length === 0) { showToast('❌ Seleziona almeno un giorno', 'error'); return; }
+        if (!days.length) { showToast('❌ Seleziona almeno un giorno'); return; }
         const time = document.getElementById('progTime').value;
         const durata = parseInt(document.getElementById('progDurata').value);
         const percentuale = parseFloat(document.getElementById('progPerc').value);
         const lavaggio = document.getElementById('progLavaggio').checked;
-        const newProgram = {
-            id: Date.now(),
-            nome: name,
-            attivo: true,
-            days: days,
-            orario: time,
-            durata: durata,
-            percentuale: percentuale,
-            lavaggio: lavaggio
-        };
-        programs.push(newProgram);
+        programs.push({ id: Date.now(), nome: name, attivo: true, days, orario: time, durata, percentuale, lavaggio });
         renderPrograms();
         closeProgramModal();
-        showToast('✅ Programma aggiunto — salva per confermare');
+        showToast('✅ Programma aggiunto – salva per inviare');
     }
 
-    function editProgram(index) {
-        const prog = programs[index];
-        if (!prog) return;
+    function editProgram(idx) {
+        const p = programs[idx];
         const modalHtml = `
-        <div id="programModal" class="modal-bg" style="display:flex;">
-            <div class="modal-box" style="max-width:500px; text-align:left; background:rgba(30,30,46,.95); border:1px solid rgba(255,255,255,.1); border-radius:24px; padding:32px;">
-                <button class="modal-close-btn" onclick="closeProgramModal()" style="position:absolute; top:16px; right:18px; background:none; border:none; color:rgba(255,255,255,.5); font-size:22px; cursor:pointer;">×</button>
-                <h3 style="font-size:18px; font-weight:700; margin-bottom:20px;">✏️ Modifica programma</h3>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Nome programma</label>
-                    <input type="text" id="progName" value="${esc(prog.nome)}" style="width:100%; padding:12px 14px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:10px; color:#fff; font-size:14px;">
-                </div>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Giorni</label>
-                    <div id="progDays" style="display:flex; gap:8px; flex-wrap:wrap;">
-                        ${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map((d,i) => `<button type="button" data-day="${i+1}" class="day-btn ${prog.days.includes(i+1)?'active':''}" onclick="toggleDay(this)" style="background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); color:#fff; padding:6px 12px; border-radius:20px; cursor:pointer; font-size:12px; transition:all .2s;">${d}</button>`).join('')}
-                    </div>
-                </div>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Orario</label>
-                    <input type="time" id="progTime" value="${prog.orario}" style="width:100%; padding:12px 14px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:10px; color:#fff; font-size:14px;">
-                </div>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Durata (secondi): <span id="durataVal">${prog.durata}</span></label>
-                    <input type="range" id="progDurata" min="10" max="1800" step="10" value="${prog.durata}" oninput="document.getElementById('durataVal').innerText=this.value" style="width:100%;">
-                </div>
-                <div style="margin-bottom:14px;">
-                    <label style="font-size:12px; opacity:.6; display:block; margin-bottom:6px;">Percentuale insetticida (%): <span id="percVal">${prog.percentuale}</span></label>
-                    <input type="range" id="progPerc" min="0.1" max="5.0" step="0.1" value="${prog.percentuale}" oninput="document.getElementById('percVal').innerText=this.value" style="width:100%;">
-                </div>
-                <div style="margin-bottom:24px;">
-                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                        <input type="checkbox" id="progLavaggio" ${prog.lavaggio?'checked':''} style="width:18px; height:18px;">
-                        <span>Ciclo di lavaggio (solo acqua)</span>
-                    </label>
-                </div>
-                <div style="display:flex; gap:10px;">
-                    <button class="btn-cmd btn-start" style="flex:1;" onclick="updateProgramInArray(${index})">Salva modifiche</button>
-                    <button class="btn-cmd btn-stop" style="flex:1; background:linear-gradient(135deg,#64748b,#334155);" onclick="closeProgramModal()">Annulla</button>
-                </div>
+        <div id="programModal" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); display:flex; align-items:center; justify-content:center; z-index:10000;">
+            <div style="background:var(--card); border:1px solid var(--border); border-radius:32px; max-width:500px; width:90%; padding:28px; position:relative;">
+                <button onclick="closeProgramModal()" style="position:absolute; top:16px; right:18px; background:none; border:none; color:var(--text-secondary); font-size:24px; cursor:pointer;">×</button>
+                <h3 style="font-size:18px; font-weight:800; margin-bottom:20px;">✏️ Modifica programma</h3>
+                <div style="margin-bottom:14px;"><label>Nome programma</label><input type="text" id="progName" value="${esc(p.nome)}" style="width:100%; padding:10px; background:var(--surface); border:1px solid var(--border); border-radius:12px;"></div>
+                <div style="margin-bottom:14px;"><label>Giorni</label><div id="progDays" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map((d,i) => `<button type="button" data-day="${i+1}" class="day-btn ${p.days.includes(i+1) ? 'active' : ''}" style="background:var(--surface); border:1px solid var(--border); padding:6px 12px; border-radius:40px; cursor:pointer;">${d}</button>`).join('')}</div></div>
+                <div style="margin-bottom:14px;"><label>Orario</label><input type="time" id="progTime" value="${p.orario}" style="width:100%; padding:10px; background:var(--surface); border:1px solid var(--border); border-radius:12px;"></div>
+                <div style="margin-bottom:14px;"><label>Durata (secondi): <span id="durataVal">${p.durata}</span></label><input type="range" id="progDurata" min="10" max="1800" step="10" value="${p.durata}" oninput="document.getElementById('durataVal').innerText=this.value" style="width:100%;"></div>
+                <div style="margin-bottom:14px;"><label>Percentuale insetticida (%): <span id="percVal">${p.percentuale}</span></label><input type="range" id="progPerc" min="0.1" max="5.0" step="0.1" value="${p.percentuale}" oninput="document.getElementById('percVal').innerText=this.value" style="width:100%;"></div>
+                <div style="margin-bottom:24px;"><label><input type="checkbox" id="progLavaggio" ${p.lavaggio ? 'checked' : ''}> Ciclo di lavaggio</label></div>
+                <div style="display:flex; gap:12px;"><button class="btn-add" onclick="updateProgram(${idx})" style="flex:1;">Salva modifiche</button><button class="btn-sm btn-delete" onclick="closeProgramModal()" style="flex:1;">Annulla</button></div>
             </div>
-        </div>
-        <style>
-            .day-btn.active { background: rgba(0,230,118,.25) !important; border-color: #00e676 !important; color: #00e676 !important; }
-        </style>`;
+        </div>`;
         if (document.getElementById('programModal')) document.getElementById('programModal').remove();
         document.body.insertAdjacentHTML('beforeend', modalHtml);
-        window.currentEditIndex = index;
+        document.querySelectorAll('.day-btn').forEach(btn => btn.onclick = () => btn.classList.toggle('active'));
+        window.currentEditIdx = idx;
     }
 
-    function updateProgramInArray(index) {
+    function updateProgram(idx) {
         const name = document.getElementById('progName').value.trim();
-        if (!name) { showToast('❌ Inserisci un nome', 'error'); return; }
+        if (!name) { showToast('❌ Inserisci un nome'); return; }
         const days = Array.from(document.querySelectorAll('#progDays .day-btn.active')).map(btn => parseInt(btn.dataset.day));
-        if (days.length === 0) { showToast('❌ Seleziona almeno un giorno', 'error'); return; }
+        if (!days.length) { showToast('❌ Seleziona almeno un giorno'); return; }
         const time = document.getElementById('progTime').value;
         const durata = parseInt(document.getElementById('progDurata').value);
         const percentuale = parseFloat(document.getElementById('progPerc').value);
         const lavaggio = document.getElementById('progLavaggio').checked;
-        programs[index] = {
-            ...programs[index],
-            nome: name,
-            days: days,
-            orario: time,
-            durata: durata,
-            percentuale: percentuale,
-            lavaggio: lavaggio
-        };
+        programs[idx] = { ...programs[idx], nome: name, days, orario: time, durata, percentuale, lavaggio };
         renderPrograms();
         closeProgramModal();
-        showToast('✅ Programma modificato — salva per confermare');
+        showToast('✅ Programma modificato – salva per inviare');
     }
 
-    // =============================================
-    // START
-    // =============================================
-    init();
+    // ==================== UTILS ====================
+    function esc(text) { if (!text) return ''; const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
+    function showToast(msg) {
+        let t = document.getElementById('toast');
+        if (!t) { t = document.createElement('div'); t.id = 'toast'; t.className = 'toast'; document.body.appendChild(t); }
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3500);
+    }
+    function refreshAll() { if (currentMachineId) loadMachineData(); else loadMachines(); }
+
+    // Auto refresh ogni 30s
+    setInterval(() => { if (currentMachineId) loadMachineData(); }, 30000);
+
+    // Avvio
+    if (token && currentUser && currentUser.role === 'client') { bootApp(); }
+    else if (token && currentUser) { window.location.href = '/dashboard.html'; }
+    else { document.getElementById('loginScreen').style.display = 'flex'; }
 </script>
 </body>
 </html>
