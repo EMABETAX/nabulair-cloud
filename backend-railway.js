@@ -129,7 +129,7 @@ async function initDatabase() {
                 resolved_at TIMESTAMP NULL
             )
         `);
-        
+
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS water_ok BOOLEAN DEFAULT NULL`).catch(() => {});
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS insecticide_ok BOOLEAN DEFAULT NULL`).catch(() => {});
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS flow FLOAT DEFAULT 0`).catch(() => {});
@@ -330,11 +330,11 @@ app.post('/api/telegram/webhook', async (req, res) => {
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    
+
     if (!token) {
         return res.status(401).json({ success: false, message: 'Token mancante' });
     }
-    
+
     jwt.verify(token, JWT_SECRET, (err, user) => {
         if (err) {
             return res.status(403).json({ success: false, message: 'Token non valido' });
@@ -417,43 +417,43 @@ app.post('/api/setup', async (req, res) => {
 
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
-    
+
     if (!username || !password) {
         return res.status(400).json({ success: false, message: 'Credenziali richieste' });
     }
-    
+
     try {
         const result = await queryWithRetry(
             'SELECT * FROM users WHERE username = $1',
             [username.toLowerCase()]
         );
-        
+
         const user = result.rows[0];
-        
+
         if (!user) {
             await new Promise(resolve => setTimeout(resolve, 100));
             return res.status(401).json({ success: false, message: 'Credenziali non valide' });
         }
-        
+
         const passwordValid = await bcrypt.compare(password, user.password_hash);
-        
+
         if (!passwordValid) {
             await new Promise(resolve => setTimeout(resolve, 100));
             return res.status(401).json({ success: false, message: 'Credenziali non valide' });
         }
-        
+
         const token = jwt.sign(
             { id: user.id, username: user.username, role: user.role, client_id: user.client_id },
             JWT_SECRET,
             { expiresIn: '24h' }
         );
-        
+
         res.json({
             success: true,
             token,
             user: { id: user.id, username: user.username, role: user.role, client_id: user.client_id }
         });
-        
+
     } catch (error) {
         console.error('Errore login:', error.message);
         res.status(500).json({ success: false, message: 'Errore server' });
@@ -492,7 +492,7 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
         `;
         let whereClause = '';
         let params = [];
-        
+
         if (req.user.role === 'installer') {
             whereClause = 'WHERE m.installer_id = $1';
             params.push(req.user.id);
@@ -500,15 +500,15 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
             whereClause = 'WHERE m.client_id = $1';
             params.push(req.user.client_id);
         }
-        
+
         const orderBy = `ORDER BY 
             CASE WHEN m.last_seen > NOW() - INTERVAL '5 minutes' THEN 1 ELSE 0 END DESC, 
             m.last_seen DESC NULLS LAST`;
-        
+
         const result = await queryWithRetry(`${baseQuery} ${whereClause} ${orderBy}`, params);
-        
+
         res.json({ success: true, machines: result.rows });
-        
+
     } catch (error) {
         console.error('Errore GET machines:', error.message);
         res.status(500).json({ success: false, message: 'Errore caricamento' });
@@ -518,16 +518,16 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
 // ← FIX FLUSSO: endpoint pre-registrazione macchina (Admin vende HW all'installatore)
 app.post('/api/machines/preregister', authenticateToken, requireAdmin, async (req, res) => {
     const { mac_address, installer_id, machine_name } = req.body;
-    
+
     if (!mac_address) {
         return res.status(400).json({ success: false, message: 'MAC address obbligatorio' });
     }
-    
+
     const macRegex = /^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$/i;
     if (!macRegex.test(mac_address)) {
         return res.status(400).json({ success: false, message: 'MAC address non valido' });
     }
-    
+
     try {
         if (installer_id) {
             const instCheck = await queryWithRetry(
@@ -538,7 +538,7 @@ app.post('/api/machines/preregister', authenticateToken, requireAdmin, async (re
                 return res.status(400).json({ success: false, message: 'Installatore non trovato' });
             }
         }
-        
+
         const result = await queryWithRetry(
             `INSERT INTO machines (mac_address, machine_name, installer_id, status, last_seen)
              VALUES ($1, $2, $3, 'pending', NULL)
@@ -548,10 +548,10 @@ app.post('/api/machines/preregister', authenticateToken, requireAdmin, async (re
              RETURNING *`,
             [mac_address.toUpperCase(), machine_name || null, installer_id || null]
         );
-        
+
         console.log(`📦 Macchina pre-registrata: ${mac_address} → installer ${installer_id}`);
         res.json({ success: true, machine: result.rows[0] });
-        
+
     } catch (error) {
         console.error('Errore pre-registrazione:', error.message);
         res.status(500).json({ success: false, message: error.message });
@@ -561,12 +561,12 @@ app.post('/api/machines/preregister', authenticateToken, requireAdmin, async (re
 app.put('/api/machines/:id', authenticateToken, requireAdmin, async (req, res) => {
     const { id } = req.params;
     const { machine_name, mac_address } = req.body;
-    
+
     try {
         const fields = [];
         const values = [];
         let idx = 1;
-        
+
         if (machine_name !== undefined) { fields.push(`machine_name = $${idx++}`); values.push(machine_name); }
         if (mac_address !== undefined) { 
             const macRegex = /^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$/i;
@@ -576,11 +576,11 @@ app.put('/api/machines/:id', authenticateToken, requireAdmin, async (req, res) =
             fields.push(`mac_address = $${idx++}`); 
             values.push(mac_address.toUpperCase()); 
         }
-        
+
         if (fields.length === 0) {
             return res.status(400).json({ success: false, message: 'Nessun campo da aggiornare' });
         }
-        
+
         values.push(id);
         await queryWithRetry(`UPDATE machines SET ${fields.join(', ')} WHERE id = $${idx}`, values);
         res.json({ success: true, message: 'Macchina aggiornata' });
@@ -591,7 +591,7 @@ app.put('/api/machines/:id', authenticateToken, requireAdmin, async (req, res) =
 
 app.get('/api/machine/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
-    
+
     try {
         const result = await queryWithRetry(`
             SELECT 
@@ -622,13 +622,13 @@ app.get('/api/machine/:id', authenticateToken, async (req, res) => {
             LEFT JOIN clients c ON m.client_id = c.id
             WHERE m.id = $1
         `, [id]);
-        
+
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Macchina non trovata' });
         }
-        
+
         res.json({ success: true, machine: result.rows[0] });
-        
+
     } catch (error) {
         console.error('Errore GET machine:', error.message);
         res.status(500).json({ success: false, message: 'Errore caricamento' });
@@ -641,7 +641,7 @@ app.delete('/api/machines/:id', authenticateToken, requireAdmin, async (req, res
         // Prima cancella gli allarmi e comandi associati (FK CASCADE li gestisce, ma per sicurezza)
         await queryWithRetry('DELETE FROM alerts WHERE machine_id = $1', [id]);
         await queryWithRetry('DELETE FROM commands WHERE machine_id = $1', [id]);
-        
+
         const result = await queryWithRetry('DELETE FROM machines WHERE id = $1 RETURNING id', [id]);
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Macchina non trovata' });
@@ -665,7 +665,7 @@ app.get('/api/alerts', authenticateToken, async (req, res) => {
         `;
         let params = [];
         let paramIndex = 1;
-        
+
         if (req.user.role === 'installer') {
             baseQuery += ` AND m.installer_id = $${paramIndex++}`;
             params.push(req.user.id);
@@ -673,12 +673,12 @@ app.get('/api/alerts', authenticateToken, async (req, res) => {
             baseQuery += ` AND m.client_id = $${paramIndex++}`;
             params.push(req.user.client_id);
         }
-        
+
         baseQuery += ` ORDER BY a.created_at DESC`;
-        
+
         const result = await queryWithRetry(baseQuery, params);
         res.json({ success: true, alerts: result.rows });
-        
+
     } catch (error) {
         console.error('Errore GET alerts:', error.message);
         res.status(500).json({ success: false, message: 'Errore caricamento allarmi' });
@@ -687,7 +687,7 @@ app.get('/api/alerts', authenticateToken, async (req, res) => {
 
 app.post('/api/alerts/:id/resolve', authenticateToken, async (req, res) => {
     const { id } = req.params;
-    
+
     try {
         await queryWithRetry(
             `UPDATE alerts SET status = 'resolved', resolved_at = NOW()
@@ -709,7 +709,7 @@ app.get('/api/clients', authenticateToken, async (req, res) => {
         `;
         let params = [];
         let whereConditions = [];
-        
+
         if (req.user.role === 'admin') {
             // nessun filtro
         } else if (req.user.role === 'installer') {
@@ -721,12 +721,12 @@ app.get('/api/clients', authenticateToken, async (req, res) => {
         } else {
             return res.status(403).json({ success: false, message: 'Accesso negato' });
         }
-        
+
         if (whereConditions.length > 0) {
             query += ' WHERE ' + whereConditions.join(' AND ');
         }
         query += ' ORDER BY c.name';
-        
+
         const result = await queryWithRetry(query, params);
         res.json({ success: true, clients: result.rows });
     } catch (error) {
@@ -825,7 +825,7 @@ app.get('/api/clients/:id', authenticateToken, async (req, res) => {
 app.put('/api/clients/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { telegram_chat_id, name, email, phone, address, password } = req.body;
-    
+
     try {
         if (req.user.role === 'installer') {
             const checkResult = await queryWithRetry(
@@ -838,7 +838,7 @@ app.put('/api/clients/:id', authenticateToken, async (req, res) => {
         } else if (req.user.role !== 'admin') {
             return res.status(403).json({ success: false, message: 'Accesso negato' });
         }
-        
+
         const fields = [];
         const values = [];
         let idx = 1;
@@ -906,7 +906,7 @@ app.delete('/api/clients/:id', authenticateToken, requireAdmin, async (req, res)
                 message: 'Impossibile eliminare: cliente associato a uno o più impianti' 
             });
         }
-        
+
         // Elimina l'utente client associato
         await queryWithRetry('DELETE FROM users WHERE client_id = $1 AND role = $2', [id, 'client']);
         // Elimina il cliente
@@ -951,19 +951,19 @@ app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
 app.delete('/api/users/:id', authenticateToken, requireAdmin, async (req, res) => {
     const { id } = req.params;
     const userId = parseInt(id);
-    
+
     try {
         // Non permettere di cancellare se stesso
         if (userId === req.user.id) {
             return res.status(400).json({ success: false, message: 'Non puoi eliminare il tuo account' });
         }
-        
+
         // Verifica che non sia un admin (opzionale: puoi bloccare cancellazione admin)
         const userCheck = await queryWithRetry('SELECT role FROM users WHERE id = $1', [userId]);
         if (userCheck.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Utente non trovato' });
         }
-        
+
         // Se è un installatore, verifica che non abbia macchine assegnate
         if (userCheck.rows[0].role === 'installer') {
             const machines = await queryWithRetry('SELECT id FROM machines WHERE installer_id = $1 LIMIT 1', [userId]);
@@ -974,7 +974,7 @@ app.delete('/api/users/:id', authenticateToken, requireAdmin, async (req, res) =
                 });
             }
         }
-        
+
         await queryWithRetry('DELETE FROM users WHERE id = $1', [userId]);
         console.log(`🗑 Utente ${userId} eliminato da admin`);
         res.json({ success: true, message: 'Utente eliminato' });
@@ -987,26 +987,26 @@ app.delete('/api/users/:id', authenticateToken, requireAdmin, async (req, res) =
 app.put('/api/users/:id', authenticateToken, requireAdmin, async (req, res) => {
     const { id } = req.params;
     const { username, password, role, client_id } = req.body;
-    
+
     try {
         const fields = [];
         const values = [];
         let idx = 1;
-        
+
         if (username !== undefined) { fields.push(`username = $${idx++}`); values.push(username.toLowerCase()); }
         if (role !== undefined)     { fields.push(`role = $${idx++}`);     values.push(role); }
         if (client_id !== undefined){ fields.push(`client_id = $${idx++}`);values.push(client_id || null); }
-        
+
         if (password) {
             const hash = await bcrypt.hash(password, 10);
             fields.push(`password_hash = $${idx++}`);
             values.push(hash);
         }
-        
+
         if (fields.length === 0) {
             return res.status(400).json({ success: false, message: 'Nessun campo da aggiornare' });
         }
-        
+
         values.push(id);
         await queryWithRetry(`UPDATE users SET ${fields.join(', ')} WHERE id = $${idx}`, values);
         res.json({ success: true, message: 'Utente aggiornato' });
@@ -1018,17 +1018,17 @@ app.put('/api/users/:id', authenticateToken, requireAdmin, async (req, res) => {
 app.put('/api/machines/:id/assign', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { client_id, installer_id } = req.body;
-    
+
     try {
         const machineCheck = await queryWithRetry(
             'SELECT installer_id FROM machines WHERE id = $1',
             [id]
         );
-        
+
         if (machineCheck.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Macchina non trovata' });
         }
-        
+
         if (req.user.role === 'installer') {
             if (machineCheck.rows[0].installer_id !== req.user.id) {
                 return res.status(403).json({ success: false, message: 'Puoi assegnare solo i tuoi impianti' });
@@ -1045,7 +1045,7 @@ app.put('/api/machines/:id/assign', authenticateToken, async (req, res) => {
         } else {
             return res.status(403).json({ success: false, message: 'Accesso negato' });
         }
-        
+
         res.json({ success: true, message: 'Macchina aggiornata' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -1062,7 +1062,7 @@ app.post('/api/machines/:id/qr', authenticateToken, async (req, res) => {
     try {
         let machineQuery = 'SELECT id, machine_name, mac_address, installer_id FROM machines WHERE id = $1';
         let params = [id];
-        
+
         const result = await queryWithRetry(machineQuery, params);
 
         if (result.rows.length === 0) {
@@ -1105,16 +1105,16 @@ app.post('/api/machines/:id/qr', authenticateToken, async (req, res) => {
 
 app.post('/api/register', async (req, res) => {
     const { mac_address, ip, version, machine_name } = req.body;
-    
+
     if (!mac_address || !ip) {
         return res.status(400).json({ success: false, message: 'Dati mancanti' });
     }
-    
+
     const macRegex = /^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$/i;
     if (!macRegex.test(mac_address)) {
         return res.status(400).json({ success: false, message: 'MAC address non valido' });
     }
-    
+
     try {
         await queryWithRetry(
             `INSERT INTO machines (mac_address, sta_ip, firmware_version, machine_name, status, last_seen)
@@ -1127,10 +1127,10 @@ app.post('/api/register', async (req, res) => {
              status = 'online'`,
             [mac_address.toUpperCase(), ip, version || '1.0', machine_name || 'NabulAir-Generic']
         );
-        
+
         console.log(`📡 ESP32 registrato con successo: ${mac_address}`);
         res.json({ success: true, message: 'Registrato con successo' });
-        
+
     } catch (error) {
         console.error('ERRORE CRITICO DATABASE:', error.message);
         res.status(500).json({ success: false, error: error.message });
@@ -1139,14 +1139,14 @@ app.post('/api/register', async (req, res) => {
 
 app.post('/api/ping', async (req, res) => {
     const { mac_address, ip, water_ok, insecticide_ok, flow, status } = req.body;
-    
+
     if (!mac_address) {
         return res.status(400).json({ success: false });
     }
-    
+
     // Normalizza MAC in uppercase per coerenza con la pre-registrazione
     const normalizedMac = mac_address.toUpperCase();
-    
+
     try {
         // Aggiorna anche i timestamp di sync se forniti
         await queryWithRetry(
@@ -1164,15 +1164,15 @@ app.post('/api/ping', async (req, res) => {
              flow !== undefined ? flow : null,
              normalizedMac]
         );
-        
+
         const machineResult = await queryWithRetry(
             'SELECT id, machine_name, client_id, paused, pause_until, last_ntp_sync, last_prog_sync FROM machines WHERE mac_address = $1',
             [normalizedMac]
         );
-        
+
         const machine = machineResult.rows[0];
         const machine_id = machine?.id;
-        
+
         if (machine_id) {
             let clientInfo = null;
             if (machine.client_id) {
@@ -1182,7 +1182,7 @@ app.post('/api/ping', async (req, res) => {
                 );
                 clientInfo = clientResult.rows[0];
             }
-            
+
             if (insecticide_ok === false) {
                 const existing = await queryWithRetry(
                     `SELECT id FROM alerts WHERE machine_id = $1 AND type = 'insecticide' AND status = 'active'`,
@@ -1195,7 +1195,7 @@ app.post('/api/ping', async (req, res) => {
                         [machine_id]
                     );
                     console.log(`🚨 Allarme: Insetticida esaurito su macchina ${machine_id}`);
-                    
+
                     if (clientInfo?.telegram_chat_id) {
                         await sendTelegramMessage(clientInfo.telegram_chat_id,
                             `🚨 <b>Allarme NabulAir</b>\n\n` +
@@ -1213,7 +1213,7 @@ app.post('/api/ping', async (req, res) => {
                     [machine_id]
                 );
             }
-            
+
             if (water_ok === false) {
                 const existing = await queryWithRetry(
                     `SELECT id FROM alerts WHERE machine_id = $1 AND type = 'water' AND status = 'active'`,
@@ -1226,7 +1226,7 @@ app.post('/api/ping', async (req, res) => {
                         [machine_id]
                     );
                     console.log(`🚨 Allarme: Acqua assente su macchina ${machine_id}`);
-                    
+
                     if (clientInfo?.telegram_chat_id) {
                         await sendTelegramMessage(clientInfo.telegram_chat_id,
                             `🚨 <b>Allarme NabulAir</b>\n\n` +
@@ -1245,7 +1245,7 @@ app.post('/api/ping', async (req, res) => {
                 );
             }
         }
-        
+
         let command = null;
         if (machine_id) {
             const cmdResult = await queryWithRetry(
@@ -1299,7 +1299,7 @@ app.post('/api/ping', async (req, res) => {
             request_sync: requestSync,
             programs: pushPrograms
         });
-        
+
     } catch (error) {
         console.error('❌ Errore ping:', error.message);
         console.error('   Stack:', error.stack);
@@ -1421,7 +1421,7 @@ app.get('/api/machines/:id/commands', authenticateToken, async (req, res) => {
 // GET /api/machines/:id/programs
 app.get('/api/machines/:id/programs', authenticateToken, async (req, res) => {
     const machineId = parseInt(req.params.id);
-    
+
     try {
         const machineCheck = await queryWithRetry(
             'SELECT installer_id, client_id FROM machines WHERE id = $1',
@@ -1431,7 +1431,7 @@ app.get('/api/machines/:id/programs', authenticateToken, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Macchina non trovata' });
         }
         const machine = machineCheck.rows[0];
-        
+
         if (req.user.role === 'installer' && machine.installer_id !== req.user.id) {
             return res.status(403).json({ success: false, message: 'Accesso negato' });
         }
@@ -1443,9 +1443,11 @@ app.get('/api/machines/:id/programs', authenticateToken, async (req, res) => {
             'SELECT programs FROM machine_programs WHERE machine_id = $1',
             [machineId]
         );
+        // FIX: garantisce che programs sia sempre un array, anche se nel DB c'è un oggetto corrotto
         let programs = [];
         if (result.rows.length > 0 && result.rows[0].programs) {
-            programs = result.rows[0].programs;
+            const p = result.rows[0].programs;
+            programs = Array.isArray(p) ? p : [];
         }
         res.json({ success: true, programs });
     } catch (error) {
@@ -1458,9 +1460,10 @@ app.get('/api/machines/:id/programs', authenticateToken, async (req, res) => {
 app.put('/api/machines/:id/programs', authenticateToken, async (req, res) => {
     const machineId = parseInt(req.params.id);
     const { programs, sendToDevice } = req.body;
-    
+
+    // FIX: validazione rigorosa che programs sia un array
     if (!programs || !Array.isArray(programs)) {
-        return res.status(400).json({ success: false, message: 'Formato programmi non valido' });
+        return res.status(400).json({ success: false, message: 'Formato programmi non valido: deve essere un array' });
     }
 
     try {
@@ -1472,7 +1475,7 @@ app.put('/api/machines/:id/programs', authenticateToken, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Macchina non trovata' });
         }
         const machine = machineCheck.rows[0];
-        
+
         if (req.user.role === 'installer' && machine.installer_id !== req.user.id) {
             return res.status(403).json({ success: false, message: 'Accesso negato' });
         }
@@ -1602,14 +1605,14 @@ app.put('/api/machines/:id/pause', authenticateToken, async (req, res) => {
 app.get('/health', async (req, res) => {
     let dbConnected = false;
     let dbError = null;
-    
+
     try {
         await pool.query('SELECT 1');
         dbConnected = true;
     } catch (error) {
         dbError = error.message;
     }
-    
+
     res.json({ 
         status: dbConnected ? 'healthy' : 'degraded',
         timestamp: new Date().toISOString(),
