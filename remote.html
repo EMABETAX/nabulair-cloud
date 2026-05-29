@@ -717,6 +717,7 @@
             opacity: 1;
         }
     </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -1085,15 +1086,22 @@
         try {
             const data = await apiGet(`/machines/${currentMachineId}/programs`);
             if (data.success) {
-                programs = data.programs || [];
+                // FIX: garantisce che programs sia SEMPRE un array
+                programs = Array.isArray(data.programs) ? data.programs : [];
+                renderPrograms();
+            } else {
+                programs = [];
                 renderPrograms();
             }
-        } catch (e) { }
+        } catch (e) {
+            programs = [];
+            renderPrograms();
+        }
     }
 
     function renderPrograms() {
         const container = document.getElementById('programsList');
-        if (!programs.length) {
+        if (!programs || !programs.length) {
             container.innerHTML = '<div class="empty-state">📭 Nessun programma configurato</div>';
             return;
         }
@@ -1123,19 +1131,21 @@
     }
 
     function deleteProgram(idx) {
-        if (!confirm(`Eliminare il programma "${programs[idx].nome}"?`)) return;
+        if (!Array.isArray(programs)) programs = [];
+        if (!confirm(`Eliminare il programma "${programs[idx]?.nome || ''}"?`)) return;
         programs.splice(idx, 1);
         renderPrograms();
     }
 
     async function savePrograms(sendToDevice) {
+        if (!Array.isArray(programs)) programs = [];
         showToast('⏳ Salvataggio in corso...');
         try {
             const data = await apiPut(`/machines/${currentMachineId}/programs`, { programs, sendToDevice });
             if (data.success) {
                 showToast('✅ ' + data.message);
                 if (sendToDevice && data.command_id) {
-                    showCmdStatus('sent', '📡 Invio programmi all\'ESP32...');
+                    showCmdStatus("sent", "📡 Invio programmi all'ESP32...");
                     startCmdPoll(data.command_id, 'update_programs');
                 }
             } else {
@@ -1223,6 +1233,8 @@
     }
 
     function addProgramToArray() {
+        // FIX: paracadute se programs è corrotto
+        if (!Array.isArray(programs)) programs = [];
         const name = document.getElementById('progName').value.trim();
         if (!name) {
             showToast('❌ Inserisci un nome');
@@ -1244,7 +1256,9 @@
     }
 
     function editProgram(idx) {
+        if (!Array.isArray(programs)) programs = [];
         const p = programs[idx];
+        if (!p) return;
         const modalHtml = `
         <div id="programModal" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); display:flex; align-items:center; justify-content:center; z-index:10000;">
             <div style="background:var(--card); border:1px solid var(--border); border-radius:32px; max-width:500px; width:90%; padding:28px; position:relative;">
@@ -1265,6 +1279,8 @@
     }
 
     function updateProgram(idx) {
+        // FIX: paracadute se programs è corrotto
+        if (!Array.isArray(programs)) programs = [];
         const name = document.getElementById('progName').value.trim();
         if (!name) {
             showToast('❌ Inserisci un nome');
