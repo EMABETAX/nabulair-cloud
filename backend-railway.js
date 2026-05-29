@@ -3,14 +3,14 @@ const cors = require('cors');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const { Pool } = require('pg'); 
+const { Pool } = require('pg');
 const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS 
-    ? process.env.ALLOWED_ORIGINS.split(',') 
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',')
     : ['https://nabulair-cloud-production.up.railway.app', 'http://localhost:3000'];
 
 app.use(cors({
@@ -109,8 +109,8 @@ async function initDatabase() {
                 firmware_version VARCHAR(20),
                 status VARCHAR(20) DEFAULT 'pending',
                 last_seen TIMESTAMP,
-                water_ok BOOLEAN DEFAULT TRUE,
-                insecticide_ok BOOLEAN DEFAULT TRUE,
+                water_ok BOOLEAN DEFAULT NULL,
+                insecticide_ok BOOLEAN DEFAULT NULL,
                 flow FLOAT DEFAULT 0,
                 client_id INTEGER REFERENCES clients(id),
                 installer_id INTEGER REFERENCES users(id),
@@ -131,8 +131,8 @@ async function initDatabase() {
         `);
         
         await pool.query(`
-            ALTER TABLE machines ADD COLUMN IF NOT EXISTS water_ok BOOLEAN DEFAULT TRUE;
-            ALTER TABLE machines ADD COLUMN IF NOT EXISTS insecticide_ok BOOLEAN DEFAULT TRUE;
+            ALTER TABLE machines ADD COLUMN IF NOT EXISTS water_ok BOOLEAN DEFAULT NULL;
+            ALTER TABLE machines ADD COLUMN IF NOT EXISTS insecticide_ok BOOLEAN DEFAULT NULL;
             ALTER TABLE machines ADD COLUMN IF NOT EXISTS flow FLOAT DEFAULT 0;
         `).catch(e => console.log('Colonne machines già esistenti'));
 
@@ -173,7 +173,29 @@ async function initDatabase() {
             )
         `);
 
+        // Colonne per pausa globale programmi
+        await pool.query(`
+            ALTER TABLE machines ADD COLUMN IF NOT EXISTS paused BOOLEAN DEFAULT FALSE;
+            ALTER TABLE machines ADD COLUMN IF NOT EXISTS pause_until DATE;
+        `).catch(e => console.log('Colonne pausa già esistenti'));
+
+        // ========== AGGIUNTA COLONNE PER TRACKING SYNC ==========
+        await pool.query(`
+            ALTER TABLE machines ADD COLUMN IF NOT EXISTS last_ntp_sync TIMESTAMP;
+            ALTER TABLE machines ADD COLUMN IF NOT EXISTS last_prog_sync TIMESTAMP;
+        `).catch(e => console.log('Colonne sync già esistenti'));
+
         console.log('✅ Database inizializzato correttamente');
+
+        // ========== MIGRATION: pulisci vecchi valori "true" non confermati ==========
+        await pool.query(`
+            UPDATE machines 
+            SET water_ok = NULL, 
+                insecticide_ok = NULL 
+            WHERE (water_ok = TRUE OR insecticide_ok = TRUE)
+              AND (last_seen IS NULL OR last_seen < NOW() - INTERVAL '1 hour')
+        `).catch(e => console.log('Migration sensori: nessun record da pulire'));
+
     } catch (err) {
         console.error('❌ Errore init database:', err.message);
     }
@@ -476,6 +498,8 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
                 m.flow,
                 m.client_id,
                 m.installer_id,
+                m.paused,
+                m.pause_until,
                 c.name as client_name,
                 c.telegram_chat_id
             FROM machines m
@@ -597,6 +621,8 @@ app.get('/api/machine/:id', authenticateToken, async (req, res) => {
                 m.flow,
                 m.client_id,
                 m.installer_id,
+                m.paused,
+                m.pause_until,
                 m.created_at,
                 CASE 
                     WHEN m.last_seen > NOW() - INTERVAL '5 minutes' THEN 'online' 
@@ -1022,10 +1048,9 @@ app.put('/api/machines/:id/assign', authenticateToken, async (req, res) => {
             if (machineCheck.rows[0].installer_id !== req.user.id) {
                 return res.status(403).json({ success: false, message: 'Puoi assegnare solo i tuoi impianti' });
             }
-            // Non toccare installer_id: un installer può solo cambiare il cliente
             await queryWithRetry(
                 'UPDATE machines SET client_id = $1 WHERE id = $2',
-                [client_id !== undefined ? (client_id || null) : machineCheck.rows[0].client_id, id]
+                [client_id || null, id]
             );
         } else if (req.user.role === 'admin') {
             await queryWithRetry(
@@ -1128,27 +1153,30 @@ app.post('/api/register', async (req, res) => {
 });
 
 app.post('/api/ping', async (req, res) => {
-    const { mac_address, ip, water_ok, insecticide_ok, flow, status } = req.body;
+    const { mac_address, ip, water_ok, insecticide_ok, flow, status, last_ntp_sync, last_prog_sync } = req.body;
     
     if (!mac_address) {
         return res.status(400).json({ success: false });
     }
     
     try {
+        // Aggiorna anche i timestamp di sync se forniti
         await queryWithRetry(
             `UPDATE machines 
              SET last_seen = NOW(), 
                  sta_ip = COALESCE($1, sta_ip), 
                  status = $2,
-                 water_ok = COALESCE($3, water_ok),
-                 insecticide_ok = COALESCE($4, insecticide_ok),
-                 flow = COALESCE($5, flow)
-             WHERE mac_address = $6`,
-            [ip, status || 'online', water_ok, insecticide_ok, flow, mac_address]
+                 water_ok = CASE WHEN $3 IS NOT NULL THEN $3 ELSE water_ok END,
+                 insecticide_ok = CASE WHEN $4 IS NOT NULL THEN $4 ELSE insecticide_ok END,
+                 flow = COALESCE($5, flow),
+                 last_ntp_sync = COALESCE($6, last_ntp_sync),
+                 last_prog_sync = COALESCE($7, last_prog_sync)
+             WHERE mac_address = $8`,
+            [ip, status || 'online', water_ok, insecticide_ok, flow, last_ntp_sync, last_prog_sync, mac_address]
         );
         
         const machineResult = await queryWithRetry(
-            'SELECT id, machine_name, client_id FROM machines WHERE mac_address = $1',
+            'SELECT id, machine_name, client_id, paused, pause_until, last_ntp_sync, last_prog_sync FROM machines WHERE mac_address = $1',
             [mac_address]
         );
         
@@ -1238,16 +1266,49 @@ app.post('/api/ping', async (req, res) => {
             );
             if (cmdResult.rows.length > 0) {
                 const cmd = cmdResult.rows[0];
-                await queryWithRetry(
-                    `UPDATE commands SET status = 'sent' WHERE id = $1`,
-                    [cmd.id]
-                );
+                // NON impostare 'sent' qui. L'ESP32 confermerà esplicitamente via /api/command/:id/confirm
+                // Se la rete cade o l'ESP crasha, il comando resta 'pending' e viene riproposto al ping successivo
                 command = { id: cmd.id, type: cmd.type, payload: cmd.payload };
-                console.log(`📤 Comando inviato a macchina ${machine_id}: ${cmd.type}`);
+                console.log(`📤 Comando in attesa di conferma: ${cmd.type} (ID ${cmd.id})`);
             }
         }
 
-        res.json({ success: true, command });
+        // ========== LOGICA AUTO-SYNC ==========
+        let requestSync = false;
+        let pushPrograms = null;
+
+        if (machine) {
+            // Richiedi sync NTP se mai fatto o >24h
+            let lastNtp = machine.last_ntp_sync;
+            if (lastNtp) {
+                const hoursSinceNtp = (Date.now() - new Date(lastNtp).getTime()) / 3600000;
+                if (hoursSinceNtp > 24) requestSync = true;
+            } else {
+                requestSync = true; // mai sincronizzato
+            }
+
+            // Push programmi se cloud più recente
+            const progResult = await queryWithRetry(
+                'SELECT programs, updated_at FROM machine_programs WHERE machine_id = $1',
+                [machine_id]
+            );
+            if (progResult.rows.length > 0) {
+                const progUpdated = new Date(progResult.rows[0].updated_at);
+                const lastProgSync = machine.last_prog_sync ? new Date(machine.last_prog_sync) : new Date(0);
+                if (progUpdated > lastProgSync) {
+                    pushPrograms = progResult.rows[0].programs;
+                }
+            }
+        }
+
+        res.json({
+            success: true,
+            command,
+            paused: machine?.paused || false,
+            pause_until: machine?.pause_until || null,
+            request_sync: requestSync,
+            programs: pushPrograms
+        });
         
     } catch (error) {
         console.error('Errore ping:', error.message);
@@ -1289,7 +1350,7 @@ app.post('/api/machines/:id/command', authenticateToken, async (req, res) => {
         const result = await queryWithRetry(
             `INSERT INTO commands (machine_id, type, payload, created_by)
              VALUES ($1, $2, $3, $4) RETURNING id`,
-            [machineId, type, payload ? JSON.stringify(payload) : null, req.user.id]
+            [machineId, type, payload || null, req.user.id]
         );
 
         console.log(`📥 Comando ${type} in coda per macchina ${machineId} (ID cmd: ${result.rows[0].id})`);
@@ -1404,7 +1465,7 @@ app.put('/api/machines/:id/programs', authenticateToken, async (req, res) => {
              VALUES ($1, $2, NOW())
              ON CONFLICT (machine_id) DO UPDATE SET
              programs = EXCLUDED.programs, updated_at = NOW()`,
-            [machineId, JSON.stringify(programs)]
+            [machineId, programs]
         );
 
         let commandId = null;
@@ -1412,7 +1473,7 @@ app.put('/api/machines/:id/programs', authenticateToken, async (req, res) => {
             const cmdResult = await queryWithRetry(
                 `INSERT INTO commands (machine_id, type, payload, created_by)
                  VALUES ($1, $2, $3, $4) RETURNING id`,
-                [machineId, 'update_programs', JSON.stringify({ programs }), req.user.id]
+                [machineId, 'update_programs', { programs }, req.user.id]
             );
             commandId = cmdResult.rows[0].id;
             console.log(`📥 Comando update_programs accodato per macchina ${machineId} (cmd ${commandId})`);
@@ -1420,13 +1481,99 @@ app.put('/api/machines/:id/programs', authenticateToken, async (req, res) => {
 
         res.json({
             success: true,
-            command_id: commandId || null,
             message: sendToDevice
                 ? `Programmi salvati e invio richiesto (cmd #${commandId})`
                 : 'Programmi salvati nel cloud'
         });
     } catch (error) {
         console.error('Errore PUT programs:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ==================== PAUSA GLOBALE PROGRAMMI ====================
+
+app.get('/api/machines/:id/pause', authenticateToken, async (req, res) => {
+    const machineId = parseInt(req.params.id);
+    try {
+        const machineCheck = await queryWithRetry(
+            'SELECT installer_id, client_id FROM machines WHERE id = $1',
+            [machineId]
+        );
+        if (machineCheck.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Macchina non trovata' });
+        }
+        const machine = machineCheck.rows[0];
+
+        if (req.user.role === 'installer' && machine.installer_id !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+        if (req.user.role === 'client' && machine.client_id !== req.user.client_id) {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+
+        const result = await queryWithRetry(
+            'SELECT paused, pause_until FROM machines WHERE id = $1',
+            [machineId]
+        );
+
+        const row = result.rows[0] || { paused: false, pause_until: null };
+
+        // Se c'è una data di scadenza passata, auto-reset
+        if (row.paused && row.pause_until) {
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const pauseDate = new Date(row.pause_until);
+            if (pauseDate < today) {
+                await queryWithRetry(
+                    'UPDATE machines SET paused = FALSE, pause_until = NULL WHERE id = $1',
+                    [machineId]
+                );
+                return res.json({ success: true, paused: false, pause_until: null, auto_resumed: true });
+            }
+        }
+
+        res.json({ success: true, paused: row.paused || false, pause_until: row.pause_until });
+    } catch (error) {
+        console.error('Errore GET pause:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.put('/api/machines/:id/pause', authenticateToken, async (req, res) => {
+    const machineId = parseInt(req.params.id);
+    const { paused, pause_until } = req.body;
+
+    if (typeof paused !== 'boolean') {
+        return res.status(400).json({ success: false, message: 'Parametro paused (boolean) obbligatorio' });
+    }
+
+    try {
+        const machineCheck = await queryWithRetry(
+            'SELECT installer_id, client_id FROM machines WHERE id = $1',
+            [machineId]
+        );
+        if (machineCheck.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Macchina non trovata' });
+        }
+        const machine = machineCheck.rows[0];
+
+        if (req.user.role === 'installer' && machine.installer_id !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+        if (req.user.role === 'client' && machine.client_id !== req.user.client_id) {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+
+        await queryWithRetry(
+            'UPDATE machines SET paused = $1, pause_until = $2 WHERE id = $3',
+            [paused, pause_until || null, machineId]
+        );
+
+        console.log(`⏸️ Macchina ${machineId}: paused=${paused}, until=${pause_until || 'indefinito'}`);
+        res.json({ success: true, message: paused ? 'Pausa attivata' : 'Programmi ripresi' });
+    } catch (error) {
+        console.error('Errore PUT pause:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
@@ -1460,7 +1607,7 @@ app.get('/', (req, res) => {
         version: '2.8',
         status: 'online',
         ssl_db: false,
-        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry', 'Installer can create and see clients', 'Installer can configure Telegram', 'Offline Detection', 'Machine Pre-registration', 'Full CRUD for machines and users', 'Client login with own password', 'Machine Programs Management'],
+        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry', 'Installer can create and see clients', 'Installer can configure Telegram', 'Offline Detection', 'Machine Pre-registration', 'Full CRUD for machines and users', 'Client login with own password', 'Machine Programs Management', 'Global Pause / Vacation Mode', 'Auto-sync NTP & Programs'],
         endpoints: [
             'GET /',
             'GET /health',
@@ -1486,7 +1633,9 @@ app.get('/', (req, res) => {
             'POST /api/register',
             'POST /api/ping',
             'GET /api/machines/:id/programs',
-            'PUT /api/machines/:id/programs'
+            'PUT /api/machines/:id/programs',
+            'GET /api/machines/:id/pause',
+            'PUT /api/machines/:id/pause'
         ]
     });
 });
@@ -1507,4 +1656,5 @@ app.listen(PORT, () => {
     console.log(`📦 Pre-registrazione macchine: ATTIVA (admin only)`);
     console.log(`👤 Client login: ATTIVO (creazione automatica utente)`);
     console.log(`📋 Gestione programmi macchina: ATTIVA`);
+    console.log(`🔄 Auto-sync NTP e programmi: ATTIVA`);
 });
