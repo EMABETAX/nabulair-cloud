@@ -506,6 +506,7 @@
             .filters-bar input, .filters-bar select { min-width: 140px; }
         }
     </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -1202,6 +1203,7 @@ function renderMachinesTable(machines) {
     tbody.innerHTML = machines.map(m => {
         const online  = m.status === 'online';
         // NUOVA LOGICA SENSORI: OK solo se esplicitamente true, altrimenti false (o null)
+        // NOTA: lo status online/offline è calcolato dal backend basato su last_seen
         const waterOk = m.water_ok === true;
         const insOk   = m.insecticide_ok === true;
         const clientName = m.client_name || (m.client_id ? allClients.find(c=>c.id==m.client_id)?.name : '') || '—';
