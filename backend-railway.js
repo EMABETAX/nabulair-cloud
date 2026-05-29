@@ -1153,7 +1153,7 @@ app.post('/api/register', async (req, res) => {
 });
 
 app.post('/api/ping', async (req, res) => {
-    const { mac_address, ip, water_ok, insecticide_ok, flow, status, last_ntp_sync, last_prog_sync } = req.body;
+    const { mac_address, ip, water_ok, insecticide_ok, flow, status } = req.body;
     
     if (!mac_address) {
         return res.status(400).json({ success: false });
@@ -1168,11 +1168,9 @@ app.post('/api/ping', async (req, res) => {
                  status = $2,
                  water_ok = CASE WHEN $3 IS NOT NULL THEN $3 ELSE water_ok END,
                  insecticide_ok = CASE WHEN $4 IS NOT NULL THEN $4 ELSE insecticide_ok END,
-                 flow = COALESCE($5, flow),
-                 last_ntp_sync = COALESCE($6, last_ntp_sync),
-                 last_prog_sync = COALESCE($7, last_prog_sync)
-             WHERE mac_address = $8`,
-            [ip, status || 'online', water_ok, insecticide_ok, flow, last_ntp_sync, last_prog_sync, mac_address]
+                 flow = COALESCE($5, flow)
+             WHERE mac_address = $6`,
+            [ip, status || 'online', water_ok, insecticide_ok, flow, mac_address]
         );
         
         const machineResult = await queryWithRetry(
@@ -1311,8 +1309,9 @@ app.post('/api/ping', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('Errore ping:', error.message);
-        res.json({ success: false, command: null });
+        console.error('❌ Errore ping:', error.message);
+        console.error('   Stack:', error.stack);
+        res.status(500).json({ success: false, command: null, error: error.message });
     }
 });
 
@@ -1372,8 +1371,38 @@ app.post('/api/command/:id/confirm', async (req, res) => {
             [success ? 'executed' : 'failed', cmdId]
         );
         console.log(`✅ Comando ${cmdId} ${success ? 'eseguito' : 'fallito'}: ${message || ''}`);
+
+        // Aggiorna last_prog_sync / last_ntp_sync in base al tipo di comando
+        if (success) {
+            try {
+                const cmdResult = await queryWithRetry(
+                    'SELECT type, machine_id FROM commands WHERE id = $1',
+                    [cmdId]
+                );
+                if (cmdResult.rows.length > 0) {
+                    const cmd = cmdResult.rows[0];
+                    if (cmd.type === 'sync_time') {
+                        await queryWithRetry(
+                            'UPDATE machines SET last_ntp_sync = NOW() WHERE id = $1',
+                            [cmd.machine_id]
+                        );
+                        console.log(`🕒 last_ntp_sync aggiornato per macchina ${cmd.machine_id}`);
+                    } else if (cmd.type === 'update_programs') {
+                        await queryWithRetry(
+                            'UPDATE machines SET last_prog_sync = NOW() WHERE id = $1',
+                            [cmd.machine_id]
+                        );
+                        console.log(`📋 last_prog_sync aggiornato per macchina ${cmd.machine_id}`);
+                    }
+                }
+            } catch (syncErr) {
+                console.error('Errore aggiornamento sync timestamp:', syncErr.message);
+            }
+        }
+
         res.json({ success: true });
     } catch (error) {
+        console.error('Errore confirm comando:', error.message);
         res.status(500).json({ success: false });
     }
 });
@@ -1604,10 +1633,10 @@ app.get('/health', async (req, res) => {
 app.get('/', (req, res) => {
     res.json({ 
         message: 'NabulAir Cloud API', 
-        version: '2.8',
+        version: '2.9',
         status: 'online',
         ssl_db: false,
-        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry', 'Installer can create and see clients', 'Installer can configure Telegram', 'Offline Detection', 'Machine Pre-registration', 'Full CRUD for machines and users', 'Client login with own password', 'Machine Programs Management', 'Global Pause / Vacation Mode', 'Auto-sync NTP & Programs'],
+        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry', 'Installer can create and see clients', 'Installer can configure Telegram', 'Offline Detection', 'Machine Pre-registration', 'Full CRUD for machines and users', 'Client login with own password', 'Machine Programs Management', 'Global Pause / Vacation Mode', 'Auto-sync NTP & Programs (fixed)'],
         endpoints: [
             'GET /',
             'GET /health',
