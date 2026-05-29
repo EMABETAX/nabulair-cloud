@@ -3,511 +3,957 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NabulAir — Centrale</title>
+    <title>NabulAir — Centrale Operativa</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        /* (lo stesso stile di prima, con aggiunta .td-sensor.unknown) */
-        :root {
-            --bg:       #0a0e1a;
-            --surface:  #111827;
-            --card:     #161d2f;
-            --border:   rgba(255,255,255,0.07);
-            --green:    #22c55e;
-            --green-dim:rgba(34,197,94,0.15);
-            --red:      #ef4444;
-            --red-dim:  rgba(239,68,68,0.15);
-            --amber:    #f59e0b;
-            --amber-dim:rgba(245,158,11,0.15);
-            --blue:     #38bdf8;
-            --blue-dim: rgba(56,189,248,0.15);
-            --accent:   #4ade80;
-            --text:     #f1f5f9;
-            --muted:    #64748b;
-            --font-display: 'Syne', sans-serif;
-            --font-body:    'DM Sans', sans-serif;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        * { margin:0; padding:0; box-sizing:border-box; }
+
+        :root {
+            --bg: #0B0E14;
+            --surface: #11161F;
+            --card: #151E2A;
+            --card-hover: #1A2332;
+            --border: rgba(255, 255, 255, 0.06);
+            --border-hover: rgba(255, 255, 255, 0.12);
+            --green: #10B981;
+            --green-dim: rgba(16, 185, 129, 0.12);
+            --red: #EF4444;
+            --red-dim: rgba(239, 68, 68, 0.12);
+            --amber: #F59E0B;
+            --amber-dim: rgba(245, 158, 11, 0.12);
+            --blue: #3B82F6;
+            --blue-dim: rgba(59, 130, 246, 0.12);
+            --text: #EDF2F7;
+            --text-secondary: #94A3B8;
+            --muted: #4B5563;
+            --font-display: 'Syne', sans-serif;
+            --font-body: 'DM Sans', sans-serif;
+        }
+
         body {
             font-family: var(--font-body);
             background: var(--bg);
             color: var(--text);
             min-height: 100vh;
         }
+
+        /* Login */
         #loginScreen {
-            position: fixed; inset: 0;
+            position: fixed;
+            inset: 0;
             background: var(--bg);
-            display: flex; align-items: center; justify-content: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             z-index: 9999;
         }
+
         .login-wrap {
-            width: 90%; max-width: 380px;
+            width: 90%;
+            max-width: 400px;
             background: var(--card);
             border: 1px solid var(--border);
-            border-radius: 24px;
-            padding: 40px 36px;
+            border-radius: 32px;
+            padding: 40px 32px;
+            backdrop-filter: blur(10px);
         }
+
         .login-logo {
-            width: 52px; height: 52px;
-            background: linear-gradient(135deg, #22c55e, #16a34a);
-            border-radius: 16px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 26px; margin: 0 auto 20px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--green), #059669);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin: 0 auto 20px;
         }
+
         .login-wrap h2 {
             font-family: var(--font-display);
-            font-size: 22px; font-weight: 800;
-            text-align: center; margin-bottom: 6px;
+            font-size: 24px;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 6px;
         }
-        .login-wrap p { text-align:center; color:var(--muted); font-size:13px; margin-bottom:28px; }
+
+        .login-wrap p {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-bottom: 28px;
+        }
+
         .login-wrap input {
-            width: 100%; padding: 14px 16px;
-            background: rgba(255,255,255,0.05);
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--border);
-            border-radius: 12px; color: var(--text);
-            font-family: var(--font-body); font-size: 15px;
-            margin-bottom: 12px; outline: none;
-            transition: border 0.2s;
+            border-radius: 14px;
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 14px;
+            margin-bottom: 12px;
+            outline: none;
+            transition: all 0.2s;
         }
-        .login-wrap input:focus { border-color: var(--accent); }
-        .login-wrap input::placeholder { color: var(--muted); }
+
+        .login-wrap input:focus {
+            border-color: var(--blue);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
         .btn-login {
-            width: 100%; padding: 14px;
+            width: 100%;
+            padding: 14px;
             background: var(--green);
-            border: none; border-radius: 12px;
-            color: #000; font-family: var(--font-display);
-            font-size: 15px; font-weight: 700;
-            cursor: pointer; margin-top: 4px;
+            border: none;
+            border-radius: 40px;
+            color: #000;
+            font-family: var(--font-display);
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 4px;
             transition: opacity 0.2s;
         }
+
         .btn-login:hover { opacity: 0.85; }
-        .login-err { color: var(--red); font-size:13px; text-align:center; margin-top:12px; display:none; }
+
+        .login-err {
+            color: var(--red);
+            font-size: 13px;
+            text-align: center;
+            margin-top: 12px;
+            display: none;
+        }
+
+        /* App Shell */
         #appShell { display: none; }
+
+        /* Topbar */
         .topbar {
             background: var(--surface);
             border-bottom: 1px solid var(--border);
-            padding: 0 24px;
+            padding: 0 28px;
             height: 64px;
-            display: flex; align-items: center; justify-content: space-between;
-            position: sticky; top: 0; z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
-        .topbar-left { display:flex; align-items:center; gap:14px; }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
         .top-logo {
-            width: 36px; height: 36px;
-            background: linear-gradient(135deg, #22c55e, #16a34a);
-            border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 18px;
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, var(--green), #059669);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
         }
+
         .top-brand {
             font-family: var(--font-display);
-            font-size: 17px; font-weight: 800; letter-spacing: 0.3px;
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: -0.3px;
         }
-        .top-pills { display:flex; gap:8px; flex-wrap:wrap; }
+
+        .top-pills {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
         .pill {
             background: var(--card);
             border: 1px solid var(--border);
-            padding: 5px 14px; border-radius: 50px;
-            font-size: 12px; color: var(--muted);
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 12px;
+            color: var(--text-secondary);
         }
-        .pill span { color: var(--text); font-weight: 600; }
-        .topbar-right { display:flex; align-items:center; gap:10px; }
+
+        .pill span {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
         .user-chip {
-            display: flex; align-items: center; gap: 8px;
-            background: var(--card); border: 1px solid var(--border);
-            padding: 6px 14px; border-radius: 50px; font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            padding: 6px 16px;
+            border-radius: 40px;
+            font-size: 13px;
         }
+
         .role-badge {
-            font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
-            padding: 2px 8px; border-radius: 50px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            padding: 2px 8px;
+            border-radius: 40px;
             text-transform: uppercase;
         }
-        .role-admin   { background: var(--blue-dim);  color: var(--blue); }
+
+        .role-admin { background: var(--blue-dim); color: var(--blue); }
         .role-installer { background: var(--green-dim); color: var(--green); }
-        .role-client  { background: var(--amber-dim); color: var(--amber); }
+
         .btn-icon {
-            background: var(--card); border: 1px solid var(--border);
-            color: var(--muted); padding: 7px 14px;
-            border-radius: 50px; cursor: pointer; font-size: 12px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 6px 14px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
             transition: all 0.2s;
         }
-        .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
-        .btn-logout { color: var(--red); }
-        .btn-logout:hover { border-color: var(--red); color: var(--red); }
-        .layout { display:flex; min-height:calc(100vh - 64px); }
+
+        .btn-icon:hover {
+            border-color: var(--blue);
+            color: var(--blue);
+        }
+
+        .btn-logout:hover {
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+        /* Layout */
+        .layout {
+            display: flex;
+            min-height: calc(100vh - 64px);
+        }
+
         .sidebar {
-            width: 220px; min-width: 220px;
+            width: 240px;
+            min-width: 240px;
             background: var(--surface);
             border-right: 1px solid var(--border);
-            padding: 24px 16px;
+            padding: 28px 16px;
             display: none;
         }
+
         .sidebar.visible { display: block; }
+
         .sidebar-label {
-            font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
-            text-transform: uppercase; color: var(--muted);
-            padding: 0 8px; margin-bottom: 8px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--muted);
+            padding: 0 12px;
+            margin-bottom: 12px;
         }
+
         .nav-item {
-            display: flex; align-items: center; gap: 10px;
-            padding: 10px 12px; border-radius: 10px;
-            cursor: pointer; font-size: 14px; color: var(--muted);
-            transition: all 0.15s; margin-bottom: 2px;
-            border: none; background: none; width: 100%; text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: all 0.15s;
+            margin-bottom: 4px;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
         }
-        .nav-item:hover { background: var(--card); color: var(--text); }
-        .nav-item.active { background: var(--green-dim); color: var(--green); font-weight: 600; }
-        .nav-icon { font-size: 16px; }
-        .sidebar-divider { border:none; border-top:1px solid var(--border); margin: 16px 0; }
-        .main { flex: 1; padding: 28px 32px; overflow-x: hidden; }
-        @media (max-width: 768px) { .main { padding: 16px; } }
+
+        .nav-item:hover {
+            background: var(--card);
+            color: var(--text);
+        }
+
+        .nav-item.active {
+            background: var(--green-dim);
+            color: var(--green);
+            font-weight: 600;
+        }
+
+        .nav-icon {
+            font-size: 18px;
+            width: 24px;
+        }
+
+        .sidebar-divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 16px 0;
+        }
+
+        /* Main */
+        .main {
+            flex: 1;
+            padding: 32px 36px;
+            overflow-x: auto;
+        }
+
+        @media (max-width: 768px) {
+            .main { padding: 20px; }
+            .topbar { padding: 0 16px; }
+        }
+
+        /* Pages */
         .section-page { display: none; }
         .section-page.active { display: block; }
+
         .page-title {
             font-family: var(--font-display);
-            font-size: 22px; font-weight: 800; margin-bottom: 6px;
+            font-size: 26px;
+            font-weight: 800;
+            margin-bottom: 6px;
         }
-        .page-sub { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
-        .alerts-wrap { display:none; }
-        .alerts-wrap.has-alerts { display:block; margin-bottom:24px; }
+
+        .page-sub {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 28px;
+        }
+
+        /* Alerts */
+        .alerts-wrap { display: none; margin-bottom: 24px; }
+        .alerts-wrap.has-alerts { display: block; }
+
         .alert-row {
             background: var(--red-dim);
-            border: 1px solid rgba(239,68,68,0.3);
-            border-radius: 12px; padding: 14px 18px;
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 8px; font-size: 14px;
-        }
-        .btn-resolve {
-            background: var(--green-dim); color: var(--green);
-            border: 1px solid rgba(34,197,94,0.3);
-            padding: 5px 14px; border-radius: 20px;
-            cursor: pointer; font-size: 12px; white-space: nowrap;
-        }
-        .filters-bar {
-            display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 16px;
+            padding: 14px 20px;
+            display: flex;
+            justify-content: space-between;
             align-items: center;
+            margin-bottom: 10px;
+            font-size: 14px;
         }
-        .filters-bar input, .filters-bar select {
-            padding: 10px 14px;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid var(--border); border-radius: 10px;
-            color: var(--text); font-family: var(--font-body); font-size: 14px;
-            outline: none; min-width: 180px;
+
+        .btn-resolve {
+            background: var(--green-dim);
+            color: var(--green);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 5px 16px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
         }
-        .filters-bar input:focus, .filters-bar select:focus { border-color: var(--accent); }
-        .filters-bar input::placeholder { color: var(--muted); }
-        .filters-bar select option { background: var(--card); }
-        .data-table-wrap { overflow-x: auto; }
+
+        /* Filters */
+        .filters-bar {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+
+        .filters-bar input,
+        .filters-bar select {
+            padding: 10px 16px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 13px;
+            outline: none;
+            min-width: 180px;
+        }
+
+        .filters-bar input:focus,
+        .filters-bar select:focus {
+            border-color: var(--blue);
+        }
+
+        /* Tables */
+        .data-table-wrap {
+            overflow-x: auto;
+            border-radius: 20px;
+            background: var(--card);
+            border: 1px solid var(--border);
+        }
+
         .data-table {
-            width: 100%; border-collapse: collapse;
-            font-size: 14px; background: var(--card);
-            border: 1px solid var(--border); border-radius: 16px;
-            overflow: hidden;
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
         }
+
         .data-table th {
-            text-align: left; padding: 14px 16px;
-            background: rgba(0,0,0,0.25);
-            color: var(--muted); font-size: 11px;
-            text-transform: uppercase; letter-spacing: 1px; font-weight: 600;
-            white-space: nowrap;
+            text-align: left;
+            padding: 14px 16px;
+            background: rgba(0, 0, 0, 0.25);
+            color: var(--text-secondary);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
         }
+
         .data-table td {
             padding: 14px 16px;
             border-bottom: 1px solid var(--border);
-            font-size: 13px; vertical-align: middle;
+            vertical-align: middle;
         }
-        .data-table tr:last-child td { border-bottom: none; }
-        .data-table tr:hover td { background: rgba(255,255,255,0.02); }
-        .td-mono { font-family: monospace; font-size: 12px; color: var(--muted); }
-        .td-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .data-table tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .td-mono {
+            font-family: monospace;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
         .td-status {
-            display: inline-flex; align-items: center; gap: 6px;
-            font-size: 12px; font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 600;
         }
+
         .td-dot {
-            width: 8px; height: 8px; border-radius: 50%;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
         }
-        .td-dot.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
-        .td-dot.offline { background: var(--red); }
-        .td-dot.alert { background: var(--red); }
-        .td-sensor {
-            display: inline-flex; align-items: center; gap: 4px;
-            font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 6px;
-            margin-right: 4px;
-        }
-        .td-sensor.ok { background: var(--green-dim); color: var(--green); }
-        .td-sensor.err { background: var(--red-dim); color: var(--red); }
-        .td-sensor.unknown { background: rgba(100,116,139,0.15); color: #64748b; } /* ← aggiunto */
-        .btn-row {
-            padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
-            cursor: pointer; border: 1px solid; transition: opacity 0.2s; white-space: nowrap;
-            background: none;
-        }
-        .btn-row-view { color: var(--blue); border-color: rgba(56,189,248,0.3); background: var(--blue-dim); }
-        .btn-row-edit { color: var(--amber); border-color: rgba(245,158,11,0.3); background: var(--amber-dim); }
-        .btn-row-del  { color: var(--red);  border-color: rgba(239,68,68,0.3);  background: var(--red-dim); }
-        .btn-row:hover { opacity: 0.75; }
-        .form-card {
-            background: var(--card); border: 1px solid var(--border);
-            border-radius: 20px; padding: 24px; margin-bottom: 24px;
-        }
-        .form-card h3 {
-            font-family: var(--font-display); font-size: 16px; font-weight: 700;
-            margin-bottom: 18px;
-        }
-        .form-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 12px; margin-bottom: 14px;
-        }
-        .form-grid input, .form-grid select {
-            padding: 11px 14px;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid var(--border); border-radius: 10px;
-            color: var(--text); font-family: var(--font-body); font-size: 14px;
-            outline: none; transition: border 0.2s;
-        }
-        .form-grid input:focus, .form-grid select:focus { border-color: var(--accent); }
-        .form-grid input::placeholder { color: var(--muted); }
-        .form-grid select option { background: var(--card); }
-        .btn-add {
-            padding: 10px 22px;
-            background: var(--green); color: #000;
-            border: none; border-radius: 50px;
-            font-family: var(--font-display); font-size: 13px; font-weight: 700;
-            cursor: pointer; transition: opacity 0.2s;
-        }
-        .btn-add:hover { opacity: 0.85; }
-        .modal-bg {
-            display: none; position: fixed; inset: 0;
-            background: rgba(0,0,0,0.85); backdrop-filter: blur(6px);
-            z-index: 1000; align-items: center; justify-content: center;
-            padding: 20px;
-        }
-        .modal-bg.open { display: flex; }
-        .modal-box {
-            background: var(--card); border: 1px solid var(--border);
-            border-radius: 28px; padding: 36px 32px;
-            width: 100%; max-width: 400px; text-align: center;
-            position: relative;
-        }
-        .modal-close-btn {
-            position: absolute; top: 16px; right: 18px;
-            background: none; border: none; color: var(--muted);
-            font-size: 22px; cursor: pointer; line-height: 1;
-        }
-        .modal-close-btn:hover { color: var(--text); }
-        .modal-box h3 {
-            font-family: var(--font-display); font-size: 18px; font-weight: 800;
-            margin-bottom: 6px;
-        }
-        .modal-machine-name { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
-        .qr-wrap {
-            background: white; padding: 20px; border-radius: 16px;
-            display: inline-block; margin-bottom: 20px;
-        }
-        .qr-steps {
-            background: var(--surface); border-radius: 14px;
-            padding: 16px 18px; text-align: left;
-        }
-        .qr-step-item {
-            display: flex; align-items: flex-start; gap: 10px;
-            margin-bottom: 10px; font-size: 13px;
-        }
-        .qr-step-item:last-child { margin-bottom: 0; }
-        .qstep-n {
-            width: 22px; height: 22px; border-radius: 50%;
-            background: var(--green-dim); color: var(--green);
-            font-size: 11px; font-weight: 700;
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0; margin-top: 1px;
-        }
-        #detailModal .modal-box {
-            max-width: 900px; width: 100%; text-align: left; padding: 0;
-            display: flex; flex-direction: column; max-height: 90vh;
-        }
-        .detail-head {
-            padding: 22px 28px; border-bottom: 1px solid var(--border);
-            display: flex; justify-content: space-between; align-items: center;
-            flex-shrink: 0;
-        }
-        .detail-head h3 { font-family: var(--font-display); font-size: 18px; font-weight: 800; }
-        .detail-body {
-            padding: 28px; overflow-y: auto;
-            display: grid; grid-template-columns: 1fr 1fr; gap: 28px;
-        }
-        @media (max-width: 720px) { .detail-body { grid-template-columns: 1fr; } }
-        .detail-section {
-            background: var(--surface); border: 1px solid var(--border);
-            border-radius: 16px; padding: 20px;
-        }
-        .detail-section h4 {
-            font-family: var(--font-display); font-size: 14px; font-weight: 700;
-            margin-bottom: 14px; color: var(--text);
-            display: flex; align-items: center; gap: 8px;
-        }
-        .detail-row {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 10px 0; border-bottom: 1px solid var(--border);
-            font-size: 13px;
-        }
-        .detail-row:last-child { border-bottom: none; }
-        .detail-row .label { color: var(--muted); }
-        .detail-row .value { font-weight: 600; }
-        .sensor-big {
-            display: flex; align-items: center; gap: 10px;
-            padding: 12px; border-radius: 12px; margin-bottom: 10px;
-            font-size: 14px; font-weight: 600;
-        }
-        .sensor-big.ok { background: var(--green-dim); color: var(--green); }
-        .sensor-big.err { background: var(--red-dim); color: var(--red); }
-        .cmd-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 10px; margin-bottom: 12px;
-        }
-        .btn-cmd {
-            padding: 10px 14px; border-radius: 10px; font-size: 13px;
-            font-weight: 600; cursor: pointer; border: 1px solid;
-            transition: opacity 0.2s; text-align: center;
-            background: none;
-        }
-        .btn-cmd-programs { background: var(--blue-dim); color: var(--blue); border-color: rgba(56,189,248,0.3); }
-        .btn-cmd-reboot   { background: var(--red-dim); color: var(--red); border-color: rgba(239,68,68,0.3); }
-        .btn-cmd-ota      { background: var(--amber-dim); color: var(--amber); border-color: rgba(245,158,11,0.3); }
-        .btn-cmd:hover { opacity: 0.75; }
-        .cmd-status {
-            font-size: 12px; color: var(--muted); min-height: 18px;
-            transition: color 0.3s;
-        }
-        .cmd-status.ok  { color: var(--green); }
-        .cmd-status.err { color: var(--red); }
-        .cmd-status.wait { color: var(--amber); }
-        .ota-panel {
-            margin-top: 12px; padding: 14px;
-            background: rgba(0,0,0,0.2); border-radius: 12px;
-            display: none;
-        }
-        .ota-panel.open { display: block; }
-        .ota-panel input {
-            width: 100%; padding: 10px 12px;
-            background: rgba(255,255,255,0.05); border: 1px solid var(--border);
-            border-radius: 8px; color: var(--text); margin-bottom: 10px; font-size: 13px;
-        }
-        .assign-box {
-            display: flex; flex-direction: column; gap: 10px; margin-top: 8px;
-        }
-        .assign-box select {
-            padding: 10px 12px;
-            background: rgba(255,255,255,0.05); border: 1px solid var(--border);
-            border-radius: 10px; color: var(--text); font-size: 13px; outline: none;
-        }
-        .btn-save-sm {
-            padding: 8px 16px;
-            background: var(--blue-dim); color: var(--blue);
-            border: 1px solid rgba(56,189,248,0.3);
-            border-radius: 20px; font-size: 12px; font-weight: 600;
-            cursor: pointer; align-self: flex-start;
-        }
-        .btn-save-sm:hover { opacity: 0.8; }
-        .btn-qr-big {
-            width: 100%; margin-top: 10px;
-            padding: 12px;
+
+        .td-dot.online {
             background: var(--green);
-            border: none; border-radius: 12px;
-            color: #000; font-family: var(--font-display);
-            font-size: 14px; font-weight: 700;
-            cursor: pointer; display: flex; align-items: center;
-            justify-content: center; gap: 8px;
-            transition: opacity 0.2s, transform 0.1s;
+            box-shadow: 0 0 6px var(--green);
         }
-        .btn-qr-big:hover { opacity: 0.88; }
-        .btn-qr-big:active { transform: scale(0.98); }
-        .btn-qr-big:disabled {
-            background: var(--surface); color: var(--muted);
-            cursor: not-allowed; opacity: 1;
+
+        .td-dot.offline {
+            background: var(--red);
         }
-        .btn-qr-big.telegram-ok {
-            background: var(--green-dim); color: var(--green);
-            border: 1px solid rgba(34,197,94,0.3);
+
+        .td-sensor {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 40px;
+            margin-right: 6px;
         }
-        .btn-del-big {
-            width: 100%; margin-top: 10px;
-            padding: 12px;
-            background: var(--red-dim); color: var(--red);
-            border: 1px solid rgba(239,68,68,0.3); border-radius: 12px;
-            font-family: var(--font-display); font-size: 14px; font-weight: 700;
-            cursor: pointer; transition: opacity 0.2s;
-        }
-        .btn-del-big:hover { opacity: 0.8; }
-        #editModal .modal-box {
-            max-width: 420px; text-align: left; padding: 32px;
-        }
-        #editModal .modal-box h3 { margin-bottom: 20px; }
-        .edit-form { display: flex; flex-direction: column; gap: 12px; }
-        .edit-form label { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-        .edit-form input, .edit-form select {
-            padding: 11px 14px;
-            background: rgba(255,255,255,0.05); border: 1px solid var(--border);
-            border-radius: 10px; color: var(--text); font-size: 14px; outline: none;
-        }
-        .edit-form input:focus, .edit-form select:focus { border-color: var(--accent); }
-        .edit-actions { display: flex; gap: 10px; margin-top: 8px; }
-        .edit-actions .btn-add { flex: 1; text-align: center; }
-        .btn-cancel {
-            padding: 10px 22px; background: transparent; color: var(--muted);
-            border: 1px solid var(--border); border-radius: 50px;
-            font-family: var(--font-display); font-size: 13px; font-weight: 700;
-            cursor: pointer; flex: 1; text-align: center;
-        }
-        .btn-cancel:hover { border-color: var(--text); color: var(--text); }
-        .webhook-box {
-            background: var(--surface); border-radius: 14px;
-            padding: 16px 18px; margin-bottom: 18px;
-        }
-        .webhook-url { font-family: monospace; font-size: 13px; color: var(--blue); margin-top: 6px; word-break: break-all; }
-        .result-ok  { background: var(--green-dim); border:1px solid rgba(34,197,94,0.3); border-radius:10px; padding:14px; font-size:13px; color:var(--green); }
-        .result-err { background: var(--red-dim);   border:1px solid rgba(239,68,68,0.3);  border-radius:10px; padding:14px; font-size:13px; color:var(--red); }
-        .empty-state {
-            text-align: center; padding: 60px 20px;
-            color: var(--muted);
-        }
-        .empty-state .big { font-size: 48px; margin-bottom: 14px; }
-        .empty-state p { font-size: 15px; }
-        .day-btn {
-            background: var(--card);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 6px 12px;
-            border-radius: 20px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .day-btn.active {
+
+        .td-sensor.ok {
             background: var(--green-dim);
-            border-color: var(--green);
             color: var(--green);
         }
+
+        .td-sensor.err {
+            background: var(--red-dim);
+            color: var(--red);
+        }
+
+        .td-sensor.unknown {
+            background: rgba(100, 116, 139, 0.15);
+            color: var(--text-secondary);
+        }
+
+        /* Buttons */
+        .btn-row {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid;
+            transition: opacity 0.2s;
+            background: none;
+            white-space: nowrap;
+        }
+
+        .btn-row-view {
+            color: var(--blue);
+            border-color: rgba(59, 130, 246, 0.3);
+            background: var(--blue-dim);
+        }
+
+        .btn-row-edit {
+            color: var(--amber);
+            border-color: rgba(245, 158, 11, 0.3);
+            background: var(--amber-dim);
+        }
+
+        .btn-row-del {
+            color: var(--red);
+            border-color: rgba(239, 68, 68, 0.3);
+            background: var(--red-dim);
+        }
+
+        .btn-row:hover {
+            opacity: 0.75;
+        }
+
+        /* Cards */
+        .form-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 24px;
+            margin-bottom: 28px;
+        }
+
+        .form-card h3 {
+            font-family: var(--font-display);
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 18px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .form-grid input,
+        .form-grid select {
+            padding: 11px 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            font-size: 13px;
+            outline: none;
+        }
+
+        .form-grid input:focus,
+        .form-grid select:focus {
+            border-color: var(--blue);
+        }
+
+        .btn-add {
+            padding: 10px 24px;
+            background: var(--green);
+            color: #000;
+            border: none;
+            border-radius: 40px;
+            font-family: var(--font-display);
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn-add:hover {
+            opacity: 0.85;
+        }
+
+        /* Modal */
+        .modal-bg {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-bg.open {
+            display: flex;
+        }
+
+        .modal-box {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 32px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-close-btn {
+            position: absolute;
+            top: 16px;
+            right: 18px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .modal-close-btn:hover {
+            color: var(--text);
+        }
+
+        /* Detail Modal (large) */
+        #detailModal .modal-box {
+            max-width: 800px;
+            padding: 0;
+        }
+
+        .detail-head {
+            padding: 20px 28px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .detail-head h3 {
+            font-family: var(--font-display);
+            font-size: 20px;
+            font-weight: 800;
+        }
+
+        .detail-body {
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .detail-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 20px;
+        }
+
+        .detail-section h4 {
+            font-family: var(--font-display);
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-row .label {
+            color: var(--text-secondary);
+        }
+
+        .detail-row .value {
+            font-weight: 600;
+        }
+
+        .sensor-big {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 14px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .sensor-big.ok {
+            background: var(--green-dim);
+            color: var(--green);
+        }
+
+        .sensor-big.err {
+            background: var(--red-dim);
+            color: var(--red);
+        }
+
+        .sensor-big.unknown {
+            background: rgba(100, 116, 139, 0.15);
+            color: var(--text-secondary);
+        }
+
+        .assign-box {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .assign-box select {
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            font-size: 13px;
+        }
+
+        .btn-save-sm {
+            padding: 8px 16px;
+            background: var(--blue-dim);
+            color: var(--blue);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            align-self: flex-start;
+        }
+
+        .btn-qr-big {
+            width: 100%;
+            margin-top: 16px;
+            padding: 12px;
+            background: var(--green);
+            border: none;
+            border-radius: 40px;
+            color: #000;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-qr-big.telegram-ok {
+            background: var(--green-dim);
+            color: var(--green);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-del-big {
+            width: 100%;
+            margin-top: 16px;
+            padding: 12px;
+            background: var(--red-dim);
+            color: var(--red);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 40px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .cmd-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .btn-cmd {
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid;
+            text-align: center;
+            background: none;
+        }
+
+        .btn-cmd-reboot {
+            background: var(--red-dim);
+            color: var(--red);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-cmd-ota {
+            background: var(--amber-dim);
+            color: var(--amber);
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+
+        .cmd-status {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 12px;
+            text-align: center;
+        }
+
+        .ota-panel {
+            margin-top: 12px;
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            display: none;
+        }
+
+        .ota-panel.open {
+            display: block;
+        }
+
+        .ota-panel input {
+            width: 100%;
+            padding: 10px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+
         .info-note {
             background: var(--blue-dim);
             border-left: 4px solid var(--blue);
-            padding: 10px 12px;
-            border-radius: 8px;
+            padding: 10px 14px;
+            border-radius: 12px;
             font-size: 12px;
             margin-top: 12px;
             color: var(--blue);
         }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state .big {
+            font-size: 48px;
+            margin-bottom: 14px;
+        }
+
+        /* Edit modal */
+        #editModal .modal-box {
+            max-width: 450px;
+            padding: 32px;
+        }
+
+        .edit-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .edit-form label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .edit-form input,
+        .edit-form select {
+            padding: 11px 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            font-size: 13px;
+        }
+
+        .edit-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .btn-cancel {
+            padding: 10px 22px;
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            border-radius: 40px;
+            font-weight: 700;
+            cursor: pointer;
+            flex: 1;
+            text-align: center;
+        }
+
+        .btn-cancel:hover {
+            border-color: var(--text);
+            color: var(--text);
+        }
+
+        /* QR Modal */
+        .qr-wrap {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .qr-steps {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 16px 20px;
+            text-align: left;
+        }
+
+        .qr-step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+
+        .qstep-n {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--green-dim);
+            color: var(--green);
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
         @media (max-width: 640px) {
             .sidebar { display: none !important; }
-            .main { padding: 14px; }
             .top-pills { display: none; }
-            .topbar { padding: 0 14px; }
-            .detail-body { grid-template-columns: 1fr; padding: 16px; }
-            .data-table th, .data-table td { padding: 10px 12px; font-size: 12px; }
-            .filters-bar input, .filters-bar select { min-width: 140px; }
+            .detail-body { padding: 20px; }
+            .cmd-grid { grid-template-columns: 1fr; }
         }
     </style>
-<base target="_blank">
-<base target="_blank">
 </head>
 <body>
 
@@ -517,15 +963,13 @@
         <h2>NabulAir</h2>
         <p>Centrale Operativa</p>
         <input type="text" id="loginUser" placeholder="Username" autocomplete="username">
-        <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password"
-               onkeydown="if(event.key==='Enter') doLogin()">
+        <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()">
         <button class="btn-login" onclick="doLogin()">Accedi</button>
         <div class="login-err" id="loginError"></div>
     </div>
 </div>
 
 <div id="appShell">
-
     <header class="topbar">
         <div class="topbar-left">
             <div class="top-logo">🌿</div>
@@ -543,12 +987,9 @@
     </header>
 
     <div class="layout">
-
-        <nav class="sidebar" id="sidebar">
-        </nav>
+        <nav class="sidebar" id="sidebar"></nav>
 
         <main class="main">
-
             <div class="alerts-wrap" id="alertsWrap">
                 <div id="alertsList"></div>
             </div>
@@ -557,7 +998,7 @@
                 <div class="page-title" id="machinesTitle">🏭 Impianti</div>
                 <div class="page-sub" id="machinesSub">Tutti gli impianti NabulAir</div>
 
-                <!-- Preregistrazione macchina (solo admin) -->
+                <!-- Preregistrazione (solo admin) -->
                 <div class="form-card" id="preregisterCard" style="display:none;">
                     <h3>➕ Pre-registra nuova macchina</h3>
                     <div class="form-grid">
@@ -576,22 +1017,16 @@
                         <option value="offline">🔴 Offline</option>
                         <option value="alert">🚨 Allarmi</option>
                     </select>
-                    <select id="filterClient" onchange="filterMachines()" style="display:none">
-                        <option value="">Tutti i clienti</option>
-                    </select>
-                    <select id="filterInstaller" onchange="filterMachines()" style="display:none">
-                        <option value="">Tutti gli installatori</option>
-                    </select>
+                    <select id="filterClient" onchange="filterMachines()" style="display:none"><option value="">Tutti i clienti</option></select>
+                    <select id="filterInstaller" onchange="filterMachines()" style="display:none"><option value="">Tutti gli installatori</option></select>
                 </div>
 
                 <div class="data-table-wrap">
-                    <table class="data-table" id="machinesTable">
+                    <table class="data-table">
                         <thead>
-                            <tr><th>Nome</th><th>MAC</th><th>Stato</th><th>Sensori</th><th>Cliente</th><th>Installatore</th><th>Azioni</th></tr>
+                            <tr><th>Nome</th><th>MAC</th><th>Stato</th><th>Sensori</th><th>Cliente</th><th>Installatore</th><th>Azioni</th>
                         </thead>
-                        <tbody id="machinesTbody">
-                            <tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">⏳</div><p>Caricamento impianti...</p></td></tr>
-                        </tbody>
+                        <tbody id="machinesTbody"></tbody>
                     </table>
                 </div>
             </section>
@@ -599,20 +1034,18 @@
             <section class="section-page" id="section-installers">
                 <div class="page-title">🔧 Installatori</div>
                 <div class="page-sub">Crea, modifica o rimuovi gli installatori</div>
-
                 <div class="form-card">
                     <h3>➕ Nuovo Installatore</h3>
                     <div class="form-grid">
-                        <input type="text"     id="instUsername"  placeholder="Nome utente (es. mario)">
-                        <input type="password" id="instPassword"  placeholder="Password (min 6 char)">
+                        <input type="text" id="instUsername" placeholder="Nome utente">
+                        <input type="password" id="instPassword" placeholder="Password (min 6 char)">
                     </div>
                     <button class="btn-add" onclick="addInstaller()">Crea Installatore</button>
                 </div>
-
                 <div class="form-card">
                     <h3>📋 Installatori registrati</h3>
                     <div class="data-table-wrap">
-                        <table class="data-table" id="installersTable">
+                        <table class="data-table">
                             <thead><tr><th>Nome utente</th><th>Impianti assegnati</th><th>Azioni</th></tr></thead>
                             <tbody id="installersTbody"></tbody>
                         </table>
@@ -623,26 +1056,22 @@
             <section class="section-page" id="section-clients">
                 <div class="page-title">👥 Clienti</div>
                 <div class="page-sub">Gestisci l'anagrafica dei clienti finali</div>
-
                 <div class="form-card">
                     <h3>➕ Nuovo Cliente</h3>
                     <div class="form-grid">
-                        <input type="text"  id="clientName"  placeholder="Nome e cognome (es. Mario Rossi)">
+                        <input type="text" id="clientName" placeholder="Nome e cognome">
                         <input type="email" id="clientEmail" placeholder="Email">
-                        <input type="tel"   id="clientPhone" placeholder="Telefono">
-                        <input type="password" id="clientPassword" placeholder="Password (min 6 caratteri)">
+                        <input type="tel" id="clientPhone" placeholder="Telefono">
+                        <input type="password" id="clientPassword" placeholder="Password (min 6)">
                     </div>
                     <button class="btn-add" onclick="addClient()">Aggiungi Cliente</button>
-                    <div class="info-box" style="margin-top:12px; background: var(--blue-dim);">
-                        ℹ️ Il cliente potrà accedere con il suo <strong>nome utente</strong> (generato dal nome) e la password impostata.
-                    </div>
+                    <div class="info-note" style="margin-top:12px;">ℹ️ Il cliente potrà accedere con username generato automaticamente (es. mario.rossi) e la password impostata.</div>
                 </div>
-
                 <div class="form-card">
                     <h3>📋 Clienti registrati</h3>
                     <div class="data-table-wrap">
                         <table class="data-table">
-                            <thead><tr><th>Nome</th><th>Email</th><th>Telefono</th><th>Username / Accesso</th><th>Telegram</th><th>Azioni</th></tr></thead>
+                            <thead><tr><th>Nome</th><th>Email</th><th>Telefono</th><th>Username</th><th>Telegram</th><th>Azioni</th></tr></thead>
                             <tbody id="clientsTbody"></tbody>
                         </table>
                     </div>
@@ -652,30 +1081,29 @@
             <section class="section-page" id="section-telegram">
                 <div class="page-title">📱 Telegram Bot</div>
                 <div class="page-sub">Configura il webhook — va fatto una sola volta dopo ogni deploy</div>
-
                 <div class="form-card" style="max-width:520px;">
-                    <div class="webhook-box">
-                        <div style="font-size:12px; color:var(--muted);">URL webhook attuale</div>
-                        <div class="webhook-url" id="webhookUrl">Caricamento...</div>
+                    <div class="webhook-box" style="background:var(--surface); border-radius:16px; padding:16px; margin-bottom:20px;">
+                        <div style="font-size:12px; color:var(--text-secondary);">URL webhook attuale</div>
+                        <div class="webhook-url" id="webhookUrl" style="font-family:monospace; font-size:13px; color:var(--blue); margin-top:6px;">Caricamento...</div>
                     </div>
                     <button class="btn-add" onclick="setupWebhook()" id="webhookBtn">🔗 Registra Webhook</button>
-                    <div id="webhookResult" style="margin-top:14px;"></div>
+                    <div id="webhookResult" style="margin-top:16px;"></div>
                 </div>
             </section>
-
         </main>
     </div>
 </div>
 
+<!-- Modali -->
 <div class="modal-bg" id="qrModal">
-    <div class="modal-box">
+    <div class="modal-box" style="text-align:center; padding:32px;">
         <button class="modal-close-btn" onclick="closeQR()">×</button>
         <h3>📲 Attiva notifiche Telegram</h3>
-        <div class="modal-machine-name" id="qrMachineName"></div>
+        <div class="modal-machine-name" id="qrMachineName" style="color:var(--text-secondary); margin-bottom:16px;"></div>
         <div class="qr-wrap"><div id="qrCanvas"></div></div>
         <div class="qr-steps">
             <div class="qr-step-item"><div class="qstep-n">1</div><div>Mostra questo QR code al cliente</div></div>
-            <div class="qr-step-item"><div class="qstep-n">2</div><div>Il cliente lo scansiona con la fotocamera del telefono</div></div>
+            <div class="qr-step-item"><div class="qstep-n">2</div><div>Il cliente lo scansiona con la fotocamera</div></div>
             <div class="qr-step-item"><div class="qstep-n">3</div><div>Si apre Telegram — il cliente preme <strong>START</strong></div></div>
             <div class="qr-step-item"><div class="qstep-n">4</div><div>✅ Da quel momento riceve gli allarmi automaticamente</div></div>
         </div>
@@ -685,7 +1113,7 @@
 <div class="modal-bg" id="detailModal">
     <div class="modal-box">
         <div class="detail-head">
-            <div><h3 id="detailTitle">🏭 Dettaglio impianto</h3><div style="color:var(--muted); font-size:13px; margin-top:2px;" id="detailSub"></div></div>
+            <div><h3 id="detailTitle">🏭 Dettaglio impianto</h3><div style="color:var(--text-secondary); font-size:13px;" id="detailSub"></div></div>
             <button class="modal-close-btn" onclick="closeDetail()">×</button>
         </div>
         <div class="detail-body" id="detailBody"></div>
@@ -695,976 +1123,636 @@
 <div class="modal-bg" id="editModal">
     <div class="modal-box">
         <button class="modal-close-btn" onclick="closeEdit()">×</button>
-        <h3 id="editTitle">Modifica</h3>
+        <h3 id="editTitle" style="padding:0 0 16px 0;">Modifica</h3>
         <div class="edit-form" id="editForm"></div>
     </div>
 </div>
 
 <script>
-const API = '/api';
-let token       = localStorage.getItem('nabulair_token');
-let currentUser = JSON.parse(localStorage.getItem('nabulair_user') || 'null');
-let allMachines = [];
-let allClients  = [];
-let allUsers    = [];
-let filteredMachines = [];
+    const API = '/api';
+    let token = localStorage.getItem('nabulair_token');
+    let currentUser = JSON.parse(localStorage.getItem('nabulair_user') || 'null');
+    let allMachines = [];
+    let allClients = [];
+    let allUsers = [];
+    let filteredMachines = [];
 
-// ==================== GESTIONE PROGRAMMI (CLOUD) ====================
-let currentPrograms = {};
-
-async function loadPrograms(machineId) {
-    const container = document.getElementById(`programs-container-${machineId}`);
-    if (!container) return;
-    container.innerHTML = '<div style="text-align:center; padding:20px;">⏳ Caricamento...</div>';
-    try {
-        const res = await apiGet(`/machines/${machineId}/programs`);
-        if (res.success) {
-            currentPrograms[machineId] = res.programs || [];
-            renderProgramsList(machineId);
-        } else {
-            container.innerHTML = '<div style="color:var(--red); text-align:center;">❌ Errore caricamento</div>';
-        }
-    } catch(e) {
-        container.innerHTML = '<div style="color:var(--red); text-align:center;">❌ Errore di rete</div>';
-    }
-}
-
-function renderProgramsList(machineId) {
-    const container = document.getElementById(`programs-container-${machineId}`);
-    if (!container) return;
-    const programs = currentPrograms[machineId] || [];
-    if (programs.length === 0) {
-        container.innerHTML = '<div style="color:var(--muted); text-align:center; padding:20px;">Nessun programma configurato</div>';
-        return;
-    }
-    let html = '';
-    programs.forEach((p, idx) => {
-        const days = (p.days || []).map(d => ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'][d-1]).join(', ');
-        html += `
-            <div style="border-bottom:1px solid var(--border); padding:12px 0;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <strong>${esc(p.nome || 'Programma')}</strong> 
-                        <span style="background:${p.attivo ? 'var(--green-dim)' : 'var(--red-dim)'}; color:${p.attivo ? 'var(--green)' : 'var(--red)'}; padding:2px 6px; border-radius:10px; font-size:11px; margin-left:6px;">
-                            ${p.attivo ? 'ON' : 'OFF'}
-                        </span>
-                        ${p.lavaggio ? '<span style="background:var(--blue-dim); color:var(--blue); padding:2px 6px; border-radius:10px; font-size:11px; margin-left:6px;">🚿 Lavaggio</span>' : ''}
-                    </div>
-                    <div>
-                        <button class="btn-row btn-row-edit" onclick="editProgram(${machineId}, ${idx})">✎</button>
-                        <button class="btn-row btn-row-del" onclick="deleteProgram(${machineId}, ${idx})">🗑</button>
-                    </div>
-                </div>
-                <div style="font-size:12px; color:var(--muted); margin-top:6px;">
-                    📅 ${days} | ⏰ ${p.orario || '08:00'} | ⏱️ ${p.durata || 120}s | 🧪 ${p.percentuale || 1.5}%
-                </div>
-            </div>
-        `;
-    });
-    container.innerHTML = html;
-}
-
-function showAddProgramModal(machineId) {
-    const modalHtml = `
-        <div id="programModal" class="modal-bg" style="display:flex;">
-            <div class="modal-box" style="max-width:500px; text-align:left;">
-                <button class="modal-close-btn" onclick="closeProgramModal()">×</button>
-                <h3>➕ Nuovo programma</h3>
-                <div style="margin-bottom:10px;">
-                    <label>Nome programma</label>
-                    <input type="text" id="progName" class="form-input" placeholder="es. Serale" style="width:100%;">
-                </div>
-                <div style="margin-bottom:10px;">
-                    <label>Giorni</label>
-                    <div id="progDays" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:5px;">
-                        ${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map((d,i) => `<button type="button" data-day="${i+1}" class="day-btn" onclick="toggleDay(this)">${d}</button>`).join('')}
-                    </div>
-                </div>
-                <div style="margin-bottom:10px;">
-                    <label>Orario</label>
-                    <input type="time" id="progTime" value="08:00" style="width:100%;">
-                </div>
-                <div style="margin-bottom:10px;">
-                    <label>Durata (secondi) <span id="durataVal">120</span></label>
-                    <input type="range" id="progDurata" min="10" max="1800" step="10" value="120" oninput="document.getElementById('durataVal').innerText=this.value">
-                </div>
-                <div style="margin-bottom:10px;">
-                    <label>Percentuale insetticida (%) <span id="percVal">1.5</span></label>
-                    <input type="range" id="progPerc" min="0.1" max="5.0" step="0.1" value="1.5" oninput="document.getElementById('percVal').innerText=this.value">
-                </div>
-                <div style="margin-bottom:20px;">
-                    <label><input type="checkbox" id="progLavaggio"> Ciclo di lavaggio (solo acqua)</label>
-                </div>
-                <div style="display:flex; gap:10px;">
-                    <button class="btn-add" onclick="addProgramToArray(${machineId})">Aggiungi</button>
-                    <button class="btn-cancel" onclick="closeProgramModal()">Annulla</button>
-                </div>
-            </div>
-        </div>
-    `;
-    if (document.getElementById('programModal')) document.getElementById('programModal').remove();
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    window.currentMachineForProgram = machineId;
-}
-
-function closeProgramModal() {
-    const modal = document.getElementById('programModal');
-    if (modal) modal.remove();
-}
-
-function toggleDay(btn) {
-    btn.classList.toggle('active');
-}
-
-function addProgramToArray(machineId) {
-    const name = document.getElementById('progName').value.trim();
-    if (!name) { alert('Inserisci un nome'); return; }
-    const days = Array.from(document.querySelectorAll('#progDays .day-btn.active')).map(btn => parseInt(btn.dataset.day));
-    if (days.length === 0) { alert('Seleziona almeno un giorno'); return; }
-    const time = document.getElementById('progTime').value;
-    const durata = parseInt(document.getElementById('progDurata').value);
-    const percentuale = parseFloat(document.getElementById('progPerc').value);
-    const lavaggio = document.getElementById('progLavaggio').checked;
-    const newProgram = {
-        id: Date.now(),
-        nome: name,
-        attivo: true,
-        days: days,
-        orario: time,
-        durata: durata,
-        percentuale: percentuale,
-        lavaggio: lavaggio
-    };
-    if (!currentPrograms[machineId]) currentPrograms[machineId] = [];
-    currentPrograms[machineId].push(newProgram);
-    renderProgramsList(machineId);
-    closeProgramModal();
-    saveProgramsToCloud(machineId, false);
-}
-
-function editProgram(machineId, index) {
-    const prog = currentPrograms[machineId][index];
-    if (!prog) return;
-    const modalHtml = `
-        <div id="programModal" class="modal-bg" style="display:flex;">
-            <div class="modal-box" style="max-width:500px; text-align:left;">
-                <button class="modal-close-btn" onclick="closeProgramModal()">×</button>
-                <h3>✏️ Modifica programma</h3>
-                <div style="margin-bottom:10px;">
-                    <label>Nome programma</label>
-                    <input type="text" id="progName" class="form-input" value="${esc(prog.nome)}" style="width:100%;">
-                </div>
-                <div style="margin-bottom:10px;">
-                    <label>Giorni</label>
-                    <div id="progDays" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:5px;">
-                        ${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map((d,i) => `<button type="button" data-day="${i+1}" class="day-btn ${prog.days.includes(i+1) ? 'active' : ''}" onclick="toggleDay(this)">${d}</button>`).join('')}
-                    </div>
-                </div>
-                <div style="margin-bottom:10px;">
-                    <label>Orario</label>
-                    <input type="time" id="progTime" value="${prog.orario}" style="width:100%;">
-                </div>
-                <div style="margin-bottom:10px;">
-                    <label>Durata (secondi) <span id="durataVal">${prog.durata}</span></label>
-                    <input type="range" id="progDurata" min="10" max="1800" step="10" value="${prog.durata}" oninput="document.getElementById('durataVal').innerText=this.value">
-                </div>
-                <div style="margin-bottom:10px;">
-                    <label>Percentuale insetticida (%) <span id="percVal">${prog.percentuale}</span></label>
-                    <input type="range" id="progPerc" min="0.1" max="5.0" step="0.1" value="${prog.percentuale}" oninput="document.getElementById('percVal').innerText=this.value">
-                </div>
-                <div style="margin-bottom:20px;">
-                    <label><input type="checkbox" id="progLavaggio" ${prog.lavaggio ? 'checked' : ''}> Ciclo di lavaggio (solo acqua)</label>
-                </div>
-                <div style="display:flex; gap:10px;">
-                    <button class="btn-add" onclick="updateProgramInArray(${machineId}, ${index})">Salva modifiche</button>
-                    <button class="btn-cancel" onclick="closeProgramModal()">Annulla</button>
-                </div>
-            </div>
-        </div>
-    `;
-    if (document.getElementById('programModal')) document.getElementById('programModal').remove();
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    window.currentMachineForProgram = machineId;
-    window.currentEditIndex = index;
-}
-
-function updateProgramInArray(machineId, index) {
-    const name = document.getElementById('progName').value.trim();
-    if (!name) { alert('Inserisci un nome'); return; }
-    const days = Array.from(document.querySelectorAll('#progDays .day-btn.active')).map(btn => parseInt(btn.dataset.day));
-    if (days.length === 0) { alert('Seleziona almeno un giorno'); return; }
-    const time = document.getElementById('progTime').value;
-    const durata = parseInt(document.getElementById('progDurata').value);
-    const percentuale = parseFloat(document.getElementById('progPerc').value);
-    const lavaggio = document.getElementById('progLavaggio').checked;
-    currentPrograms[machineId][index] = {
-        ...currentPrograms[machineId][index],
-        nome: name,
-        days: days,
-        orario: time,
-        durata: durata,
-        percentuale: percentuale,
-        lavaggio: lavaggio
-    };
-    renderProgramsList(machineId);
-    closeProgramModal();
-    saveProgramsToCloud(machineId, false);
-}
-
-function deleteProgram(machineId, index) {
-    if (confirm('Eliminare questo programma?')) {
-        currentPrograms[machineId].splice(index, 1);
-        renderProgramsList(machineId);
-        saveProgramsToCloud(machineId, false);
-    }
-}
-
-async function saveProgramsToCloud(machineId, sendToDevice) {
-    const programs = currentPrograms[machineId] || [];
-    const formatted = programs.map(p => ({
-        id: p.id,
-        nome: p.nome,
-        attivo: p.attivo,
-        days: p.days,
-        orario: p.orario,
-        durata: p.durata,
-        percentuale: p.percentuale,
-        lavaggio: p.lavaggio || false
-    }));
-    // Feedback visivo nell'elemento status comandi del modal aperto
-    const statusEl = document.getElementById(`cmd-status-${machineId}`);
-    if (statusEl) { statusEl.textContent = '⏳ Salvataggio in corso...'; statusEl.className = 'cmd-status wait'; }
-    try {
-        const res = await apiPut(`/machines/${machineId}/programs`, { programs: formatted, sendToDevice });
-        if (res.success) {
-            if (statusEl) { statusEl.textContent = '✅ ' + res.message; statusEl.className = 'cmd-status ok'; }
-            else showDashToast('✅ ' + res.message);
-            // Se inviato all'ESP32 e abbiamo un command_id, avvia polling
-            if (sendToDevice && res.command_id) {
-                startDashCmdPoll(machineId, res.command_id);
-            }
-        } else {
-            if (statusEl) { statusEl.textContent = '❌ ' + (res.message || 'Salvataggio fallito'); statusEl.className = 'cmd-status err'; }
-            else showDashToast('❌ ' + (res.message || 'Salvataggio fallito'));
-        }
-    } catch(e) {
-        if (statusEl) { statusEl.textContent = '❌ Errore di connessione'; statusEl.className = 'cmd-status err'; }
-        else showDashToast('❌ Errore di connessione');
-    }
-}
-
-function showDashToast(msg) {
-    // Fallback semplice quando il status element non è visibile
-    const old = document.getElementById('dashToast');
-    if (old) old.remove();
-    const t = document.createElement('div');
-    t.id = 'dashToast';
-    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid rgba(255,255,255,.15);padding:12px 22px;border-radius:12px;font-size:13px;z-index:9999;color:#f1f5f9;box-shadow:0 8px 32px rgba(0,0,0,.5);';
-    t.textContent = msg;
-    document.body.appendChild(t);
-    setTimeout(() => t.remove(), 3500);
-}
-
-function startDashCmdPoll(machineId, cmdId) {
-    const statusEl = document.getElementById(`cmd-status-${machineId}`);
-    if (statusEl) { statusEl.textContent = '📡 Invio all\'ESP32 in corso...'; statusEl.className = 'cmd-status wait'; }
-    let attempts = 0;
-    const timer = setInterval(async () => {
-        attempts++;
+    // ==================== LOGIN ====================
+    async function doLogin() {
+        const u = document.getElementById('loginUser').value.trim();
+        const p = document.getElementById('loginPass').value;
+        const err = document.getElementById('loginError');
+        err.style.display = 'none';
+        if (!u || !p) { err.textContent = 'Inserisci username e password'; err.style.display='block'; return; }
         try {
-            const data = await apiGet(`/machines/${machineId}/commands`);
-            if (!data.success) return;
-            const cmd = data.commands.find(c => c.id === cmdId);
-            if (!cmd) return;
-            if (cmd.status === 'executed') {
-                if (statusEl) { statusEl.textContent = '✅ Programmi ricevuti dall\'ESP32!'; statusEl.className = 'cmd-status ok'; }
-                clearInterval(timer);
-            } else if (cmd.status === 'failed') {
-                if (statusEl) { statusEl.textContent = '❌ ESP32: invio programmi fallito'; statusEl.className = 'cmd-status err'; }
-                clearInterval(timer);
-            } else if (attempts > 24) {
-                if (statusEl) { statusEl.textContent = '⏳ ESP32 non ancora risposto (max 2 min)'; statusEl.className = 'cmd-status wait'; }
-                clearInterval(timer);
+            const res = await fetch(`${API}/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:u, password:p}) });
+            const data = await res.json();
+            if (data.success) {
+                token = data.token;
+                currentUser = data.user;
+                localStorage.setItem('nabulair_token', token);
+                localStorage.setItem('nabulair_user', JSON.stringify(currentUser));
+                if (currentUser.role === 'client') {
+                    window.location.href = '/remote.html';
+                    return;
+                }
+                bootApp();
+            } else {
+                err.textContent = data.message || 'Credenziali non valide';
+                err.style.display = 'block';
             }
-        } catch(e) {}
-    }, 5000);
-}
-
-// ==================== FUNZIONI DI TEST CONNESSIONE LOCALE ====================
-async function testLocalConnection(ip, machineId) {
-    const statusSpan = document.getElementById(`local-test-${machineId}`);
-    if (!statusSpan) return;
-    statusSpan.textContent = '⏳ testing...';
-    statusSpan.style.color = 'var(--amber)';
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
-        // Tentiamo una fetch verso l'endpoint /status (o qualsiasi rotta che risponda velocemente)
-        // Usiamo mode: 'no-cors' per evitare problemi CORS, ma non potremo leggere la risposta.
-        // Per avere un vero test, idealmente l'ESP risponde con un piccolo JSON.
-        // In mancanza, proviamo a vedere se la connessione TCP viene stabilita.
-        const res = await fetch(`http://${ip}/status`, { signal: controller.signal, mode: 'no-cors' });
-        clearTimeout(timeoutId);
-        // Con 'no-cors', la risposta è opaca e non possiamo leggere lo status, ma se non c'è eccezione la connessione è ok.
-        statusSpan.textContent = '✅ Raggiungibile (stessa LAN)';
-        statusSpan.style.color = 'var(--green)';
-    } catch(e) {
-        statusSpan.textContent = '❌ Non raggiungibile o firewall';
-        statusSpan.style.color = 'var(--red)';
-    }
-}
-
-async function doLogin() {
-    const u = document.getElementById('loginUser').value.trim();
-    const p = document.getElementById('loginPass').value;
-    const err = document.getElementById('loginError');
-    err.style.display = 'none';
-    if (!u || !p) { err.textContent = 'Inserisci username e password'; err.style.display='block'; return; }
-    try {
-        const res  = await fetch(`${API}/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:u, password:p}) });
-        const data = await res.json();
-        if (data.success) {
-            token = data.token;
-            currentUser = data.user;
-            localStorage.setItem('nabulair_token', token);
-            localStorage.setItem('nabulair_user', JSON.stringify(currentUser));
-            bootApp();
-        } else {
-            err.textContent = data.message || 'Credenziali non valide';
+        } catch(e) {
+            err.textContent = 'Impossibile contattare il server';
             err.style.display = 'block';
         }
-    } catch(e) {
-        err.textContent = 'Impossibile contattare il server';
-        err.style.display = 'block';
-    }
-}
-
-function logout() {
-    localStorage.removeItem('nabulair_token');
-    localStorage.removeItem('nabulair_user');
-    location.reload();
-}
-
-function bootApp() {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('appShell').style.display    = 'block';
-
-    const role = currentUser.role;
-    document.getElementById('topUsername').textContent   = currentUser.username;
-    const badge = document.getElementById('topRoleBadge');
-    badge.textContent  = role === 'admin' ? 'Admin' : role === 'installer' ? 'Installatore' : 'Cliente';
-    badge.className    = `role-badge role-${role}`;
-
-    const sidebar = document.getElementById('sidebar');
-    if (role === 'admin') {
-        sidebar.classList.add('visible');
-        sidebar.innerHTML = `
-            <div class="sidebar-label">Menu</div>
-            <button class="nav-item active" onclick="showSection('machines')" id="nav-machines"><span class="nav-icon">🏭</span> Impianti</button>
-            <button class="nav-item" onclick="showSection('installers')" id="nav-installers"><span class="nav-icon">🔧</span> Installatori</button>
-            <button class="nav-item" onclick="showSection('clients')" id="nav-clients"><span class="nav-icon">👥</span> Clienti</button>
-            <hr class="sidebar-divider">
-            <div class="sidebar-label">Sistema</div>
-            <button class="nav-item" onclick="showSection('telegram')" id="nav-telegram"><span class="nav-icon">📱</span> Telegram Bot</button>
-        `;
-        document.getElementById('filterClient').style.display = 'inline-block';
-        document.getElementById('filterInstaller').style.display = 'inline-block';
-        document.getElementById('preregisterCard').style.display = 'block';
-        loadClients();
-        loadUsers();
-    } else if (role === 'installer') {
-        sidebar.classList.add('visible');
-        sidebar.innerHTML = `
-            <div class="sidebar-label">Menu</div>
-            <button class="nav-item active" onclick="showSection('machines')" id="nav-machines"><span class="nav-icon">🏭</span> I Tuoi Impianti</button>
-            <button class="nav-item" onclick="showSection('clients')" id="nav-clients"><span class="nav-icon">👥</span> Clienti</button>
-            <hr class="sidebar-divider">
-            <div class="sidebar-label">Sistema</div>
-            <button class="nav-item" onclick="showSection('telegram')" id="nav-telegram"><span class="nav-icon">📱</span> Telegram Bot</button>
-        `;
-        document.getElementById('machinesTitle').textContent = '🏭 I Tuoi Impianti';
-        document.getElementById('machinesSub').textContent   = 'Impianti assegnati a te';
-        loadClients();
-    } else {
-        sidebar.classList.remove('visible');
-        document.getElementById('machinesTitle').textContent = '🏭 I Tuoi Impianti';
-        document.getElementById('machinesSub').textContent   = 'I tuoi impianti NabulAir';
     }
 
-    loadMachines();
-    loadAlerts();
-}
+    function logout() {
+        localStorage.removeItem('nabulair_token');
+        localStorage.removeItem('nabulair_user');
+        location.reload();
+    }
 
-function showSection(name) {
-    document.querySelectorAll('.section-page').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.getElementById('section-' + name)?.classList.add('active');
-    document.getElementById('nav-' + name)?.classList.add('active');
-    if (name === 'telegram') loadWebhookStatus();
-    if (name === 'installers') renderInstallers();
-    if (name === 'clients') renderClientsTable();
-}
+    function bootApp() {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('appShell').style.display = 'block';
 
-async function api(method, endpoint, body) {
-    const opts = { method, headers: { 'Authorization': `Bearer ${token}` } };
-    if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
-    const res = await fetch(API + endpoint, opts);
-    if (res.status === 401) { logout(); return { success: false, message: 'Sessione scaduta' }; }
-    return res.json();
-}
-const apiGet  = ep       => api('GET',  ep);
-const apiPost = (ep, b)  => api('POST', ep, b);
-const apiPut  = (ep, b)  => api('PUT',  ep, b);
-const apiDel  = ep       => api('DELETE', ep);
+        document.getElementById('topUsername').textContent = currentUser.username;
+        const badge = document.getElementById('topRoleBadge');
+        badge.textContent = currentUser.role === 'admin' ? 'Admin' : 'Installatore';
+        badge.className = `role-badge role-${currentUser.role}`;
 
-async function loadAlerts() {
-    try {
-        const data = await apiGet('/alerts');
-        const wrap = document.getElementById('alertsWrap');
-        const list = document.getElementById('alertsList');
-        if (data.success && data.alerts.length > 0) {
-            wrap.classList.add('has-alerts');
-            list.innerHTML = data.alerts.map(a => `
-                <div class="alert-row">
-                    <span>🚨 <strong>${esc(a.machine_name || '—')}</strong> — ${esc(a.message)}</span>
-                    <button class="btn-resolve" onclick="resolveAlert(${a.id})">✓ Risolto</button>
-                </div>`).join('');
-        } else {
-            wrap.classList.remove('has-alerts');
+        const sidebar = document.getElementById('sidebar');
+        if (currentUser.role === 'admin') {
+            sidebar.classList.add('visible');
+            sidebar.innerHTML = `
+                <div class="sidebar-label">Menu</div>
+                <button class="nav-item active" onclick="showSection('machines')"><span class="nav-icon">🏭</span> Impianti</button>
+                <button class="nav-item" onclick="showSection('installers')"><span class="nav-icon">🔧</span> Installatori</button>
+                <button class="nav-item" onclick="showSection('clients')"><span class="nav-icon">👥</span> Clienti</button>
+                <hr class="sidebar-divider">
+                <div class="sidebar-label">Sistema</div>
+                <button class="nav-item" onclick="showSection('telegram')"><span class="nav-icon">📱</span> Telegram Bot</button>
+            `;
+            document.getElementById('filterClient').style.display = 'inline-block';
+            document.getElementById('filterInstaller').style.display = 'inline-block';
+            document.getElementById('preregisterCard').style.display = 'block';
+            loadClients();
+            loadUsers();
+        } else { // installer
+            sidebar.classList.add('visible');
+            sidebar.innerHTML = `
+                <div class="sidebar-label">Menu</div>
+                <button class="nav-item active" onclick="showSection('machines')"><span class="nav-icon">🏭</span> I Tuoi Impianti</button>
+                <button class="nav-item" onclick="showSection('clients')"><span class="nav-icon">👥</span> Clienti</button>
+                <hr class="sidebar-divider">
+                <div class="sidebar-label">Sistema</div>
+                <button class="nav-item" onclick="showSection('telegram')"><span class="nav-icon">📱</span> Telegram Bot</button>
+            `;
+            document.getElementById('machinesTitle').textContent = '🏭 I Tuoi Impianti';
+            document.getElementById('machinesSub').textContent = 'Impianti assegnati a te';
+            loadClients();
         }
-    } catch(e) {}
-}
+        loadMachines();
+        loadAlerts();
+    }
 
-async function resolveAlert(id) {
-    await apiPost(`/alerts/${id}/resolve`, {});
-    loadAlerts();
-}
+    function showSection(name) {
+        document.querySelectorAll('.section-page').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('section-' + name)?.classList.add('active');
+        if (name === 'telegram') loadWebhookStatus();
+        if (name === 'installers') renderInstallers();
+        if (name === 'clients') renderClientsTable();
+    }
 
-async function loadMachines() {
-    try {
-        const data = await apiGet('/machines');
-        if (data.success) {
-            allMachines = data.machines;
-            populateFilterDropdowns();
-            filterMachines();
-            renderTopPills(data.machines);
+    // ==================== API ====================
+    async function api(method, endpoint, body) {
+        const opts = { method, headers: { 'Authorization': `Bearer ${token}` } };
+        if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+        const res = await fetch(API + endpoint, opts);
+        if (res.status === 401) { logout(); return { success: false }; }
+        return res.json();
+    }
+    const apiGet = ep => api('GET', ep);
+    const apiPost = (ep, b) => api('POST', ep, b);
+    const apiPut = (ep, b) => api('PUT', ep, b);
+    const apiDel = ep => api('DELETE', ep);
+
+    // ==================== ALERTS ====================
+    async function loadAlerts() {
+        try {
+            const data = await apiGet('/alerts');
+            const wrap = document.getElementById('alertsWrap');
+            const list = document.getElementById('alertsList');
+            if (data.success && data.alerts.length) {
+                wrap.classList.add('has-alerts');
+                list.innerHTML = data.alerts.map(a => `
+                    <div class="alert-row">
+                        <span>🚨 <strong>${esc(a.machine_name || '—')}</strong> — ${esc(a.message)}</span>
+                        <button class="btn-resolve" onclick="resolveAlert(${a.id})">✓ Risolto</button>
+                    </div>
+                `).join('');
+            } else {
+                wrap.classList.remove('has-alerts');
+            }
+        } catch(e) {}
+    }
+
+    async function resolveAlert(id) {
+        await apiPost(`/alerts/${id}/resolve`, {});
+        loadAlerts();
+    }
+
+    // ==================== MACHINES ====================
+    async function loadMachines() {
+        try {
+            const data = await apiGet('/machines');
+            if (data.success) {
+                allMachines = data.machines;
+                populateFilterDropdowns();
+                filterMachines();
+                renderTopPills();
+            }
+        } catch(e) {
+            document.getElementById('machinesTbody').innerHTML = '<tr><td colspan="7" class="empty-state"><div class="big">❌</div><p>Errore di connessione</p></td></tr>';
         }
-    } catch(e) {
-        document.getElementById('machinesTbody').innerHTML = '<tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">❌</div><p>Errore di connessione</p></td></tr>';
-    }
-}
-
-function populateFilterDropdowns() {
-    const role = currentUser.role;
-    const fClient = document.getElementById('filterClient');
-    const fInst   = document.getElementById('filterInstaller');
-
-    if (role === 'admin') {
-        fClient.style.display = 'inline-block';
-        fInst.style.display   = 'inline-block';
-        fClient.innerHTML = '<option value="">Tutti i clienti</option>' +
-            allClients.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
-        fInst.innerHTML = '<option value="">Tutti gli installatori</option>' +
-            allUsers.filter(u=>u.role==='installer').map(u => `<option value="${u.id}">${esc(u.username)}</option>`).join('');
-    }
-}
-
-function filterMachines() {
-    const search = document.getElementById('filterSearch').value.toLowerCase();
-    const status = document.getElementById('filterStatus').value;
-    const clientId = document.getElementById('filterClient').value;
-    const instId   = document.getElementById('filterInstaller').value;
-
-    filteredMachines = allMachines.filter(m => {
-        const textMatch = (m.machine_name||'').toLowerCase().includes(search) || (m.mac_address||'').toLowerCase().includes(search);
-        let statusMatch = true;
-        if (status === 'online')  statusMatch = m.status === 'online';
-        if (status === 'offline') statusMatch = m.status !== 'online';
-        if (status === 'alert')   statusMatch = m.water_ok === false || m.insecticide_ok === false;
-        let clientMatch = true, instMatch = true;
-        if (clientId) clientMatch = m.client_id == clientId;
-        if (instId)   instMatch   = m.installer_id == instId;
-        return textMatch && statusMatch && clientMatch && instMatch;
-    });
-
-    renderMachinesTable(filteredMachines);
-}
-
-function renderMachinesTable(machines) {
-    const tbody = document.getElementById('machinesTbody');
-    if (!machines.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="empty-state" style="padding:40px;"><div class="big">📭</div><p>Nessun impianto trovato</p></td></tr>';
-        return;
     }
 
-    const isAdmin     = currentUser.role === 'admin';
-    const isInstaller = currentUser.role === 'installer';
-    const isClient    = currentUser.role === 'client';
+    function populateFilterDropdowns() {
+        if (currentUser.role !== 'admin') return;
+        const fClient = document.getElementById('filterClient');
+        const fInst = document.getElementById('filterInstaller');
+        fClient.innerHTML = '<option value="">Tutti i clienti</option>' + allClients.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+        fInst.innerHTML = '<option value="">Tutti gli installatori</option>' + allUsers.filter(u=>u.role==='installer').map(u => `<option value="${u.id}">${esc(u.username)}</option>`).join('');
+    }
 
-    tbody.innerHTML = machines.map(m => {
-        const online  = m.status === 'online';
-        // NUOVA LOGICA SENSORI: OK solo se esplicitamente true, altrimenti false (o null)
-        // NOTA: lo status online/offline è calcolato dal backend basato su last_seen
+    function filterMachines() {
+        const search = document.getElementById('filterSearch').value.toLowerCase();
+        const status = document.getElementById('filterStatus').value;
+        const clientId = document.getElementById('filterClient').value;
+        const instId = document.getElementById('filterInstaller').value;
+        filteredMachines = allMachines.filter(m => {
+            const textMatch = (m.machine_name||'').toLowerCase().includes(search) || (m.mac_address||'').toLowerCase().includes(search);
+            let statusMatch = true;
+            if (status === 'online') statusMatch = m.status === 'online';
+            if (status === 'offline') statusMatch = m.status !== 'online';
+            if (status === 'alert') statusMatch = m.water_ok === false || m.insecticide_ok === false;
+            let clientMatch = true, instMatch = true;
+            if (clientId) clientMatch = m.client_id == clientId;
+            if (instId) instMatch = m.installer_id == instId;
+            return textMatch && statusMatch && clientMatch && instMatch;
+        });
+        renderMachinesTable();
+    }
+
+    function renderMachinesTable() {
+        const tbody = document.getElementById('machinesTbody');
+        if (!filteredMachines.length) {
+            tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="big">📭</div><p>Nessun impianto trovato</p></td></tr>';
+            return;
+        }
+        const isAdmin = currentUser.role === 'admin';
+        tbody.innerHTML = filteredMachines.map(m => {
+            const online = m.status === 'online';
+            const waterOk = m.water_ok === true;
+            const insOk = m.insecticide_ok === true;
+            const clientName = m.client_name || (m.client_id ? allClients.find(c=>c.id==m.client_id)?.name : '') || '—';
+            const instName = m.installer_name || (m.installer_id ? allUsers.find(u=>u.id==m.installer_id)?.username : '') || '—';
+            let actions = `<button class="btn-row btn-row-view" onclick="openDetail(${m.id})">👁 Dettaglio</button>`;
+            if (isAdmin) {
+                actions += ` <button class="btn-row btn-row-edit" onclick="editMachine(${m.id})">✎</button>`;
+                actions += ` <button class="btn-row btn-row-del" onclick="deleteMachine(${m.id})">🗑</button>`;
+            }
+            return `<tr>
+                <td><strong>${esc(m.machine_name || 'Impianto')}</strong></td>
+                <td class="td-mono">${m.mac_address || '—'}</td>
+                <td><span class="td-status"><span class="td-dot ${online?'online':'offline'}"></span>${online?'Online':'Offline'}</span></td>
+                <td>
+                    <span class="td-sensor ${!online ? 'unknown' : waterOk ? 'ok' : 'err'}">${!online ? '❓ N/D' : waterOk ? '💧 OK' : '💧 ❌'}</span>
+                    <span class="td-sensor ${!online ? 'unknown' : insOk ? 'ok' : 'err'}">${!online ? '❓ N/D' : insOk ? '🧪 OK' : '🧪 ❌'}</span>
+                </td>
+                <td>${esc(clientName)}</td>
+                <td>${esc(instName)}</td>
+                <td class="td-actions">${actions}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    function renderTopPills() {
+        if (currentUser.role !== 'admin') return;
+        const online = allMachines.filter(m => m.status === 'online').length;
+        const offline = allMachines.filter(m => m.status !== 'online').length;
+        const alerts = allMachines.filter(m => m.water_ok === false || m.insecticide_ok === false).length;
+        document.getElementById('topPills').innerHTML = `
+            <div class="pill">Totale <span>${allMachines.length}</span></div>
+            <div class="pill">🟢 Online <span>${online}</span></div>
+            ${offline ? `<div class="pill">🔴 Offline <span>${offline}</span></div>` : ''}
+            ${alerts ? `<div class="pill">🚨 Allarmi <span>${alerts}</span></div>` : ''}
+        `;
+    }
+
+    // ==================== DETAIL MODAL (without programs, with reboot/OTA and remote link) ====================
+    let currentDetailId = null;
+
+    function openDetail(id) {
+        const m = allMachines.find(x => x.id === id);
+        if (!m) return;
+        currentDetailId = id;
+        const online = m.status === 'online';
         const waterOk = m.water_ok === true;
-        const insOk   = m.insecticide_ok === true;
-        const waterNull = m.water_ok === null || m.water_ok === undefined;
-        const insNull   = m.insecticide_ok === null || m.insecticide_ok === undefined;
-        const clientName = m.client_name || (m.client_id ? allClients.find(c=>c.id==m.client_id)?.name : '') || '—';
-        const instName   = m.installer_name || (m.installer_id ? allUsers.find(u=>u.id==m.installer_id)?.username : '') || '—';
+        const insOk = m.insecticide_ok === true;
+        const isAdmin = currentUser.role === 'admin';
+        const isInstaller = currentUser.role === 'installer';
 
-        let actions = `<button class="btn-row btn-row-view" onclick="openDetail(${m.id})">👁 Dettaglio</button>`;
-        if (isAdmin) {
-            actions += ` <button class="btn-row btn-row-edit" onclick="editMachine(${m.id})">✎</button>`;
-            actions += ` <button class="btn-row btn-row-del" onclick="deleteMachine(${m.id})">🗑</button>`;
-        }
+        document.getElementById('detailTitle').textContent = esc(m.machine_name || 'Impianto');
+        document.getElementById('detailSub').textContent = `${m.mac_address || '—'} · IP ${m.sta_ip || '—'}`;
 
-        return `<tr>
-            <td><strong>${esc(m.machine_name || 'Impianto')}</strong></td>
-            <td class="td-mono">${m.mac_address || '—'}</td>
-            <td><span class="td-status"><span class="td-dot ${online?'online':'offline'}"></span>${online?'Online':'Offline'}</span></td>
-            <td>
-                <span class="td-sensor ${!online || waterNull ? 'unknown' : waterOk ? 'ok' : 'err'}">
-                    ${!online || waterNull ? '❓ N/D' : waterOk ? '💧 OK' : '💧 ❌'}
-                </span>
-                <span class="td-sensor ${!online || insNull ? 'unknown' : insOk ? 'ok' : 'err'}">
-                    ${!online || insNull ? '❓ N/D' : insOk ? '🧪 OK' : '🧪 ❌'}
-                </span>
-            </td>
-            <td>${esc(clientName)}</td>
-            <td>${esc(instName)}</td>
-            <td class="td-actions">${actions}</td>
-        </tr>`;
-    }).join('');
-}
-
-function renderTopPills(machines) {
-    if (currentUser.role !== 'admin') return;
-    const online  = machines.filter(m => m.status === 'online').length;
-    const offline = machines.filter(m => m.status !== 'online').length;
-    const alerts  = machines.filter(m => m.water_ok === false || m.insecticide_ok === false).length;
-    document.getElementById('topPills').innerHTML = `
-        <div class="pill">Totale <span>${machines.length}</span></div>
-        <div class="pill">🟢 Online <span>${online}</span></div>
-        ${offline > 0 ? `<div class="pill">🔴 Offline <span>${offline}</span></div>` : ''}
-        ${alerts  > 0 ? `<div class="pill">🚨 Allarmi <span>${alerts}</span></div>`  : ''}
-    `;
-}
-
-let currentDetailId = null;
-
-function openDetail(id) {
-    const m = allMachines.find(x => x.id === id);
-    if (!m) return;
-    currentDetailId = id;
-
-    const online  = m.status === 'online';
-    const waterOk = m.water_ok === true;
-    const insOk   = m.insecticide_ok === true;
-    const waterNull = m.water_ok === null || m.water_ok === undefined;
-    const insNull   = m.insecticide_ok === null || m.insecticide_ok === undefined;
-    const step1done = !!m.client_id;
-    const step2done = !!m.telegram_chat_id;
-    const isAdmin     = currentUser.role === 'admin';
-    const isInstaller = currentUser.role === 'installer';
-    const isClient    = currentUser.role === 'client';
-
-    document.getElementById('detailTitle').textContent = esc(m.machine_name || 'Impianto');
-    document.getElementById('detailSub').textContent = `${m.mac_address || '—'} · IP ${m.sta_ip || '—'}`;
-
-    let left = `
-        <div class="detail-section">
-            <h4>📡 Stato</h4>
-            <div class="detail-row"><span class="label">Connessione</span><span class="value" style="color:${online?'var(--green)':'var(--red)'}">${online?'🟢 Online':'🔴 Offline'}</span></div>
-            <div class="detail-row"><span class="label">MAC</span><span class="value td-mono">${m.mac_address||'—'}</span></div>
-            <div class="detail-row">
-                <span class="label">IP Locale</span>
-                <span class="value td-mono" id="device-ip-${m.id}">${m.sta_ip || '—'}</span>
-                ${m.sta_ip ? `<button class="btn-save-sm" style="margin-left:10px;" onclick="testLocalConnection('${m.sta_ip}', ${m.id})">🔍 Test</button>
-                              <a href="/remote?machineId=${m.id}" target="_blank" class="btn-save-sm" style="text-decoration:none;">🌐 Controllo Remoto</a>
-                              <span id="local-test-${m.id}" style="margin-left:8px;"></span>` : ''}
+        let left = `
+            <div class="detail-section">
+                <h4>📡 Stato</h4>
+                <div class="detail-row"><span class="label">Connessione</span><span class="value" style="color:${online?'var(--green)':'var(--red)'}">${online?'🟢 Online':'🔴 Offline'}</span></div>
+                <div class="detail-row"><span class="label">MAC</span><span class="value td-mono">${m.mac_address||'—'}</span></div>
+                <div class="detail-row"><span class="label">IP Locale</span><span class="value td-mono">${m.sta_ip || '—'}</span></div>
             </div>
-        </div>
-        <div class="detail-section">
-            <h4>🧪 Sensori</h4>
-            <div class="sensor-big ${!online || waterNull ? 'unknown' : waterOk ? 'ok' : 'err'}">
-                <span style="font-size:18px">💧</span>
-                <span>${!online ? '❓ N/D (offline)' : waterNull ? '❓ N/D (non riportato)' : waterOk ? 'Acqua presente' : 'Acqua assente — rabboccare!'}</span>
-            </div>
-            <div class="sensor-big ${!online || insNull ? 'unknown' : insOk ? 'ok' : 'err'}">
-                <span style="font-size:18px">🧪</span>
-                <span>${!online ? '❓ N/D (offline)' : insNull ? '❓ N/D (non riportato)' : insOk ? 'Insetticida OK' : 'Insetticida esaurito!'}</span>
-            </div>
-        </div>
-    `;
-
-    let assignSection = `<div class="detail-section"><h4>👤 Assegnazione</h4>`;
-    if (isAdmin) {
-        const clientOpts = allClients.map(c => `<option value="${c.id}" ${m.client_id==c.id?'selected':''}>${esc(c.name)}</option>`).join('');
-        const instOpts = allUsers.filter(u=>u.role==='installer').map(u => `<option value="${u.id}" ${m.installer_id==u.id?'selected':''}>${esc(u.username)}</option>`).join('');
-        assignSection += `
-            <div class="assign-box">
-                <label style="font-size:12px; color:var(--muted);">Cliente</label>
-                <select id="det-client-${m.id}"><option value="">— Nessun cliente —</option>${clientOpts}</select>
-                <label style="font-size:12px; color:var(--muted);">Installatore</label>
-                <select id="det-inst-${m.id}"><option value="">— Nessun installatore —</option>${instOpts}</select>
-                <button class="btn-save-sm" onclick="saveDetailAssign(${m.id})">💾 Salva assegnazione</button>
-            </div>
-        `;
-    } else if (isInstaller) {
-        const clientOpts = allClients.map(c => `<option value="${c.id}" ${m.client_id==c.id?'selected':''}>${esc(c.name)}</option>`).join('');
-        assignSection += `
-            <div class="assign-box">
-                <label style="font-size:12px; color:var(--muted);">Cliente assegnato</label>
-                <select id="det-client-${m.id}"><option value="">— Nessun cliente —</option>${clientOpts}</select>
-                <button class="btn-save-sm" onclick="saveDetailAssignInstaller(${m.id})">💾 Salva cliente</button>
-            </div>
-        `;
-    } else {
-        const clientName = m.client_name || allClients.find(c=>c.id==m.client_id)?.name || '—';
-        assignSection += `<div class="detail-row"><span class="label">Cliente</span><span class="value">${esc(clientName)}</span></div>`;
-    }
-    assignSection += `</div>`;
-    left += assignSection;
-
-    let telegramSection = `<div class="detail-section"><h4>📱 Telegram</h4>`;
-    if (step2done) {
-        telegramSection += `<div style="color:var(--green); font-size:13px; font-weight:600;">✅ Attivo — chat ID: ${esc(m.telegram_chat_id)}</div>`;
-        if (!isClient) telegramSection += `<button class="btn-qr-big telegram-ok" style="margin-top:12px;" onclick="openQR(${m.id},'${esc(m.machine_name||m.mac_address)}')">🔄 Rigenera QR</button>`;
-    } else if (step1done && !isClient) {
-        telegramSection += `<div style="color:var(--muted); font-size:13px;">Non ancora attivato dal cliente</div>`;
-        telegramSection += `<button class="btn-qr-big" style="margin-top:12px;" onclick="openQR(${m.id},'${esc(m.machine_name||m.mac_address)}')">📲 Genera QR Telegram</button>`;
-    } else if (!step1done && !isClient) {
-        telegramSection += `<div style="color:var(--amber); font-size:13px;">🔒 Assegna prima un cliente per attivare Telegram</div>`;
-    } else {
-        telegramSection += `<div style="color:var(--muted); font-size:13px;">—</div>`;
-    }
-    telegramSection += `</div>`;
-    left += telegramSection;
-
-    let right = '';
-    if (!isClient) {
-        right = `
-        <div class="detail-section">
-            <h4>🛠 Comandi remoti</h4>
-            <div class="cmd-grid">
-                <button class="btn-cmd btn-cmd-programs" onclick="sendMachineCmd(${m.id},'sync_time')">🕒 Sincronizza ora</button>
-                <button class="btn-cmd btn-cmd-programs" onclick="sendMachineCmd(${m.id},'start_cycle')">💨 Avvia ciclo manuale</button>
-                <button class="btn-cmd btn-cmd-reboot" onclick="sendMachineCmd(${m.id},'reboot')">🔄 Riavvia</button>
-                <button class="btn-cmd btn-cmd-ota" onclick="toggleOtaPanel(${m.id})">⬆️ OTA Firmware</button>
-            </div>
-            <div class="cmd-status" id="cmd-status-${m.id}"></div>
-            <div class="ota-panel" id="ota-panel-${m.id}">
-                <label style="font-size:12px; color:var(--muted);">URL firmware (.bin)</label>
-                <input type="text" id="ota-url-${m.id}" placeholder="https://.../firmware.bin">
-                <button class="btn-cmd btn-cmd-ota" style="width:100%" onclick="sendMachineCmd(${m.id},'ota_firmware')">🚀 Avvia aggiornamento</button>
-                <div class="info-note">
-                    💡 L'OTA via cloud funziona sempre, anche da remoto. Usa questa sezione per aggiornare l'ESP32 ovunque si trovi.
+            <div class="detail-section">
+                <h4>🧪 Sensori</h4>
+                <div class="sensor-big ${!online ? 'unknown' : waterOk ? 'ok' : 'err'}">
+                    <span style="font-size:18px">💧</span>
+                    <span>${!online ? '❓ N/D (offline)' : waterOk ? 'Acqua presente' : 'Acqua assente — rabboccare!'}</span>
+                </div>
+                <div class="sensor-big ${!online ? 'unknown' : insOk ? 'ok' : 'err'}">
+                    <span style="font-size:18px">🧪</span>
+                    <span>${!online ? '❓ N/D (offline)' : insOk ? 'Insetticida OK' : 'Insetticida esaurito!'}</span>
                 </div>
             </div>
-        </div>
-        
-        <div class="detail-section">
-            <h4>📅 Programmi di nebulizzazione</h4>
-            <div id="programs-container-${m.id}">
-                <div style="text-align:center; padding:20px;">Caricamento programmi...</div>
-            </div>
-            <button class="btn-add" style="margin-top:12px; width:100%;" onclick="showAddProgramModal(${m.id})">➕ Aggiungi programma</button>
-            <div style="display:flex; gap:8px; margin-top:12px;">
-                <button class="btn-save-sm" onclick="saveProgramsToCloud(${m.id}, false)">💾 Salva solo nel cloud</button>
-                <button class="btn-save-sm" onclick="saveProgramsToCloud(${m.id}, true)">📡 Salva e invia all'ESP32</button>
-            </div>
-            <div class="info-note" style="margin-top:12px;">
-                📌 <strong>Nota sull'OTA</strong>: Se l'ESP32 è connesso a una rete Wi-Fi (STA), l'aggiornamento OTA tramite cloud funziona sempre.<br>
-                Per l'accesso locale all'interfaccia web dell'ESP, usa il link "Apri web ESP" sopra (solo se sei sulla stessa LAN).
-            </div>
-        </div>
         `;
-    }
 
-    if (isAdmin) {
-        right += `
-        <div class="detail-section">
-            <h4>⚠️ Pericolo</h4>
-            <button class="btn-del-big" onclick="deleteMachine(${m.id}); closeDetail();">🗑 Elimina impianto</button>
-        </div>
+        // Assign section
+        let assignSection = `<div class="detail-section"><h4>👤 Assegnazione</h4>`;
+        if (isAdmin) {
+            const clientOpts = allClients.map(c => `<option value="${c.id}" ${m.client_id==c.id?'selected':''}>${esc(c.name)}</option>`).join('');
+            const instOpts = allUsers.filter(u=>u.role==='installer').map(u => `<option value="${u.id}" ${m.installer_id==u.id?'selected':''}>${esc(u.username)}</option>`).join('');
+            assignSection += `
+                <div class="assign-box">
+                    <select id="det-client-${m.id}"><option value="">— Nessun cliente —</option>${clientOpts}</select>
+                    <select id="det-inst-${m.id}"><option value="">— Nessun installatore —</option>${instOpts}</select>
+                    <button class="btn-save-sm" onclick="saveDetailAssign(${m.id})">💾 Salva assegnazione</button>
+                </div>
+            `;
+        } else if (isInstaller) {
+            const clientOpts = allClients.map(c => `<option value="${c.id}" ${m.client_id==c.id?'selected':''}>${esc(c.name)}</option>`).join('');
+            assignSection += `
+                <div class="assign-box">
+                    <select id="det-client-${m.id}"><option value="">— Nessun cliente —</option>${clientOpts}</select>
+                    <button class="btn-save-sm" onclick="saveDetailAssignInstaller(${m.id})">💾 Salva cliente</button>
+                </div>
+            `;
+        } else {
+            const clientName = m.client_name || allClients.find(c=>c.id==m.client_id)?.name || '—';
+            assignSection += `<div class="detail-row"><span class="label">Cliente</span><span class="value">${esc(clientName)}</span></div>`;
+        }
+        assignSection += `</div>`;
+        left += assignSection;
+
+        // Telegram section
+        let telegramSection = `<div class="detail-section"><h4>📱 Telegram</h4>`;
+        const step1done = !!m.client_id;
+        const step2done = !!m.telegram_chat_id;
+        if (step2done) {
+            telegramSection += `<div style="color:var(--green); font-size:13px; font-weight:600;">✅ Attivo — chat ID: ${esc(m.telegram_chat_id)}</div>`;
+            if (!isInstaller) telegramSection += `<button class="btn-qr-big telegram-ok" onclick="openQR(${m.id},'${esc(m.machine_name||m.mac_address)}')">🔄 Rigenera QR</button>`;
+        } else if (step1done) {
+            telegramSection += `<div style="color:var(--text-secondary);">Non ancora attivato dal cliente</div>`;
+            telegramSection += `<button class="btn-qr-big" onclick="openQR(${m.id},'${esc(m.machine_name||m.mac_address)}')">📲 Genera QR Telegram</button>`;
+        } else {
+            telegramSection += `<div style="color:var(--amber);">🔒 Assegna prima un cliente</div>`;
+        }
+        telegramSection += `</div>`;
+        left += telegramSection;
+
+        // Remote control link
+        let right = `
+            <div class="detail-section">
+                <h4>🎮 Controllo remoto</h4>
+                <a href="/remote.html?machineId=${m.id}" target="_blank" class="btn-qr-big" style="text-decoration:none; display:block; text-align:center;">🌐 Apri controllo remoto (cliente)</a>
+                <div class="info-note" style="margin-top:12px;">Da qui il cliente può avviare/fermare cicli, gestire programmi e attivare la pausa vacanza.</div>
+            </div>
         `;
+
+        // Admin/Installer commands (reboot, OTA)
+        if (isAdmin || isInstaller) {
+            right += `
+                <div class="detail-section">
+                    <h4>🛠 Manutenzione</h4>
+                    <div class="cmd-grid">
+                        <button class="btn-cmd btn-cmd-reboot" onclick="sendMachineCmd(${m.id},'reboot')">🔄 Riavvia ESP</button>
+                        <button class="btn-cmd btn-cmd-ota" onclick="toggleOtaPanel(${m.id})">⬆️ OTA Firmware</button>
+                    </div>
+                    <div class="cmd-status" id="cmd-status-${m.id}"></div>
+                    <div class="ota-panel" id="ota-panel-${m.id}">
+                        <input type="text" id="ota-url-${m.id}" placeholder="https://.../firmware.bin">
+                        <button class="btn-cmd btn-cmd-ota" style="width:100%" onclick="sendMachineCmd(${m.id},'ota_firmware')">🚀 Avvia aggiornamento</button>
+                        <div class="info-note">💡 L'OTA funziona sempre, anche da remoto.</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (isAdmin) {
+            right += `
+                <div class="detail-section">
+                    <h4>⚠️ Pericolo</h4>
+                    <button class="btn-del-big" onclick="deleteMachine(${m.id}); closeDetail();">🗑 Elimina impianto</button>
+                </div>
+            `;
+        }
+
+        document.getElementById('detailBody').innerHTML = left + right;
+        document.getElementById('detailModal').classList.add('open');
     }
 
-    document.getElementById('detailBody').innerHTML = left + right;
-    document.getElementById('detailModal').classList.add('open');
-    
-    if (!isClient) {
-        loadPrograms(m.id);
+    function closeDetail() { document.getElementById('detailModal').classList.remove('open'); currentDetailId = null; }
+
+    async function saveDetailAssign(machineId) {
+        const clientId = document.getElementById(`det-client-${machineId}`)?.value || null;
+        const installerId = document.getElementById(`det-inst-${machineId}`)?.value || null;
+        const res = await apiPut(`/machines/${machineId}/assign`, { client_id: clientId||null, installer_id: installerId||null });
+        if (res.success) { await loadMachines(); openDetail(machineId); } else alert(res.message || 'Errore');
     }
-}
 
-function closeDetail() { document.getElementById('detailModal').classList.remove('open'); currentDetailId = null; }
-
-async function saveDetailAssign(machineId) {
-    const clientId   = document.getElementById(`det-client-${machineId}`)?.value || null;
-    const installerId = document.getElementById(`det-inst-${machineId}`)?.value || null;
-    const res = await apiPut(`/machines/${machineId}/assign`, { client_id: clientId||null, installer_id: installerId||null });
-    if (res.success) { await loadMachines(); openDetail(machineId); } else alert(res.message || 'Errore salvataggio');
-}
-
-async function saveDetailAssignInstaller(machineId) {
-    const clientId = document.getElementById(`det-client-${machineId}`)?.value || null;
-    // Non passare installer_id: il backend lo ignorerà e manterrà quello esistente
-    const res = await apiPut(`/machines/${machineId}/assign`, { client_id: clientId||null });
-    if (res.success) { await loadMachines(); openDetail(machineId); } else alert(res.message || 'Errore salvataggio');
-}
-
-async function sendMachineCmd(machineId, cmd) {
-    const statusEl = document.getElementById(`cmd-status-${machineId}`);
-    statusEl.textContent = '⏳ Invio comando...';
-    statusEl.className = 'cmd-status wait';
-    let payload = {};
-    if (cmd === 'ota_firmware') {
-        const url = document.getElementById(`ota-url-${machineId}`)?.value.trim();
-        if (!url) { statusEl.textContent = '❌ Inserisci URL firmware'; statusEl.className='cmd-status err'; return; }
-        payload.url = url;
+    async function saveDetailAssignInstaller(machineId) {
+        const clientId = document.getElementById(`det-client-${machineId}`)?.value || null;
+        const res = await apiPut(`/machines/${machineId}/assign`, { client_id: clientId||null });
+        if (res.success) { await loadMachines(); openDetail(machineId); } else alert(res.message || 'Errore');
     }
-    try {
-        const res = await apiPost(`/machines/${machineId}/command`, { type: cmd, payload });
-        if (res.success) { statusEl.textContent = '✅ Comando inviato'; statusEl.className = 'cmd-status ok'; }
-        else { statusEl.textContent = '❌ ' + (res.message || 'Errore'); statusEl.className = 'cmd-status err'; }
-    } catch(e) { statusEl.textContent = '❌ Errore di connessione'; statusEl.className = 'cmd-status err'; }
-}
 
-function toggleOtaPanel(id) { document.getElementById(`ota-panel-${id}`).classList.toggle('open'); }
-
-async function openQR(machineId, machineName) {
-    const res = await apiPost(`/machines/${machineId}/qr`, {});
-    if (!res.success) { alert(res.message || 'Errore generazione QR'); return; }
-    document.getElementById('qrMachineName').textContent = '🏭 ' + machineName;
-    const canvas = document.getElementById('qrCanvas');
-    canvas.innerHTML = '';
-    new QRCode(canvas, { text: res.telegram_link, width: 220, height: 220, colorDark:'#000', colorLight:'#fff', correctLevel: QRCode.CorrectLevel.M });
-    document.getElementById('qrModal').classList.add('open');
-}
-function closeQR() { document.getElementById('qrModal').classList.remove('open'); document.getElementById('qrCanvas').innerHTML = ''; }
-
-async function loadClients() {
-    const data = await apiGet('/clients');
-    if (data.success) { allClients = data.clients; renderClientsTable(); populateFilterDropdowns(); }
-}
-
-function renderClientsTable() {
-    const tbody = document.getElementById('clientsTbody');
-    if (!tbody) return;
-    if (!allClients.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state" style="padding:20px;">Nessun cliente registrato</td></tr>'; return; }
-    const isAdmin = currentUser.role === 'admin';
-    const isInstaller = currentUser.role === 'installer';
-    tbody.innerHTML = allClients.map(c => {
-        let actions = '';
-        if (isAdmin || isInstaller) { actions = `<button class="btn-row btn-row-edit" onclick="editClient(${c.id})">✎ Modifica</button><button class="btn-row btn-row-del" onclick="deleteClient(${c.id})">🗑 Elimina</button>`; }
-        const userExists = c.username ? true : false;
-        return `<tr>
-            <td><strong>${esc(c.name)}</strong></td>
-            <td class="td-mono">${esc(c.email||'—')}</td>
-            <td class="td-mono">${esc(c.phone||'—')}</td>
-            <td>${userExists ? `<span style="color:var(--green);">✅ ${esc(c.username)}</span>` : '<span style="color:var(--amber);">⚠️ Nessun account</span>'}</td>
-            <td>${c.telegram_chat_id ? `<span style="color:var(--green); font-size:12px;">✅ ${esc(c.telegram_chat_id)}</span>` : '<span style="color:var(--muted); font-size:12px;">—</span>'}</td>
-            <td class="td-actions">${actions}</td>
-        </tr>`;
-    }).join('');
-}
-
-async function addClient() {
-    const name  = document.getElementById('clientName').value.trim();
-    const email = document.getElementById('clientEmail').value.trim();
-    const phone = document.getElementById('clientPhone').value.trim();
-    const password = document.getElementById('clientPassword').value;
-    if (!name) return alert('Il nome è obbligatorio');
-    if (!password) return alert('La password è obbligatoria');
-    if (password.length < 6) return alert('La password deve avere almeno 6 caratteri');
-    const res = await apiPost('/clients', { name, email, phone, password });
-    if (res.success) {
-        document.getElementById('clientName').value = '';
-        document.getElementById('clientEmail').value = '';
-        document.getElementById('clientPhone').value = '';
-        document.getElementById('clientPassword').value = '';
-        await loadClients();
-        alert('✅ Cliente creato con successo. Ora può fare login con username generato automaticamente.');
-    } else { alert(res.message || 'Errore'); }
-}
-
-function editClient(id) {
-    const c = allClients.find(x => x.id === id);
-    if (!c) return;
-    openEditModal({
-        title: 'Modifica Cliente',
-        fields: [
-            { label: 'Nome', name: 'name', value: c.name, type: 'text' },
-            { label: 'Email', name: 'email', value: c.email||'', type: 'email' },
-            { label: 'Telefono', name: 'phone', value: c.phone||'', type: 'tel' },
-            { label: 'Nuova password (lascia vuoto per non cambiare)', name: 'password', value: '', type: 'password' }
-        ],
-        onSave: async (vals) => {
-            const body = { name: vals.name, email: vals.email, phone: vals.phone };
-            if (vals.password) body.password = vals.password;
-            const res = await apiPut(`/clients/${id}`, body);
-            if (res.success) { closeEdit(); await loadClients(); } else alert(res.message || 'Errore modifica');
+    async function sendMachineCmd(machineId, cmd) {
+        const statusEl = document.getElementById(`cmd-status-${machineId}`);
+        statusEl.textContent = '⏳ Invio comando...';
+        statusEl.style.color = 'var(--amber)';
+        let payload = {};
+        if (cmd === 'ota_firmware') {
+            const url = document.getElementById(`ota-url-${machineId}`)?.value.trim();
+            if (!url) { statusEl.textContent = '❌ Inserisci URL firmware'; statusEl.style.color = 'var(--red)'; return; }
+            payload.url = url;
         }
-    });
-}
-
-async function deleteClient(id) {
-    if (!confirm('Eliminare definitivamente questo cliente? Le macchine ad esso associate verranno dissociate.')) return;
-    const res = await apiDel(`/clients/${id}`);
-    if (res.success) await loadClients(); else alert(res.message || 'Errore eliminazione');
-}
-
-async function loadUsers() {
-    const data = await apiGet('/users');
-    if (data.success) { allUsers = data.users; renderInstallers(); populateFilterDropdowns(); populatePreregInstallers(); }
-}
-
-function renderInstallers() {
-    const tbody = document.getElementById('installersTbody');
-    if (!tbody) return;
-    const installers = allUsers.filter(u => u.role === 'installer');
-    if (!installers.length) { tbody.innerHTML = '<tr><td colspan="3" style="color:var(--muted); text-align:center; padding:20px;">Nessun installatore ancora</td></tr>'; return; }
-    tbody.innerHTML = installers.map(u => {
-        const count = allMachines.filter(m => m.installer_id == u.id).length;
-        return `<tr>
-            <td><strong>${esc(u.username)}</strong></td>
-            <td>${count > 0 ? `${count} impianto${count>1?'i':''}` : '<span style="color:var(--muted)">—</span>'}</td>
-            <td class="td-actions"><button class="btn-row btn-row-edit" onclick="editInstaller(${u.id})">✎ Modifica</button><button class="btn-row btn-row-del" onclick="deleteInstaller(${u.id})">🗑 Elimina</button></td>
-          </tr>`;
-    }).join('');
-}
-
-async function addInstaller() {
-    const username = document.getElementById('instUsername').value.trim();
-    const password = document.getElementById('instPassword').value;
-    if (!username || !password) return alert('Username e password sono obbligatori');
-    if (password.length < 6) return alert('La password deve essere di almeno 6 caratteri');
-    const res = await apiPost('/users', { username, password, role: 'installer' });
-    if (res.success) {
-        document.getElementById('instUsername').value = '';
-        document.getElementById('instPassword').value = '';
-        await loadUsers();
-        alert(`✅ Installatore "${username}" creato!`);
-    } else { alert(res.message || 'Errore nella creazione'); }
-}
-
-function editInstaller(id) {
-    const u = allUsers.find(x => x.id === id);
-    if (!u) return;
-    openEditModal({
-        title: 'Modifica Installatore',
-        fields: [
-            { label: 'Username', name: 'username', value: u.username, type: 'text' },
-            { label: 'Nuova password (lascia vuoto per non cambiare)', name: 'password', value: '', type: 'password' }
-        ],
-        onSave: async (vals) => {
-            const body = { username: vals.username };
-            if (vals.password) body.password = vals.password;
-            const res = await apiPut(`/users/${id}`, body);
-            if (res.success) { closeEdit(); await loadUsers(); } else alert(res.message || 'Errore modifica');
+        try {
+            const res = await apiPost(`/machines/${machineId}/command`, { type: cmd, payload });
+            if (res.success) {
+                statusEl.textContent = '✅ Comando inviato all\'ESP32';
+                statusEl.style.color = 'var(--green)';
+            } else {
+                statusEl.textContent = '❌ ' + (res.message || 'Errore');
+                statusEl.style.color = 'var(--red)';
+            }
+        } catch(e) {
+            statusEl.textContent = '❌ Errore di rete';
+            statusEl.style.color = 'var(--red)';
         }
-    });
-}
+    }
 
-async function deleteInstaller(id) {
-    if (!confirm('Eliminare definitivamente questo installatore?')) return;
-    const res = await apiDel(`/users/${id}`);
-    if (res.success) await loadUsers(); else alert(res.message || 'Errore eliminazione');
-}
+    function toggleOtaPanel(id) {
+        document.getElementById(`ota-panel-${id}`).classList.toggle('open');
+    }
 
-function editMachine(id) {
-    const m = allMachines.find(x => x.id === id);
-    if (!m) return;
-    openEditModal({
-        title: 'Modifica Impianto',
-        fields: [
-            { label: 'Nome impianto', name: 'machine_name', value: m.machine_name||'', type: 'text' },
-            { label: 'MAC Address', name: 'mac_address', value: m.mac_address||'', type: 'text' }
-        ],
-        onSave: async (vals) => {
-            const res = await apiPut(`/machines/${id}`, vals);
-            if (res.success) { closeEdit(); await loadMachines(); } else alert(res.message || 'Errore modifica');
-        }
-    });
-}
+    async function openQR(machineId, machineName) {
+        const res = await apiPost(`/machines/${machineId}/qr`, {});
+        if (!res.success) { alert(res.message || 'Errore generazione QR'); return; }
+        document.getElementById('qrMachineName').textContent = '🏭 ' + machineName;
+        const canvas = document.getElementById('qrCanvas');
+        canvas.innerHTML = '';
+        new QRCode(canvas, { text: res.telegram_link, width: 220, height: 220, colorDark:'#000', colorLight:'#fff', correctLevel: QRCode.CorrectLevel.M });
+        document.getElementById('qrModal').classList.add('open');
+    }
+    function closeQR() { document.getElementById('qrModal').classList.remove('open'); document.getElementById('qrCanvas').innerHTML = ''; }
 
-async function deleteMachine(id) {
-    if (!confirm('Eliminare definitivamente questo impianto?')) return;
-    const res = await apiDel(`/machines/${id}`);
-    if (res.success) { await loadMachines(); closeDetail(); } else alert(res.message || 'Errore eliminazione');
-}
+    // ==================== CLIENTS ====================
+    async function loadClients() {
+        const data = await apiGet('/clients');
+        if (data.success) { allClients = data.clients; renderClientsTable(); populateFilterDropdowns(); }
+    }
 
-let currentEditSave = null;
+    function renderClientsTable() {
+        const tbody = document.getElementById('clientsTbody');
+        if (!tbody) return;
+        if (!allClients.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nessun cliente</td></tr>'; return; }
+        const isAdmin = currentUser.role === 'admin';
+        const isInstaller = currentUser.role === 'installer';
+        tbody.innerHTML = allClients.map(c => {
+            let actions = '';
+            if (isAdmin || isInstaller) {
+                actions = `<button class="btn-row btn-row-edit" onclick="editClient(${c.id})">✎</button><button class="btn-row btn-row-del" onclick="deleteClient(${c.id})">🗑</button>`;
+            }
+            return `<tr>
+                <td><strong>${esc(c.name)}</strong></td>
+                <td>${esc(c.email||'—')}</td>
+                <td>${esc(c.phone||'—')}</td>
+                <td>${c.username ? `<span style="color:var(--green);">✅ ${esc(c.username)}</span>` : '<span style="color:var(--amber);">⚠️ Nessun account</span>'}</td>
+                <td>${c.telegram_chat_id ? `<span style="color:var(--green);">✅ ${esc(c.telegram_chat_id)}</span>` : '—'}</td>
+                <td class="td-actions">${actions}</td>
+            </tr>`;
+        }).join('');
+    }
 
-function openEditModal({title, fields, onSave}) {
-    document.getElementById('editTitle').textContent = title;
-    const form = document.getElementById('editForm');
-    form.innerHTML = fields.map(f => `<label>${esc(f.label)}</label><input type="${f.type||'text'}" id="edit-field-${f.name}" value="${esc(f.value||'')}">`).join('') +
-        `<div class="edit-actions"><button class="btn-cancel" onclick="closeEdit()">Annulla</button><button class="btn-add" onclick="submitEdit()">Salva</button></div>`;
-    currentEditSave = onSave;
-    document.getElementById('editModal').classList.add('open');
-}
+    async function addClient() {
+        const name = document.getElementById('clientName').value.trim();
+        const email = document.getElementById('clientEmail').value.trim();
+        const phone = document.getElementById('clientPhone').value.trim();
+        const password = document.getElementById('clientPassword').value;
+        if (!name) return alert('Nome obbligatorio');
+        if (!password || password.length < 6) return alert('Password almeno 6 caratteri');
+        const res = await apiPost('/clients', { name, email, phone, password });
+        if (res.success) {
+            document.getElementById('clientName').value = '';
+            document.getElementById('clientEmail').value = '';
+            document.getElementById('clientPhone').value = '';
+            document.getElementById('clientPassword').value = '';
+            await loadClients();
+            alert('✅ Cliente creato. Può accedere con username generato automaticamente.');
+        } else { alert(res.message || 'Errore'); }
+    }
 
-function closeEdit() { document.getElementById('editModal').classList.remove('open'); currentEditSave = null; }
+    function editClient(id) {
+        const c = allClients.find(x => x.id === id);
+        if (!c) return;
+        openEditModal({
+            title: 'Modifica Cliente',
+            fields: [
+                { label: 'Nome', name: 'name', value: c.name },
+                { label: 'Email', name: 'email', value: c.email || '' },
+                { label: 'Telefono', name: 'phone', value: c.phone || '' },
+                { label: 'Nuova password (lascia vuoto)', name: 'password', value: '', type: 'password' }
+            ],
+            onSave: async (vals) => {
+                const body = { name: vals.name, email: vals.email, phone: vals.phone };
+                if (vals.password) body.password = vals.password;
+                const res = await apiPut(`/clients/${id}`, body);
+                if (res.success) { closeEdit(); await loadClients(); } else alert(res.message);
+            }
+        });
+    }
 
-async function submitEdit() {
-    if (!currentEditSave) return;
-    const inputs = document.querySelectorAll('#editForm input, #editForm select');
-    const vals = {};
-    inputs.forEach(inp => { if (inp.id && inp.id.startsWith('edit-field-')) { const name = inp.id.replace('edit-field-', ''); vals[name] = inp.value.trim(); } });
-    await currentEditSave(vals);
-}
+    async function deleteClient(id) {
+        if (!confirm('Eliminare cliente? Le macchine verranno dissociate.')) return;
+        const res = await apiDel(`/clients/${id}`);
+        if (res.success) await loadClients(); else alert(res.message);
+    }
 
-async function loadWebhookStatus() {
-    try {
-        const res = await apiGet('/telegram/webhook-status');
-        const el  = document.getElementById('webhookUrl');
-        if (res.url) { el.textContent = res.url; el.style.color = 'var(--green)'; }
-        else { el.textContent = 'Nessun webhook configurato'; el.style.color = 'var(--amber)'; }
-    } catch(e) { document.getElementById('webhookUrl').textContent = 'Impossibile verificare'; }
-}
-async function setupWebhook() {
-    const btn = document.getElementById('webhookBtn');
-    const result = document.getElementById('webhookResult');
-    btn.textContent = '⏳ Registrazione...'; btn.disabled = true;
-    const webhookUrl = window.location.origin + '/api/telegram/webhook';
-    try {
-        const res = await apiPost('/telegram/setup-webhook', { webhook_url: webhookUrl });
-        result.innerHTML = res.success ? `<div class="result-ok">✅ Webhook registrato: <code>${webhookUrl}</code></div>` : `<div class="result-err">❌ ${res.message}</div>`;
-        if (res.success) { btn.textContent = '✅ Registrato'; loadWebhookStatus(); }
-        else { btn.textContent = '🔗 Riprova'; btn.disabled = false; }
-    } catch(e) { result.innerHTML = '<div class="result-err">❌ Errore di connessione</div>'; btn.textContent = '🔗 Riprova'; btn.disabled = false; }
-}
+    // ==================== USERS (Installers) ====================
+    async function loadUsers() {
+        const data = await apiGet('/users');
+        if (data.success) { allUsers = data.users; renderInstallers(); populateFilterDropdowns(); populatePreregInstallers(); }
+    }
 
-function populatePreregInstallers() {
-    const sel = document.getElementById('preregInstaller');
-    if (!sel) return;
-    const installers = allUsers.filter(u => u.role === 'installer');
-    sel.innerHTML = '<option value="">— Seleziona installatore —</option>' + installers.map(u => `<option value="${u.id}">${esc(u.username)}</option>`).join('');
-}
+    function renderInstallers() {
+        const tbody = document.getElementById('installersTbody');
+        if (!tbody) return;
+        const installers = allUsers.filter(u => u.role === 'installer');
+        if (!installers.length) { tbody.innerHTML = '<tr><td colspan="3" class="empty-state">Nessun installatore</td></tr>'; return; }
+        tbody.innerHTML = installers.map(u => {
+            const count = allMachines.filter(m => m.installer_id == u.id).length;
+            return `<tr>
+                <td><strong>${esc(u.username)}</strong></td>
+                <td>${count} impianto${count !== 1 ? 'i' : ''}</td>
+                <td class="td-actions"><button class="btn-row btn-row-edit" onclick="editInstaller(${u.id})">✎</button><button class="btn-row btn-row-del" onclick="deleteInstaller(${u.id})">🗑</button></td>
+            </tr>`;
+        }).join('');
+    }
 
-async function preregisterMachine() {
-    const mac = document.getElementById('preregMac').value.trim();
-    const name = document.getElementById('preregName').value.trim();
-    const installerId = document.getElementById('preregInstaller').value;
-    if (!mac) return alert('MAC address obbligatorio');
-    if (!installerId) return alert('Seleziona un installatore');
-    const res = await apiPost('/machines/preregister', { mac_address: mac, machine_name: name || null, installer_id: parseInt(installerId) });
-    if (res.success) {
-        alert('✅ Macchina pre-registrata!\n\nQuando l\'installatore la accenderà, apparirà automaticamente nel suo pannello.');
-        document.getElementById('preregMac').value = '';
-        document.getElementById('preregName').value = '';
-        document.getElementById('preregInstaller').value = '';
-        await loadMachines();
-    } else { alert(res.message || 'Errore pre-registrazione'); }
-}
+    async function addInstaller() {
+        const username = document.getElementById('instUsername').value.trim();
+        const password = document.getElementById('instPassword').value;
+        if (!username || !password || password.length < 6) return alert('Username e password (min 6 caratteri)');
+        const res = await apiPost('/users', { username, password, role: 'installer' });
+        if (res.success) {
+            document.getElementById('instUsername').value = '';
+            document.getElementById('instPassword').value = '';
+            await loadUsers();
+            alert(`✅ Installatore "${username}" creato`);
+        } else { alert(res.message); }
+    }
 
-function esc(text) { if (!text) return ''; const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
-function refreshAll() { loadMachines(); loadAlerts(); }
+    function editInstaller(id) {
+        const u = allUsers.find(x => x.id === id);
+        if (!u) return;
+        openEditModal({
+            title: 'Modifica Installatore',
+            fields: [
+                { label: 'Username', name: 'username', value: u.username },
+                { label: 'Nuova password', name: 'password', value: '', type: 'password' }
+            ],
+            onSave: async (vals) => {
+                const body = { username: vals.username };
+                if (vals.password) body.password = vals.password;
+                const res = await apiPut(`/users/${id}`, body);
+                if (res.success) { closeEdit(); await loadUsers(); } else alert(res.message);
+            }
+        });
+    }
 
-if (token && currentUser) { bootApp(); } else { document.getElementById('loginScreen').style.display = 'flex'; }
-setInterval(() => { if (token) { loadMachines(); loadAlerts(); } }, 30000);
+    async function deleteInstaller(id) {
+        if (!confirm('Eliminare installatore?')) return;
+        const res = await apiDel(`/users/${id}`);
+        if (res.success) await loadUsers(); else alert(res.message);
+    }
+
+    // ==================== MACHINE EDIT/DELETE ====================
+    function editMachine(id) {
+        const m = allMachines.find(x => x.id === id);
+        if (!m) return;
+        openEditModal({
+            title: 'Modifica Impianto',
+            fields: [
+                { label: 'Nome impianto', name: 'machine_name', value: m.machine_name || '' },
+                { label: 'MAC Address', name: 'mac_address', value: m.mac_address || '' }
+            ],
+            onSave: async (vals) => {
+                const res = await apiPut(`/machines/${id}`, vals);
+                if (res.success) { closeEdit(); await loadMachines(); } else alert(res.message);
+            }
+        });
+    }
+
+    async function deleteMachine(id) {
+        if (!confirm('Eliminare definitivamente questo impianto?')) return;
+        const res = await apiDel(`/machines/${id}`);
+        if (res.success) { await loadMachines(); closeDetail(); } else alert(res.message);
+    }
+
+    // ==================== PREREGISTER ====================
+    function populatePreregInstallers() {
+        const sel = document.getElementById('preregInstaller');
+        if (!sel) return;
+        const installers = allUsers.filter(u => u.role === 'installer');
+        sel.innerHTML = '<option value="">— Seleziona installatore —</option>' + installers.map(u => `<option value="${u.id}">${esc(u.username)}</option>`).join('');
+    }
+
+    async function preregisterMachine() {
+        const mac = document.getElementById('preregMac').value.trim();
+        const name = document.getElementById('preregName').value.trim();
+        const installerId = document.getElementById('preregInstaller').value;
+        if (!mac) return alert('MAC obbligatorio');
+        if (!installerId) return alert('Seleziona installatore');
+        const res = await apiPost('/machines/preregister', { mac_address: mac, machine_name: name || null, installer_id: parseInt(installerId) });
+        if (res.success) {
+            alert('✅ Macchina pre-registrata!');
+            document.getElementById('preregMac').value = '';
+            document.getElementById('preregName').value = '';
+            await loadMachines();
+        } else { alert(res.message); }
+    }
+
+    // ==================== TELEGRAM WEBHOOK ====================
+    async function loadWebhookStatus() {
+        try {
+            const res = await apiGet('/telegram/webhook-status');
+            const el = document.getElementById('webhookUrl');
+            if (res.url) { el.textContent = res.url; el.style.color = 'var(--green)'; }
+            else { el.textContent = 'Nessun webhook configurato'; el.style.color = 'var(--amber)'; }
+        } catch(e) { document.getElementById('webhookUrl').textContent = 'Impossibile verificare'; }
+    }
+
+    async function setupWebhook() {
+        const btn = document.getElementById('webhookBtn');
+        const result = document.getElementById('webhookResult');
+        btn.textContent = '⏳ Registrazione...'; btn.disabled = true;
+        const webhookUrl = window.location.origin + '/api/telegram/webhook';
+        try {
+            const res = await apiPost('/telegram/setup-webhook', { webhook_url: webhookUrl });
+            result.innerHTML = res.success ? `<div class="result-ok" style="background:var(--green-dim); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:12px; color:var(--green);">✅ Webhook registrato: <code>${webhookUrl}</code></div>` : `<div class="result-err" style="background:var(--red-dim); border-radius:12px; padding:12px; color:var(--red);">❌ ${res.message}</div>`;
+            if (res.success) { btn.textContent = '✅ Registrato'; loadWebhookStatus(); }
+            else { btn.textContent = '🔗 Riprova'; btn.disabled = false; }
+        } catch(e) { result.innerHTML = '<div class="result-err">❌ Errore di connessione</div>'; btn.textContent = '🔗 Riprova'; btn.disabled = false; }
+    }
+
+    // ==================== EDIT MODAL ====================
+    let currentEditSave = null;
+    function openEditModal({title, fields, onSave}) {
+        document.getElementById('editTitle').textContent = title;
+        const form = document.getElementById('editForm');
+        form.innerHTML = fields.map(f => `<label>${esc(f.label)}</label><input type="${f.type||'text'}" id="edit-field-${f.name}" value="${esc(f.value||'')}">`).join('') +
+            `<div class="edit-actions"><button class="btn-cancel" onclick="closeEdit()">Annulla</button><button class="btn-add" onclick="submitEdit()">Salva</button></div>`;
+        currentEditSave = onSave;
+        document.getElementById('editModal').classList.add('open');
+    }
+    function closeEdit() { document.getElementById('editModal').classList.remove('open'); currentEditSave = null; }
+    async function submitEdit() {
+        if (!currentEditSave) return;
+        const inputs = document.querySelectorAll('#editForm input');
+        const vals = {};
+        inputs.forEach(inp => { if (inp.id && inp.id.startsWith('edit-field-')) { const name = inp.id.replace('edit-field-', ''); vals[name] = inp.value.trim(); } });
+        await currentEditSave(vals);
+    }
+
+    // ==================== UTILS ====================
+    function esc(text) { if (!text) return ''; const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
+    function refreshAll() { loadMachines(); loadAlerts(); }
+
+    // Auto refresh
+    if (token && currentUser && currentUser.role !== 'client') { bootApp(); } else if (token && currentUser && currentUser.role === 'client') { window.location.href = '/remote.html'; }
+    else { document.getElementById('loginScreen').style.display = 'flex'; }
+    setInterval(() => { if (token && currentUser?.role !== 'client') { loadMachines(); loadAlerts(); } }, 30000);
 </script>
 </body>
 </html>
