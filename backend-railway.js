@@ -1486,10 +1486,10 @@ app.put('/api/machines/:id/programs', authenticateToken, async (req, res) => {
         // Upsert dei programmi nel DB
         await queryWithRetry(
             `INSERT INTO machine_programs (machine_id, programs, updated_at)
-             VALUES ($1, $2, NOW())
+             VALUES ($1, $2::jsonb, NOW())
              ON CONFLICT (machine_id) DO UPDATE SET
              programs = EXCLUDED.programs, updated_at = NOW()`,
-            [machineId, programs]
+            [machineId, JSON.stringify(programs)]
         );
 
         let commandId = null;
