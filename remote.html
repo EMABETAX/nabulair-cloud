@@ -532,16 +532,36 @@
             document.getElementById('statusLed').classList.toggle('online', online);
             document.getElementById('statusText').textContent = online ? '🟢 Online' : '🔴 Offline';
 
-            const waterOk = m.water_ok !== false;
-            const insOk   = m.insecticide_ok !== false;
+            // ========== CORREZIONE SENSORI ==========
+            // Ora waterOk è true solo se esplicitamente true, altrimenti false (per null o false)
+            const waterOk = m.water_ok === true;
+            const insOk   = m.insecticide_ok === true;
+            const isOnline = m.status === 'online';
 
             const ws = document.getElementById('waterStatus');
-            ws.textContent = waterOk ? '✅ OK' : '❌ BASSO';
-            ws.className = 'stat-value ' + (waterOk ? 'stat-ok' : 'stat-err');
-
             const is = document.getElementById('insecticideStatus');
-            is.textContent = insOk ? '✅ OK' : '❌ ESAURITO';
-            is.className = 'stat-value ' + (insOk ? 'stat-ok' : 'stat-err');
+
+            // Acqua
+            if (!isOnline || m.water_ok === null) {
+                ws.textContent = '❓ N/D';
+                ws.style.color = '#64748b';
+                ws.className = 'stat-value';
+            } else {
+                ws.textContent = waterOk ? '✅ OK' : '❌ BASSO';
+                ws.className = 'stat-value ' + (waterOk ? 'stat-ok' : 'stat-err');
+                ws.style.color = '';
+            }
+
+            // Insetticida
+            if (!isOnline || m.insecticide_ok === null) {
+                is.textContent = '❓ N/D';
+                is.style.color = '#64748b';
+                is.className = 'stat-value';
+            } else {
+                is.textContent = insOk ? '✅ OK' : '❌ ESAURITO';
+                is.className = 'stat-value ' + (insOk ? 'stat-ok' : 'stat-err');
+                is.style.color = '';
+            }
 
             const fr = document.getElementById('flowRate');
             const flow = parseFloat(m.flow || 0);
