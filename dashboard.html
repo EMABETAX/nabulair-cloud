@@ -477,6 +477,57 @@
         .test-err { color: var(--red); }
         .test-wait { color: var(--amber); }
 
+        /* REMOTE CARD — special highlight */
+        .remote-card {
+            background: linear-gradient(180deg, rgba(56,189,248,0.08) 0%, rgba(56,189,248,0.02) 100%);
+            border: 1px solid rgba(56,189,248,0.25);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        .remote-card::before {
+            content: '';
+            position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle at 50% 50%, rgba(56,189,248,0.08), transparent 60%);
+            pointer-events: none;
+        }
+        .remote-card-title {
+            font-family: var(--font-display);
+            font-size: 13px; font-weight: 800;
+            text-transform: uppercase; letter-spacing: 1.4px;
+            color: var(--blue);
+            margin-bottom: 14px;
+            display: flex; align-items: center; gap: 10px;
+            position: relative;
+        }
+        .remote-card-desc {
+            font-size: 13px; color: var(--muted);
+            margin-bottom: 20px; line-height: 1.6;
+            position: relative;
+        }
+        .btn-remote-big {
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            width: 100%; padding: 16px;
+            background: var(--blue); color: #000;
+            border: none; border-radius: 14px;
+            font-family: var(--font-display); font-size: 15px; font-weight: 800;
+            cursor: pointer; transition: all 0.2s;
+            text-decoration: none;
+            position: relative;
+            box-shadow: 0 6px 24px rgba(56,189,248,0.35);
+        }
+        .btn-remote-big:hover { opacity: 0.9; transform: translateY(-2px); box-shadow: 0 8px 32px rgba(56,189,248,0.45); }
+        .btn-remote-big:active { transform: scale(0.98); }
+        .remote-ip-note {
+            margin-top: 14px; font-size: 12px; color: var(--muted);
+            text-align: center; position: relative;
+        }
+        .remote-ip-note .mono {
+            font-family: monospace; background: rgba(0,0,0,0.25);
+            padding: 2px 8px; border-radius: 6px; font-size: 11px;
+        }
+
         /* sensors */
         .sensor-gauge {
             display: flex; align-items: center; gap: 16px;
@@ -729,19 +780,19 @@
 
         /* range inputs in program modal */
         input[type="range"] {
-    -webkit-appearance: none;
-    appearance: none;        /* ← aggiungi questa */
-    width: 100%; height: 6px;
-    background: rgba(255,255,255,0.1); border-radius: 3px;
-    outline: none; margin-top: 10px;
-}
-input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;        /* ← aggiungi questa */
-    width: 20px; height: 20px;
-    background: var(--accent); border-radius: 50%;
-    cursor: pointer; box-shadow: 0 2px 8px rgba(74,222,128,0.4);
-}
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%; height: 6px;
+            background: rgba(255,255,255,0.1); border-radius: 3px;
+            outline: none; margin-top: 10px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px; height: 20px;
+            background: var(--accent); border-radius: 50%;
+            cursor: pointer; box-shadow: 0 2px 8px rgba(74,222,128,0.4);
+        }
 
         @media (max-width: 640px) {
             .sidebar { display: none !important; }
@@ -1544,12 +1595,27 @@ function openDetail(id) {
             ${m.sta_ip ? `
             <div class="detail-ip-actions">
                 <button class="btn-sm btn-blue" onclick="testLocalConnection('${m.sta_ip}', ${m.id})">🔍 Test LAN</button>
-                <a href="/remote?machineId=${m.id}" target="_blank" class="btn-sm btn-blue" style="text-decoration:none;">🌐 Remoto</a>
             </div>
             <div class="local-test-result" id="local-test-${m.id}"></div>
             ` : ''}
         </div>
     `;
+
+    // REMOTE — CARD DEDICATA E VISIBILE
+    if (!isClient) {
+        html += `
+        <div class="remote-card">
+            <div class="remote-card-title">🌐 Controllo Remoto</div>
+            <div class="remote-card-desc">
+                Apri la dashboard web integrata nell'ESP32 per controllare l'impianto in tempo reale, avviare cicli e modificare parametri locali.
+            </div>
+            <a href="/remote?machineId=${m.id}" target="_blank" class="btn-remote-big">
+                🌐 Apri Pannello Remoto
+            </a>
+            ${m.sta_ip ? `<div class="remote-ip-note">IP rilevato: <span class="mono">${m.sta_ip}</span></div>` : ''}
+        </div>
+        `;
+    }
 
     // Sensori
     html += `
@@ -1672,7 +1738,7 @@ function openDetail(id) {
             </div>
             <div class="info-note" style="margin-top:14px;">
                 📌 <strong>Nota sull'OTA</strong>: Se l'ESP32 è connesso a una rete Wi-Fi (STA), l'aggiornamento OTA tramite cloud funziona sempre.<br>
-                Per l'accesso locale all'interfaccia web dell'ESP, usa il link "Controllo Remoto" sopra (solo se sei sulla stessa LAN).
+                Per l'accesso locale all'interfaccia web dell'ESP, usa il link "Controllo Remoto" nella sidebar (solo se sei sulla stessa LAN).
             </div>
         </div>
         `;
