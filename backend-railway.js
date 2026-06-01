@@ -1291,11 +1291,18 @@ app.post('/api/ping', async (req, res) => {
             }
         }
 
+        // Normalizza pause_until in formato YYYY-MM-DD per l'ESP32
+        let pauseUntilFormatted = null;
+        if (machine?.pause_until) {
+            const d = new Date(machine.pause_until);
+            pauseUntilFormatted = d.toISOString().split('T')[0]; // "2026-06-15"
+        }
+
         res.json({
             success: true,
             command,
             paused: machine?.paused || false,
-            pause_until: machine?.pause_until || null,
+            pause_until: pauseUntilFormatted,
             request_sync: requestSync,
             programs: pushPrograms
         });
