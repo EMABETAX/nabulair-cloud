@@ -18,7 +18,13 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
+
+// File statici
+app.use(express.static(__dirname));
+app.get('/logo.png', (req, res) => res.sendFile(__dirname + '/logo.png'));
+app.get('/favicon.ico', (req, res) => res.sendFile(__dirname + '/favicon.ico'));
+app.get('/dashboard.html', (req, res) => res.sendFile(__dirname + '/dashboard.html'));
+app.get('/remote.html', (req, res) => res.sendFile(__dirname + '/remote.html'));
 
 app.use(express.static(__dirname));
 
