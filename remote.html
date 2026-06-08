@@ -983,10 +983,10 @@
             <div style="display:flex; gap:12px; margin-top:20px; flex-wrap:wrap;">
                 <button class="btn-add" onclick="showAddProgramModal()">➕ Nuovo programma</button>
                 <button class="btn-add" onclick="savePrograms(false)" style="background:var(--blue); color:#fff;">💾 Salva nel cloud</button>
-                <button class="btn-add" onclick="savePrograms(true)" style="background:var(--green);">📡 Salva e invia all'ESP32</button>
+                <button class="btn-add" onclick="savePrograms(true)" style="background:var(--green);">📡 Salva e invia a Nabulair</button>
             </div>
             <div class="info-note">
-                📌 I programmi vengono salvati nel cloud. Usa "Salva e invia" per trasferirli all'ESP32 (entro ~60 secondi).
+                📌 I programmi vengono salvati nel cloud. Usa "Salva e invia" per trasferirli a Nabulair (entro ~60 secondi).
             </div>
         </div>
         </div><!-- /rsec-programmi -->
@@ -1350,7 +1350,7 @@
             if (data.success) {
                 showToast('✅ ' + data.message);
                 if (sendToDevice && data.command_id) {
-                    showCmdStatus("sent", "📡 Invio programmi all'ESP32...");
+                    showCmdStatus("sent", "📡 Invio programmi a Nabulair...");
                     startCmdPoll(data.command_id, 'update_programs');
                 }
             } else {
