@@ -125,6 +125,22 @@
             opacity: 0.85;
         }
 
+        .btn-forgot {
+            background: none; border: none;
+            color: var(--text-secondary); font-size: 12px;
+            cursor: pointer; text-decoration: underline;
+            margin-top: 8px; display: block; width: 100%;
+            text-align: center; padding: 4px;
+            font-family: var(--font-body);
+        }
+        .btn-forgot:hover { color: var(--text); }
+        .forgot-success {
+            background: var(--green-dim);
+            border: 1px solid rgba(16,185,129,0.3);
+            border-radius: 12px; padding: 14px;
+            color: var(--green); font-size: 13px;
+            text-align: center; margin-top: 12px;
+        }
         .login-err {
             color: var(--red);
             font-size: 13px;
@@ -761,8 +777,75 @@
         .toast.show {
             opacity: 1;
         }
+
+        /* Meteo widget */
+        .weather-widget {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .weather-widget.blocked {
+            border-color: rgba(245,158,11,0.4);
+            background: var(--amber-dim);
+        }
+        .weather-widget.ok {
+            border-color: rgba(16,185,129,0.3);
+        }
+        .weather-main {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .weather-icon { font-size: 28px; }
+        .weather-desc { font-size: 13px; font-weight: 600; color: var(--text); }
+        .weather-sub  { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+        .weather-stats {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .weather-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .weather-stat span:first-child { font-size: 15px; font-weight: 700; color: var(--text); }
+        .weather-block-msg {
+            width: 100%;
+            background: var(--amber-dim);
+            border: 1px solid rgba(245,158,11,0.4);
+            border-radius: 12px;
+            padding: 10px 14px;
+            font-size: 12px;
+            color: var(--amber);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Location banner */
+        .location-banner {
+            background: var(--blue-dim);
+            border: 1px solid rgba(59,130,246,0.3);
+            border-radius: 16px;
+            padding: 14px 16px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 13px;
+        }
+        .location-banner .loc-text { flex: 1; color: var(--text); }
+        .location-banner .loc-sub  { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
     </style>
 <base target="_blank">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -771,10 +854,24 @@
         <div class="login-logo"><img src="logo.png" alt="NabulAir"></div>
         <h2>NabulAir</h2>
         <p>Area Clienti</p>
-        <input type="text" id="loginUser" placeholder="Username" autocomplete="username">
-        <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()">
-        <button class="btn-login" onclick="doLogin()">Accedi</button>
-        <div class="login-err" id="loginError"></div>
+        <div id="loginForm">
+            <input type="text" id="loginUser" placeholder="Username" autocomplete="username">
+            <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()">
+            <button class="btn-login" onclick="doLogin()">Accedi</button>
+            <button class="btn-forgot" onclick="showForgot()">Password dimenticata?</button>
+            <div class="login-err" id="loginError"></div>
+        </div>
+        <div id="forgotForm" style="display:none;">
+            <p style="font-size:13px; color:var(--text-secondary); margin-bottom:16px; text-align:center;">
+                Inserisci l'email associata al tuo account.</p>
+            <input type="email" id="resetEmail" placeholder="La tua email" autocomplete="email">
+            <button class="btn-login" onclick="sendReset()">Invia link reset</button>
+            <button class="btn-forgot" onclick="showLogin()">← Torna al login</button>
+            <div class="login-err" id="resetError"></div>
+            <div id="resetSuccess" class="forgot-success" style="display:none;">
+                ✅ Controlla la tua email — link inviato.
+            </div>
+        </div>
     </div>
 </div>
 
@@ -807,6 +904,21 @@
 
         <!-- Stats + Comandi = sezione HOME -->
         <div class="remote-section active" id="rsec-home">
+        <!-- Location banner (shown when no location set) -->
+        <div class="location-banner" id="locationBanner" style="display:none;">
+            <div>
+                <div class="loc-text">📍 Condividi la posizione dell'impianto</div>
+                <div class="loc-sub">Attiva il blocco automatico dei cicli in caso di pioggia o vento forte</div>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button onclick="requestLocation()" style="background:var(--blue); color:#fff; border:none; padding:8px 16px; border-radius:40px; font-weight:700; cursor:pointer; font-size:12px;">📍 Condividi</button>
+                <button onclick="dismissLocationBanner()" style="background:none; border:1px solid var(--border); color:var(--text-secondary); padding:8px 12px; border-radius:40px; cursor:pointer; font-size:12px;">Non ora</button>
+            </div>
+        </div>
+
+        <!-- Meteo widget -->
+        <div id="weatherWidget" style="display:none;"></div>
+
         <!-- Stats -->
         <div class="stats-grid" id="statsGrid">
             <div class="stat-card"><div class="stat-icon">💧</div><div class="stat-label">Acqua</div><div class="stat-value" id="waterStatus">—</div></div>
@@ -882,10 +994,41 @@
     </div>
 </div>
 
+        <!-- Sezione STORICO -->
+        <div class="remote-section" id="rsec-storico">
+        <div class="panel">
+            <div class="panel-title">📊 Storico cicli</div>
+            <div id="storiciControls" style="margin-bottom:16px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <select id="storicoGiorni" onchange="loadStorico()" style="background:var(--surface); border:1px solid var(--border); border-radius:40px; padding:8px 16px; color:var(--text); font-size:13px;">
+                    <option value="7">Ultimi 7 giorni</option>
+                    <option value="30" selected>Ultimi 30 giorni</option>
+                    <option value="90">Ultimi 90 giorni</option>
+                </select>
+            </div>
+            <!-- Grafico consumi -->
+            <canvas id="storiciChart" style="max-height:200px; margin-bottom:20px;"></canvas>
+            <!-- Lista cicli -->
+            <div id="storiciList"></div>
+        </div>
+        </div><!-- /rsec-storico -->
+
+    </div>
+</div>
+
+<!-- Push permission banner -->
+<div id="pushBanner" style="display:none; position:fixed; bottom:70px; left:12px; right:12px; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:14px 16px; z-index:300; display:none; align-items:center; gap:12px; flex-wrap:wrap;">
+    <span style="font-size:13px; flex:1;">🔔 Attiva le notifiche per ricevere gli allarmi anche quando l'app è chiusa</span>
+    <div style="display:flex; gap:8px;">
+        <button onclick="requestPush()" style="background:var(--green); color:#000; border:none; padding:8px 16px; border-radius:40px; font-weight:700; cursor:pointer; font-size:12px;">Attiva</button>
+        <button onclick="dismissPushBanner()" style="background:none; border:1px solid var(--border); color:var(--text-secondary); padding:8px 12px; border-radius:40px; cursor:pointer; font-size:12px;">Non ora</button>
+    </div>
+</div>
+
 <nav class="bottom-nav" id="bottomNav">
     <button class="bnav-tab active" data-rsec="home" onclick="remoteSec('home')"><span class="bnav-icon">🏠</span>Home</button>
     <button class="bnav-tab" data-rsec="programmi" onclick="remoteSec('programmi')"><span class="bnav-icon">📅</span>Programmi</button>
     <button class="bnav-tab" data-rsec="pausa" onclick="remoteSec('pausa')"><span class="bnav-icon">⏸️</span>Pausa</button>
+    <button class="bnav-tab" data-rsec="storico" onclick="remoteSec('storico'); loadStorico();"><span class="bnav-icon">📊</span>Storico</button>
 </nav>
 
 
@@ -1000,7 +1143,7 @@
 
     async function loadMachineData() {
         if (!currentMachineId) return;
-        await Promise.all([loadStatus(), loadPrograms(), loadPause(), loadLastCommand()]);
+        await Promise.all([loadStatus(), loadPrograms(), loadPause(), loadLastCommand(), loadWeather()]);
     }
 
     async function loadStatus() {
@@ -1401,11 +1544,306 @@
         if (currentMachineId) loadMachineData();
     }, 30000);
 
+    // ── Reset password ──
+    function showForgot() {
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('forgotForm').style.display = 'block';
+        document.getElementById('resetEmail').focus();
+    }
+    function showLogin() {
+        document.getElementById('forgotForm').style.display = 'none';
+        document.getElementById('loginForm').style.display = 'block';
+    }
+    async function sendReset() {
+        const email = document.getElementById('resetEmail').value.trim();
+        const errEl = document.getElementById('resetError');
+        const sucEl = document.getElementById('resetSuccess');
+        errEl.style.display = 'none'; sucEl.style.display = 'none';
+        if (!email) { errEl.textContent = 'Inserisci la tua email'; errEl.style.display = 'block'; return; }
+        try {
+            const res = await fetch(`${API}/reset-request`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) });
+            const data = await res.json();
+            if (data.success) { sucEl.style.display = 'block'; document.getElementById('resetEmail').value = ''; }
+            else { errEl.textContent = data.message || 'Errore'; errEl.style.display = 'block'; }
+        } catch { errEl.textContent = 'Impossibile contattare il server'; errEl.style.display = 'block'; }
+    }
+
+    // ── Storico cicli ──
+    let storiciChart = null;
+
+    async function loadStorico() {
+        if (!currentMachineId) return;
+        const days = document.getElementById('storicoGiorni').value;
+        try {
+            const data = await apiGet(`/machines/${currentMachineId}/cicli?days=${days}&limit=100`);
+            if (!data.success) return;
+            renderStoriciChart(data.aggregato || []);
+            renderStoriciList(data.cicli || []);
+        } catch(e) {}
+    }
+
+    function renderStoriciChart(agg) {
+        const ctx = document.getElementById('storiciChart').getContext('2d');
+        if (storiciChart) { storiciChart.destroy(); storiciChart = null; }
+        if (!agg.length) return;
+        const labels = agg.slice().reverse().map(r => new Date(r.giorno).toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit'}));
+        const cicli  = agg.slice().reverse().map(r => parseInt(r.num_cicli));
+        const ml_ins = agg.slice().reverse().map(r => parseFloat(r.ml_ins || 0).toFixed(1));
+        const ml_rep = agg.slice().reverse().map(r => parseFloat(r.ml_rep || 0).toFixed(1));
+
+        storiciChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    { label: 'Cicli', data: cicli, backgroundColor: 'rgba(59,130,246,0.7)', yAxisID: 'y1' },
+                    { label: 'ml Insetticida', data: ml_ins, backgroundColor: 'rgba(16,185,129,0.7)', yAxisID: 'y2' },
+                    { label: 'ml Repellente',  data: ml_rep, backgroundColor: 'rgba(245,158,11,0.7)', yAxisID: 'y2' },
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { labels: { color: '#94A3B8', font: { size: 11 } } } },
+                scales: {
+                    x:  { ticks: { color: '#94A3B8', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+                    y1: { position: 'left',  ticks: { color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.04)' }, title: { display: true, text: 'Cicli', color: '#94A3B8' } },
+                    y2: { position: 'right', ticks: { color: '#94A3B8' }, grid: { display: false }, title: { display: true, text: 'ml', color: '#94A3B8' } }
+                }
+            }
+        });
+    }
+
+    function renderStoriciList(cicli) {
+        const el = document.getElementById('storiciList');
+        if (!cicli.length) { el.innerHTML = '<div class="empty-state">📭 Nessun ciclo registrato in questo periodo</div>'; return; }
+        const prodLabel = p => p === 'repellent' ? '🌸 Repellente' : '🧪 Insetticida';
+        el.innerHTML = cicli.slice(0, 20).map(c => `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); font-size:13px; gap:8px;">
+                <span style="color:var(--text-secondary);">${new Date(c.started_at).toLocaleString('it-IT', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span>
+                <span>${prodLabel(c.product)}</span>
+                <span>⏱ ${c.duration_sec}s</span>
+                <span style="color:var(--green);">${parseFloat(c.ml_consumed || 0).toFixed(1)} ml</span>
+                <span style="color:var(--text-secondary);">Z${c.zona}</span>
+            </div>
+        `).join('');
+        if (cicli.length > 20) el.innerHTML += `<div style="text-align:center; color:var(--text-secondary); font-size:12px; padding:10px;">... e altri ${cicli.length - 20} cicli</div>`;
+    }
+
+    // ── Web Push ──
+    let pushDismissed = false;
+
+    async function initPush() {
+        if (pushDismissed) return;
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+        if (Notification.permission === 'granted') {
+            await subscribePush(false); // silent re-subscribe
+            return;
+        }
+        if (Notification.permission !== 'denied') {
+            // Show banner after 5s
+            setTimeout(() => {
+                const banner = document.getElementById('pushBanner');
+                if (banner) banner.style.display = 'flex';
+            }, 5000);
+        }
+    }
+
+    async function requestPush() {
+        dismissPushBanner();
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+            await subscribePush(true);
+        }
+    }
+
+    function dismissPushBanner() {
+        pushDismissed = true;
+        const banner = document.getElementById('pushBanner');
+        if (banner) banner.style.display = 'none';
+    }
+
+    async function subscribePush(notify = false) {
+        try {
+            const keyRes = await fetch(`${API}/push/vapid-key`);
+            if (!keyRes.ok) return;
+            const { publicKey } = await keyRes.json();
+
+            const reg = await navigator.serviceWorker.ready;
+            const existing = await reg.pushManager.getSubscription();
+            if (existing) await existing.unsubscribe();
+
+            const sub = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(publicKey)
+            });
+
+            await api('POST', '/push/subscribe', { subscription: sub.toJSON() });
+            if (notify) showToast('🔔 Notifiche push attivate!');
+        } catch(e) {
+            console.error('Push subscribe error:', e);
+        }
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const raw = window.atob(base64);
+        return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+    }
+
     // Avvio – nessun reindirizzamento automatico per ruolo
     if (token && currentUser) {
-        bootApp();
+        bootApp().then(() => initPush());
     } else {
         document.getElementById('loginScreen').style.display = 'flex';
+    }
+    // ── Meteo e posizione ──
+    let locationDismissed = localStorage.getItem('nabulair_loc_dismissed') === '1';
+
+    async function loadWeather() {
+        if (!currentMachineId) return;
+        try {
+            const data = await apiGet(`/machines/${currentMachineId}/weather`);
+            if (!data.success) return;
+
+            const banner = document.getElementById('locationBanner');
+            const widget = document.getElementById('weatherWidget');
+
+            if (!data.configured) {
+                // Nessuna posizione — mostra banner se non già scartato
+                if (!locationDismissed) banner.style.display = 'flex';
+                widget.style.display = 'none';
+                return;
+            }
+
+            banner.style.display = 'none';
+            widget.style.display = 'block';
+            renderWeatherWidget(data);
+        } catch(e) {}
+    }
+
+    function renderWeatherWidget(data) {
+        const w = data.weather || {};
+        const blocked = data.weather_block;
+        const widget = document.getElementById('weatherWidget');
+
+        const icon = getWeatherIcon(w.weather_code);
+        const updatedAgo = w.updated_at
+            ? Math.round((Date.now() - new Date(w.updated_at)) / 60000) + ' min fa'
+            : '—';
+
+        widget.className = `weather-widget ${blocked ? 'blocked' : 'ok'}`;
+        widget.innerHTML = `
+            <div class="weather-main">
+                <div class="weather-icon">${icon}</div>
+                <div>
+                    <div class="weather-desc">${w.description || '—'}</div>
+                    <div class="weather-sub">${data.location_name || 'Posizione impianto'} · aggiornato ${updatedAgo}</div>
+                </div>
+            </div>
+            <div class="weather-stats">
+                <div class="weather-stat">
+                    <span>${w.temperature !== undefined ? w.temperature.toFixed(1) + '°' : '—'}</span>
+                    <span>Temp.</span>
+                </div>
+                <div class="weather-stat">
+                    <span>${w.wind_speed !== undefined ? w.wind_speed.toFixed(0) + ' km/h' : '—'}</span>
+                    <span>Vento</span>
+                </div>
+                <div class="weather-stat">
+                    <span>${w.precipitation !== undefined ? w.precipitation.toFixed(1) + ' mm' : '—'}</span>
+                    <span>Pioggia</span>
+                </div>
+                <div class="weather-stat">
+                    <span>${w.humidity !== undefined ? w.humidity + '%' : '—'}</span>
+                    <span>Umidità</span>
+                </div>
+            </div>
+            ${blocked ? `
+            <div class="weather-block-msg">
+                ⚠️ Cicli automatici sospesi — ${w.block_reason || 'condizioni meteo avverse'}
+            </div>` : ''}
+        `;
+    }
+
+    function getWeatherIcon(code) {
+        if (!code || code === 0) return '☀️';
+        if (code <= 3)  return '⛅';
+        if (code <= 49) return '🌫️';
+        if (code <= 59) return '🌦️';
+        if (code <= 69) return '🌧️';
+        if (code <= 79) return '❄️';
+        if (code <= 86) return '🌦️';
+        return '⛈️';
+    }
+
+    function dismissLocationBanner() {
+        locationDismissed = true;
+        localStorage.setItem('nabulair_loc_dismissed', '1');
+        document.getElementById('locationBanner').style.display = 'none';
+    }
+
+    async function requestLocation() {
+        if (!navigator.geolocation) {
+            showToast('❌ Geolocalizzazione non supportata dal browser');
+            return;
+        }
+
+        const banner = document.getElementById('locationBanner');
+        banner.innerHTML = `
+            <div class="loc-text">📍 Rilevamento posizione in corso...</div>
+        `;
+
+        navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+                const { latitude: lat, longitude: lon } = pos.coords;
+
+                // Cerca nome comune tramite Open-Meteo geocoding
+                let location_name = null;
+                try {
+                    const geoRes = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+                        { headers: { 'Accept-Language': 'it' } }
+                    );
+                    const geoData = await geoRes.json();
+                    const addr = geoData.address || {};
+                    location_name = addr.city || addr.town || addr.village || addr.municipality || null;
+                } catch(e) {}
+
+                try {
+                    const res = await apiPut(`/machines/${currentMachineId}/location`, {
+                        lat, lon, location_name
+                    });
+                    if (res.success) {
+                        showToast('📍 Posizione salvata — meteo attivato!');
+                        banner.style.display = 'none';
+                        await loadWeather();
+                    } else {
+                        showToast('❌ ' + (res.message || 'Errore salvataggio'));
+                        banner.style.display = 'none';
+                    }
+                } catch(e) {
+                    showToast('❌ Errore di rete');
+                    banner.style.display = 'none';
+                }
+            },
+            (err) => {
+                banner.style.display = 'none';
+                if (err.code === 1) {
+                    showToast('⚠️ Permesso posizione negato');
+                } else {
+                    showToast('❌ Impossibile rilevare la posizione');
+                }
+            },
+            { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+        );
+    }
+
+    // Register service worker (push notifications)
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw-remote.js')
+            .then(reg => console.log('SW remote registrato:', reg.scope))
+            .catch(e => console.warn('SW remote errore:', e));
     }
 </script>
 </body>
