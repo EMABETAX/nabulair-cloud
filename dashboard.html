@@ -1009,6 +1009,7 @@
             .cmd-grid { grid-template-columns: 1fr; }
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -1079,7 +1080,7 @@
                 <div class="data-table-wrap">
                     <table class="data-table">
                         <thead>
-                            <tr><th>Nome</th><th>MAC</th><th>Stato</th><th>Sensori</th><th>Cliente</th><th>Installatore</th><th>Azioni</th>
+                            <tr><th>Nome</th><th>MAC</th><th>Stato</th><th>Sensori</th><th>Meteo</th><th>Cliente</th><th>Installatore</th><th>Azioni</th>
                         </thead>
                         <tbody id="machinesTbody"></tbody>
                     </table>
@@ -1130,6 +1131,27 @@
                             <tbody id="clientsTbody"></tbody>
                         </table>
                     </div>
+                </div>
+            </section>
+
+            <section class="section-page" id="section-stats">
+                <div class="page-title">📊 Statistiche cicli</div>
+                <div class="page-sub">Storico cicli di tutti gli impianti</div>
+
+                <div class="form-card" style="margin-bottom:20px;">
+                    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:16px;">
+                        <select id="statsMachineFilter" onchange="loadAdminStats()" style="padding:10px 16px; background:var(--card); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:13px;">
+                            <option value="">Tutti gli impianti</option>
+                        </select>
+                        <select id="statsDays" onchange="loadAdminStats()" style="padding:10px 16px; background:var(--card); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:13px;">
+                            <option value="7">Ultimi 7 giorni</option>
+                            <option value="30" selected>Ultimi 30 giorni</option>
+                            <option value="90">Ultimi 90 giorni</option>
+                        </select>
+                    </div>
+                    <canvas id="adminStatsChart" style="max-height:250px; margin-bottom:20px;"></canvas>
+                    <div id="adminStatsSummary" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:16px;"></div>
+                    <div id="adminCicliList"></div>
                 </div>
             </section>
 
@@ -1245,6 +1267,7 @@
                 <button class="nav-item active" onclick="showSection('machines')"><span class="nav-icon">🏭</span> Impianti</button>
                 <button class="nav-item" onclick="showSection('installers')"><span class="nav-icon">🔧</span> Installatori</button>
                 <button class="nav-item" onclick="showSection('clients')"><span class="nav-icon">👥</span> Clienti</button>
+                <button class="nav-item" onclick="showSection('stats'); loadAdminStats();"><span class="nav-icon">📊</span> Statistiche</button>
                 <hr class="sidebar-divider">
                 <div class="sidebar-label">Sistema</div>
                 <button class="nav-item" onclick="showSection('telegram')"><span class="nav-icon">📱</span> Telegram Bot</button>
@@ -1255,7 +1278,7 @@
             document.getElementById('bottomNavInner').innerHTML = `
                 <button class="bnav-tab active" data-section="machines" onclick="bnavGo('machines')"><span class="bnav-icon">🏭</span>Impianti</button>
                 <button class="bnav-tab" data-section="clients" onclick="bnavGo('clients')"><span class="bnav-icon">👥</span>Clienti</button>
-                <button class="bnav-tab" data-section="installers" onclick="bnavGo('installers')"><span class="bnav-icon">🔧</span>Team</button>
+                <button class="bnav-tab" data-section="stats" onclick="bnavGo('stats'); loadAdminStats();"><span class="bnav-icon">📊</span>Stats</button>
                 <button class="bnav-tab" data-section="telegram" onclick="bnavGo('telegram')"><span class="bnav-icon">📱</span>Bot</button>
             `;
             document.getElementById('bottomNav').style.display = 'block';
@@ -1392,6 +1415,18 @@
                 actions += ` <button class="btn-row btn-row-edit" onclick="editMachine(${m.id})">✎</button>`;
                 actions += ` <button class="btn-row btn-row-del" onclick="deleteMachine(${m.id})">🗑</button>`;
             }
+            // Meteo
+            let weatherCell = '<span style="color:var(--muted); font-size:12px;">—</span>';
+            if (m.lat && m.lon) {
+                const w = m.weather_cache || {};
+                const blocked = m.weather_block;
+                const icon = w.weather_code !== undefined ? getWeatherIconDash(w.weather_code) : '🌤️';
+                weatherCell = `<span title="${w.description || ''}" style="cursor:default;">
+                    ${icon} ${w.temperature !== undefined ? w.temperature.toFixed(0)+'°' : ''}
+                    ${blocked ? '<span style="color:var(--amber); font-size:11px;">⚠️ stop</span>' : ''}
+                </span>`;
+            }
+
             return `<tr>
                 <td><strong>${esc(m.machine_name || 'Impianto')}</strong></td>
                 <td class="td-mono">${m.mac_address || '—'}</td>
@@ -1400,6 +1435,7 @@
                     <span class="td-sensor ${!online ? 'unknown' : waterOk ? 'ok' : 'err'}">${!online ? '❓ N/D' : waterOk ? '💧 OK' : '💧 ❌'}</span>
                     <span class="td-sensor ${!online ? 'unknown' : insOk ? 'ok' : 'err'}">${!online ? '❓ N/D' : insOk ? '🧪 OK' : '🧪 ❌'}</span>
                 </td>
+                <td>${weatherCell}</td>
                 <td>${esc(clientName)}</td>
                 <td>${esc(instName)}</td>
                 <td class="td-actions">${actions}</td>
@@ -1526,6 +1562,39 @@
                 </div>
             `;
         }
+
+        // Meteo section
+        right += `
+            <div class="detail-section">
+                <h4>🌤️ Meteo</h4>
+                ${m.lat && m.lon ? `
+                    <div style="font-size:13px; margin-bottom:10px;">
+                        📍 ${esc(m.location_name || `${parseFloat(m.lat).toFixed(4)}, ${parseFloat(m.lon).toFixed(4)}`)}
+                    </div>
+                    ${m.weather_cache ? `
+                    <div style="background:var(--surface); border-radius:12px; padding:12px; font-size:13px; display:flex; gap:16px; flex-wrap:wrap;">
+                        <span>${getWeatherIconDash(m.weather_cache.weather_code)} ${m.weather_cache.description || '—'}</span>
+                        <span>🌡️ ${m.weather_cache.temperature?.toFixed(1)}°C</span>
+                        <span>💨 ${m.weather_cache.wind_speed?.toFixed(0)} km/h</span>
+                        <span>🌧️ ${m.weather_cache.precipitation?.toFixed(1)} mm/h</span>
+                    </div>
+                    ${m.weather_block ? `<div style="margin-top:8px; padding:8px 12px; background:var(--amber-dim); border-radius:10px; font-size:12px; color:var(--amber);">⚠️ Cicli bloccati: ${esc(m.weather_cache.block_reason || 'condizioni avverse')}</div>` : ''}
+                    ` : '<div style="color:var(--text-secondary); font-size:12px;">Caricamento meteo...</div>'}
+                    ${isAdmin || isInstaller ? `
+                    <div style="margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                        <label style="font-size:12px; color:var(--text-secondary);">Soglia vento (km/h):</label>
+                        <input type="number" id="windThreshold-${m.id}" value="${m.wind_threshold || 20}" min="5" max="100" style="width:70px; padding:6px; background:var(--card); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:12px;">
+                        <label style="font-size:12px; color:var(--text-secondary);">Pioggia (mm/h):</label>
+                        <input type="number" id="rainThreshold-${m.id}" value="${m.rain_threshold || 0.1}" min="0.1" max="10" step="0.1" style="width:70px; padding:6px; background:var(--card); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:12px;">
+                        <button class="btn-save-sm" onclick="saveWeatherSettings(${m.id})">💾 Salva soglie</button>
+                    </div>` : ''}
+                ` : `
+                    <div style="color:var(--text-secondary); font-size:13px;">
+                        📍 Posizione non configurata — il cliente può impostarla dall'app.
+                    </div>
+                `}
+            </div>
+        `;
 
         if (isAdmin) {
             right += `
@@ -1742,6 +1811,14 @@
         });
     }
 
+    async function saveWeatherSettings(machineId) {
+        const wt = parseFloat(document.getElementById(`windThreshold-${machineId}`)?.value) || 20;
+        const rt = parseFloat(document.getElementById(`rainThreshold-${machineId}`)?.value) || 0.1;
+        const res = await apiPut(`/machines/${machineId}/weather-settings`, { wind_threshold: wt, rain_threshold: rt });
+        if (res.success) { showToast('✅ Soglie meteo salvate'); await loadMachines(); openDetail(machineId); }
+        else alert(res.message || 'Errore');
+    }
+
     async function deleteMachine(id) {
         if (!confirm('Eliminare definitivamente questo impianto?')) return;
         const res = await apiDel(`/machines/${id}`);
@@ -1815,6 +1892,149 @@
 
     // ==================== UTILS ====================
     function esc(text) { if (!text) return ''; const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
+
+    function showToast(msg) {
+        let t = document.getElementById('dash-toast');
+        if (!t) {
+            t = document.createElement('div');
+            t.id = 'dash-toast';
+            t.style.cssText = 'position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:var(--surface); border-left:4px solid var(--green); padding:12px 24px; border-radius:40px; font-size:13px; font-weight:500; opacity:0; transition:opacity 0.3s; z-index:9999; white-space:nowrap; max-width:90vw;';
+            document.body.appendChild(t);
+        }
+        t.textContent = msg;
+        t.style.opacity = '1';
+        setTimeout(() => { t.style.opacity = '0'; }, 3500);
+    }
+
+    function getWeatherIconDash(code) {
+        if (!code || code === 0) return '☀️';
+        if (code <= 3)  return '⛅';
+        if (code <= 49) return '🌫️';
+        if (code <= 59) return '🌦️';
+        if (code <= 69) return '🌧️';
+        if (code <= 79) return '❄️';
+        if (code <= 86) return '🌦️';
+        return '⛈️';
+    }
+    // ── Statistiche cicli (admin) ──
+    let adminChart = null;
+
+    async function loadAdminStats() {
+        const machineId = document.getElementById('statsMachineFilter').value;
+        const days = document.getElementById('statsDays').value;
+
+        // Popola filtro macchine se vuoto
+        const sel = document.getElementById('statsMachineFilter');
+        if (sel.options.length <= 1 && allMachines.length) {
+            allMachines.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = m.machine_name || m.mac_address;
+                sel.appendChild(opt);
+            });
+        }
+
+        if (!machineId) {
+            // Carica tutte le macchine in parallelo e aggrega
+            if (!allMachines.length) return;
+            const results = await Promise.all(
+                allMachines.map(m => apiGet(`/machines/${m.id}/cicli?days=${days}&limit=200`).catch(() => null))
+            );
+            let allCicli = [], allAgg = {};
+            results.forEach((r, idx) => {
+                if (!r?.success) return;
+                const mName = allMachines[idx].machine_name || allMachines[idx].mac_address;
+                (r.cicli || []).forEach(c => allCicli.push({ ...c, machine_name: mName }));
+                (r.aggregato || []).forEach(a => {
+                    const k = a.giorno;
+                    if (!allAgg[k]) allAgg[k] = { giorno: k, num_cicli: 0, tot_ml: 0, ml_ins: 0, ml_rep: 0 };
+                    allAgg[k].num_cicli += parseInt(a.num_cicli || 0);
+                    allAgg[k].ml_ins   += parseFloat(a.ml_ins || 0);
+                    allAgg[k].ml_rep   += parseFloat(a.ml_rep || 0);
+                });
+            });
+            const aggArr = Object.values(allAgg).sort((a, b) => a.giorno < b.giorno ? 1 : -1);
+            renderAdminChart(aggArr);
+            renderAdminSummary(allCicli, aggArr);
+            renderAdminList(allCicli.sort((a,b) => new Date(b.started_at) - new Date(a.started_at)));
+        } else {
+            const data = await apiGet(`/machines/${machineId}/cicli?days=${days}&limit=200`);
+            if (!data.success) return;
+            renderAdminChart(data.aggregato || []);
+            renderAdminSummary(data.cicli || [], data.aggregato || []);
+            renderAdminList(data.cicli || []);
+        }
+    }
+
+    function renderAdminChart(agg) {
+        const ctx = document.getElementById('adminStatsChart').getContext('2d');
+        if (adminChart) { adminChart.destroy(); adminChart = null; }
+        if (!agg.length) return;
+        const sorted = agg.slice().reverse();
+        adminChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: sorted.map(r => new Date(r.giorno).toLocaleDateString('it-IT', {day:'2-digit',month:'2-digit'})),
+                datasets: [
+                    { label: 'Cicli', data: sorted.map(r => parseInt(r.num_cicli)), backgroundColor: 'rgba(59,130,246,0.7)', yAxisID: 'y1' },
+                    { label: 'ml Insetticida', data: sorted.map(r => parseFloat(r.ml_ins||0).toFixed(1)), backgroundColor: 'rgba(16,185,129,0.7)', yAxisID: 'y2' },
+                    { label: 'ml Repellente',  data: sorted.map(r => parseFloat(r.ml_rep||0).toFixed(1)), backgroundColor: 'rgba(245,158,11,0.7)', yAxisID: 'y2' },
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { labels: { color: '#94A3B8', font: { size: 11 } } } },
+                scales: {
+                    x:  { ticks: { color: '#94A3B8', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+                    y1: { position: 'left',  ticks: { color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.04)' }, title: { display: true, text: 'Cicli', color: '#94A3B8' } },
+                    y2: { position: 'right', ticks: { color: '#94A3B8' }, grid: { display: false }, title: { display: true, text: 'ml', color: '#94A3B8' } }
+                }
+            }
+        });
+    }
+
+    function renderAdminSummary(cicli, agg) {
+        const totCicli = cicli.length;
+        const totIns   = cicli.reduce((s, c) => c.product !== 'repellent' ? s + parseFloat(c.ml_consumed||0) : s, 0);
+        const totRep   = cicli.reduce((s, c) => c.product === 'repellent' ? s + parseFloat(c.ml_consumed||0) : s, 0);
+        const totSec   = cicli.reduce((s, c) => s + parseInt(c.duration_sec||0), 0);
+        document.getElementById('adminStatsSummary').innerHTML = `
+            <div class="form-card" style="text-align:center; margin:0; padding:16px;">
+                <div style="font-size:24px; font-weight:800; color:var(--blue);">${totCicli}</div>
+                <div style="font-size:11px; color:var(--text-secondary); margin-top:4px;">CICLI TOTALI</div>
+            </div>
+            <div class="form-card" style="text-align:center; margin:0; padding:16px;">
+                <div style="font-size:24px; font-weight:800; color:var(--green);">${totIns.toFixed(0)} ml</div>
+                <div style="font-size:11px; color:var(--text-secondary); margin-top:4px;">INSETTICIDA</div>
+            </div>
+            <div class="form-card" style="text-align:center; margin:0; padding:16px;">
+                <div style="font-size:24px; font-weight:800; color:var(--amber);">${totRep.toFixed(0)} ml</div>
+                <div style="font-size:11px; color:var(--text-secondary); margin-top:4px;">REPELLENTE</div>
+            </div>
+            <div class="form-card" style="text-align:center; margin:0; padding:16px;">
+                <div style="font-size:24px; font-weight:800; color:var(--text);">${Math.round(totSec/60)} min</div>
+                <div style="font-size:11px; color:var(--text-secondary); margin-top:4px;">TEMPO TOT.</div>
+            </div>
+        `;
+    }
+
+    function renderAdminList(cicli) {
+        const el = document.getElementById('adminCicliList');
+        if (!cicli.length) { el.innerHTML = '<div class="empty-state">📭 Nessun ciclo registrato</div>'; return; }
+        el.innerHTML = `<div class="data-table-wrap"><table class="data-table">
+            <thead><tr><th>Data/Ora</th><th>Impianto</th><th>Prodotto</th><th>Durata</th><th>ml</th><th>Zona</th></tr></thead>
+            <tbody>${cicli.slice(0,50).map(c => `<tr>
+                <td class="td-mono">${new Date(c.started_at).toLocaleString('it-IT', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
+                <td>${esc(c.machine_name || '—')}</td>
+                <td>${c.product === 'repellent' ? '🌸 Repellente' : '🧪 Insetticida'}</td>
+                <td>${c.duration_sec}s</td>
+                <td style="color:var(--green);">${parseFloat(c.ml_consumed||0).toFixed(1)}</td>
+                <td>Z${c.zona}</td>
+            </tr>`).join('')}</tbody>
+        </table></div>`;
+        if (cicli.length > 50) el.innerHTML += `<div style="text-align:center; padding:10px; color:var(--text-secondary); font-size:12px;">... e altri ${cicli.length - 50} cicli</div>`;
+    }
+
     function refreshAll() { loadMachines(); loadAlerts(); }
 
     // Auto refresh
