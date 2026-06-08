@@ -1619,7 +1619,7 @@ app.post('/api/machines/:id/command', authenticateToken, async (req, res) => {
         const result = await queryWithRetry(
             `INSERT INTO commands (machine_id, type, payload, created_by)
              VALUES ($1, $2, $3, $4) RETURNING id`,
-            [machineId, type, payload || null, req.user.id]
+            [machineId, type, payload || {}, req.user.id]
         );
 
         console.log(`📥 Comando ${type} in coda per macchina ${machineId} (ID cmd: ${result.rows[0].id})`);
