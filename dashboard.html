@@ -1637,7 +1637,7 @@
         try {
             const res = await apiPost(`/machines/${machineId}/command`, { type: cmd, payload });
             if (res.success) {
-                statusEl.textContent = '✅ Comando inviato all\'ESP32';
+                statusEl.textContent = '✅ Comando inviato a Nabulair';
                 statusEl.style.color = 'var(--green)';
             } else {
                 statusEl.textContent = '❌ ' + (res.message || 'Errore');
