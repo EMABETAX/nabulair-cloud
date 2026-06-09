@@ -3,7 +3,7 @@
 // NabulAir v1.5
 // =============================================
 
-const CACHE_NAME = 'nabulair-remote-v1';
+const CACHE_NAME = 'nabulair-remote-v2';
 
 // Installa e attiva
 self.addEventListener('install', e => {
