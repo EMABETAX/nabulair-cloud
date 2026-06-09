@@ -42,26 +42,12 @@ app.use(express.json());
 
 // File statici
 app.use(express.static(__dirname));
-app.get('/logo.png', (req, res) => res.sendFile(__dirname + '/logo.png'));
-app.get('/favicon.ico', (req, res) => res.sendFile(__dirname + '/favicon.ico'));
-app.get('/dashboard.html', (req, res) => res.sendFile(__dirname + '/dashboard.html'));
-app.get('/remote.html', (req, res) => res.sendFile(__dirname + '/remote.html'));
-
-app.use(express.static(__dirname));
 
 app.get('/dashboard', (req, res) => {
     res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
 
 app.get('/remote', (req, res) => {
-    res.sendFile(path.join(__dirname, 'remote.html'));
-});
-
-app.get('/dashboard.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dashboard.html'));
-});
-
-app.get('/remote.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'remote.html'));
 });
 
@@ -229,16 +215,6 @@ async function initDatabase() {
         // Web push subscriptions (v1.5)
         await pool.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS push_subscription JSONB`).catch(() => {});
 
-        // Colonne posizione e meteo (v1.6)
-        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS lat DECIMAL(10,8)`).catch(() => {});
-        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS lon DECIMAL(11,8)`).catch(() => {});
-        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS location_name VARCHAR(100)`).catch(() => {});
-        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS weather_cache JSONB`).catch(() => {});
-        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS weather_updated_at TIMESTAMP`).catch(() => {});
-        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS weather_block BOOLEAN DEFAULT FALSE`).catch(() => {});
-        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS wind_threshold FLOAT DEFAULT 20`).catch(() => {});
-        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS rain_threshold FLOAT DEFAULT 0.1`).catch(() => {});
-
         // ========== AGGIUNTA COLONNE PER TRACKING SYNC ==========
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS last_ntp_sync TIMESTAMP`).catch(() => {});
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS last_prog_sync TIMESTAMP`).catch(() => {});
@@ -293,84 +269,6 @@ function startOfflineDetectionJob() {
     }, CHECK_INTERVAL_MS);
 
     console.log(`🕐 Offline detection job attivo: check ogni ${CHECK_INTERVAL_MS/1000}s, timeout ${OFFLINE_THRESHOLD_MINUTES}min`);
-}
-
-// ─────────────────────────────────────────────
-// METEO — Open-Meteo (gratuito, no key)
-// ─────────────────────────────────────────────
-
-const WMO_RAIN_CODES = new Set([51,53,55,56,57,61,63,65,66,67,71,73,75,77,80,81,82,85,86,95,96,99]);
-
-function wmoDescription(code) {
-    if (code === 0)  return '☀️ Sereno';
-    if (code <= 3)   return '⛅ Nuvoloso';
-    if (code <= 49)  return '🌫️ Nebbia';
-    if (code <= 59)  return '🌧️ Pioggerella';
-    if (code <= 69)  return '🌧️ Pioggia';
-    if (code <= 79)  return '❄️ Neve';
-    if (code <= 86)  return '🌦️ Rovesci';
-    return '⛈️ Temporale';
-}
-
-async function fetchWeatherForMachine(machine) {
-    const { id, lat, lon, wind_threshold, rain_threshold } = machine;
-    if (!lat || !lon) return;
-    try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=precipitation,wind_speed_10m,weather_code,temperature_2m,relative_humidity_2m&hourly=precipitation,wind_speed_10m&timezone=auto&forecast_days=1`;
-        const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-        if (!res.ok) throw new Error(`Open-Meteo HTTP ${res.status}`);
-        const data = await res.json();
-        const c = data.current || {};
-        const precipitation = parseFloat(c.precipitation  || 0);
-        const wind_speed    = parseFloat(c.wind_speed_10m || 0);
-        const weather_code  = parseInt(c.weather_code     || 0);
-        const temperature   = parseFloat(c.temperature_2m || 0);
-        const humidity      = parseInt(c.relative_humidity_2m || 0);
-        const wt = wind_threshold || 20, rt = rain_threshold || 0.1;
-        const hourly = data.hourly || {};
-        const upcoming_rain = (hourly.precipitation || []).slice(0,3).some(p => p > rt);
-        const upcoming_wind = (hourly.wind_speed_10m|| []).slice(0,3).some(w => w > wt);
-        const weatherBlock = precipitation > rt || wind_speed > wt || WMO_RAIN_CODES.has(weather_code) || upcoming_rain || upcoming_wind;
-        const blockReason = [];
-        if (precipitation > rt)           blockReason.push(`pioggia ${precipitation}mm/h`);
-        if (wind_speed > wt)              blockReason.push(`vento ${wind_speed.toFixed(0)}km/h`);
-        if (WMO_RAIN_CODES.has(weather_code) && !blockReason.length) blockReason.push(wmoDescription(weather_code));
-        if (upcoming_rain && precipitation <= rt) blockReason.push('pioggia prevista a breve');
-        if (upcoming_wind && wind_speed <= wt)    blockReason.push('vento forte previsto');
-        const weatherCache = {
-            precipitation, wind_speed, weather_code,
-            temperature, humidity,
-            description: wmoDescription(weather_code),
-            block: weatherBlock,
-            block_reason: blockReason.join(', ') || null,
-            upcoming_rain, upcoming_wind,
-            updated_at: new Date().toISOString()
-        };
-        await pool.query(
-            `UPDATE machines SET weather_cache=$1, weather_updated_at=NOW(), weather_block=$2 WHERE id=$3`,
-            [JSON.stringify(weatherCache), weatherBlock, id]
-        );
-        if (weatherBlock) console.log(`🌧️ Macchina ${id}: bloccata — ${blockReason.join(', ')}`);
-    } catch (err) {
-        console.error(`Errore meteo macchina ${id}:`, err.message);
-    }
-}
-
-function startWeatherJob() {
-    const run = async () => {
-        try {
-            const result = await pool.query('SELECT id, lat, lon, wind_threshold, rain_threshold FROM machines WHERE lat IS NOT NULL AND lon IS NOT NULL');
-            if (!result.rows.length) return;
-            console.log(`🌤️ Aggiornamento meteo per ${result.rows.length} macchine...`);
-            for (const m of result.rows) {
-                await fetchWeatherForMachine(m);
-                await new Promise(r => setTimeout(r, 300));
-            }
-        } catch (err) { console.error('Weather job error:', err.message); }
-    };
-    run();
-    setInterval(run, 60 * 60 * 1000);
-    console.log('🌤️ Weather job attivo (ogni ora)');
 }
 
 async function sendTelegramMessage(chatId, text) {
@@ -724,9 +622,6 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
                 m.installer_id,
                 m.paused,
                 m.pause_until,
-                m.lat, m.lon, m.location_name,
-                m.weather_cache, m.weather_block,
-                m.wind_threshold, m.rain_threshold,
                 c.name as client_name,
                 c.telegram_chat_id
             FROM machines m
@@ -1554,28 +1449,13 @@ app.post('/api/ping', async (req, res) => {
             pauseUntilFormatted = d.toISOString().split('T')[0]; // "2026-06-15"
         }
 
-        // Meteo — includi weather_block nella risposta ping
-        let weatherBlock = false;
-        let weatherInfo = null;
-        if (machine) {
-            const wRes = await pool.query(
-                'SELECT weather_block, weather_cache FROM machines WHERE id=$1', [machine_id]
-            ).catch(() => ({ rows: [] }));
-            if (wRes.rows.length) {
-                weatherBlock = wRes.rows[0].weather_block || false;
-                weatherInfo  = wRes.rows[0].weather_cache;
-            }
-        }
-
         res.json({
             success: true,
             command,
             paused: machine?.paused || false,
             pause_until: pauseUntilFormatted,
             request_sync: requestSync,
-            programs: pushPrograms,
-            weather_block: weatherBlock,
-            weather: weatherInfo
+            programs: pushPrograms
         });
 
     } catch (error) {
@@ -1619,7 +1499,7 @@ app.post('/api/machines/:id/command', authenticateToken, async (req, res) => {
         const result = await queryWithRetry(
             `INSERT INTO commands (machine_id, type, payload, created_by)
              VALUES ($1, $2, $3, $4) RETURNING id`,
-            [machineId, type, payload || {}, req.user.id]
+            [machineId, type, payload || null, req.user.id]
         );
 
         console.log(`📥 Comando ${type} in coda per macchina ${machineId} (ID cmd: ${result.rows[0].id})`);
@@ -1941,10 +1821,10 @@ app.get('/api/machines/:id/cicli', authenticateToken, async (req, res) => {
             SELECT id, started_at, duration_sec, product, ml_consumed, zona
             FROM cicli
             WHERE machine_id = $1
-              AND started_at >= NOW() - INTERVAL '${days} days'
+              AND started_at >= NOW() - ($2 * INTERVAL '1 day')
             ORDER BY started_at DESC
-            LIMIT $2
-        `, [machineId, limit]);
+            LIMIT $3
+        `, [machineId, days, limit]);
 
         // Aggregato per giorno per il grafico
         const aggResult = await pool.query(`
@@ -1957,10 +1837,10 @@ app.get('/api/machines/:id/cicli', authenticateToken, async (req, res) => {
                 SUM(CASE WHEN product = 'insecticide' THEN ml_consumed ELSE 0 END) as ml_ins
             FROM cicli
             WHERE machine_id = $1
-              AND started_at >= NOW() - INTERVAL '${days} days'
+              AND started_at >= NOW() - ($2 * INTERVAL '1 day')
             GROUP BY DATE(started_at)
             ORDER BY giorno DESC
-        `, [machineId]);
+        `, [machineId, days]);
 
         res.json({
             success: true,
@@ -2018,116 +1898,6 @@ app.delete('/api/push/unsubscribe', authenticateToken, async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ success: false });
-    }
-});
-
-// ─────────────────────────────────────────────
-// POSIZIONE E METEO (v1.6)
-// ─────────────────────────────────────────────
-
-// PUT /api/machines/:id/location — salva le coordinate (chiamato da remote.html)
-app.put('/api/machines/:id/location', authenticateToken, async (req, res) => {
-    const machineId = parseInt(req.params.id);
-    const { lat, lon, location_name } = req.body;
-
-    if (!lat || !lon) {
-        return res.status(400).json({ success: false, message: 'lat e lon obbligatori' });
-    }
-
-    try {
-        // Verifica accesso
-        const machineCheck = await pool.query(
-            'SELECT installer_id, client_id FROM machines WHERE id = $1', [machineId]
-        );
-        if (!machineCheck.rows.length) {
-            return res.status(404).json({ success: false, message: 'Macchina non trovata' });
-        }
-        const m = machineCheck.rows[0];
-        if (req.user.role === 'installer' && m.installer_id !== req.user.id)
-            return res.status(403).json({ success: false, message: 'Accesso negato' });
-        if (req.user.role === 'client' && m.client_id !== req.user.client_id)
-            return res.status(403).json({ success: false, message: 'Accesso negato' });
-
-        await pool.query(
-            `UPDATE machines SET lat=$1, lon=$2, location_name=$3 WHERE id=$4`,
-            [lat, lon, location_name || null, machineId]
-        );
-
-        // Aggiorna subito il meteo
-        await fetchWeatherForMachine({ id: machineId, lat, lon, wind_threshold: 20, rain_threshold: 0.1 });
-
-        console.log(`📍 Posizione salvata per macchina ${machineId}: ${lat},${lon}`);
-        res.json({ success: true, message: 'Posizione salvata' });
-    } catch (error) {
-        console.error('Errore save location:', error.message);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// GET /api/machines/:id/weather — meteo corrente della macchina
-app.get('/api/machines/:id/weather', authenticateToken, async (req, res) => {
-    const machineId = parseInt(req.params.id);
-    try {
-        const result = await pool.query(
-            `SELECT lat, lon, location_name, weather_cache, weather_updated_at, weather_block,
-                    wind_threshold, rain_threshold
-             FROM machines WHERE id = $1`, [machineId]
-        );
-        if (!result.rows.length) return res.status(404).json({ success: false });
-        const m = result.rows[0];
-
-        if (!m.lat || !m.lon) {
-            return res.json({ success: true, configured: false });
-        }
-
-        // Aggiorna se cache > 1 ora
-        const lastUpdate = m.weather_updated_at ? new Date(m.weather_updated_at) : null;
-        const stale = !lastUpdate || (Date.now() - lastUpdate.getTime()) > 60 * 60 * 1000;
-        if (stale) {
-            await fetchWeatherForMachine({
-                id: machineId, lat: m.lat, lon: m.lon,
-                wind_threshold: m.wind_threshold, rain_threshold: m.rain_threshold
-            });
-            const fresh = await pool.query(
-                'SELECT weather_cache, weather_updated_at, weather_block FROM machines WHERE id=$1', [machineId]
-            );
-            m.weather_cache    = fresh.rows[0].weather_cache;
-            m.weather_block    = fresh.rows[0].weather_block;
-            m.weather_updated_at = fresh.rows[0].weather_updated_at;
-        }
-
-        res.json({
-            success: true,
-            configured: true,
-            lat: m.lat, lon: m.lon,
-            location_name: m.location_name,
-            weather: m.weather_cache,
-            weather_block: m.weather_block,
-            weather_updated_at: m.weather_updated_at,
-            wind_threshold: m.wind_threshold,
-            rain_threshold: m.rain_threshold
-        });
-    } catch (error) {
-        console.error('Errore GET weather:', error.message);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// PUT /api/machines/:id/weather-settings — soglie vento/pioggia (admin/installatore)
-app.put('/api/machines/:id/weather-settings', authenticateToken, async (req, res) => {
-    const machineId = parseInt(req.params.id);
-    const { wind_threshold, rain_threshold } = req.body;
-    if (req.user.role === 'client') {
-        return res.status(403).json({ success: false, message: 'Solo admin e installatori possono modificare le soglie' });
-    }
-    try {
-        await pool.query(
-            `UPDATE machines SET wind_threshold=$1, rain_threshold=$2 WHERE id=$3`,
-            [wind_threshold || 20, rain_threshold || 0.1, machineId]
-        );
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
     }
 });
 
@@ -2194,7 +1964,6 @@ app.get('/', (req, res) => {
 });
 
 startOfflineDetectionJob();
-startWeatherJob();
 
 app.listen(PORT, () => {
     console.log(`✅ NabulAir Cloud avviato su porta ${PORT}`);
