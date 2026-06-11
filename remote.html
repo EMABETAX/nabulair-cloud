@@ -242,6 +242,79 @@
             color: var(--red);
         }
 
+        /* Profile menu */
+        .profile-menu-wrap {
+            position: relative;
+        }
+        .profile-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            min-width: 200px;
+            z-index: 200;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+        .profile-dropdown.open { display: block; }
+        .profile-dropdown button {
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: none;
+            padding: 12px 16px;
+            color: var(--text);
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.15s;
+        }
+        .profile-dropdown button:hover { background: var(--card); }
+        .profile-dropdown button.danger { color: var(--red); }
+
+        /* Modal overlay */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 500;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            width: 340px;
+            max-width: calc(100vw - 32px);
+        }
+        .modal-box h3 { margin: 0 0 20px; font-size: 16px; }
+        .modal-box label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; margin-top: 14px; }
+        .modal-box input {
+            width: 100%;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            color: var(--text);
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .modal-box input:focus { outline: none; border-color: var(--blue); }
+        .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-actions button { flex: 1; padding: 10px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 13px; border: none; }
+        .modal-btn-primary { background: var(--green); color: #000; }
+        .modal-btn-cancel { background: var(--card); border: 1px solid var(--border) !important; color: var(--text-secondary); }
+        .modal-msg { font-size: 12px; margin-top: 10px; min-height: 16px; }
+
         /* Main layout */
         .main {
             max-width: 1200px;
@@ -777,72 +850,6 @@
         .toast.show {
             opacity: 1;
         }
-
-        /* Meteo widget */
-        .weather-widget {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 16px 20px;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-        .weather-widget.blocked {
-            border-color: rgba(245,158,11,0.4);
-            background: var(--amber-dim);
-        }
-        .weather-widget.ok {
-            border-color: rgba(16,185,129,0.3);
-        }
-        .weather-main {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .weather-icon { font-size: 28px; }
-        .weather-desc { font-size: 13px; font-weight: 600; color: var(--text); }
-        .weather-sub  { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
-        .weather-stats {
-            display: flex;
-            gap: 16px;
-            font-size: 12px;
-            color: var(--text-secondary);
-        }
-        .weather-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-        .weather-stat span:first-child { font-size: 15px; font-weight: 700; color: var(--text); }
-        .weather-block-msg {
-            width: 100%;
-            background: var(--amber-dim);
-            border: 1px solid rgba(245,158,11,0.4);
-            border-radius: 12px;
-            padding: 10px 14px;
-            font-size: 12px;
-            color: var(--amber);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        /* Location banner */
-        .location-banner {
-            background: var(--blue-dim);
-            border: 1px solid rgba(59,130,246,0.3);
-            border-radius: 16px;
-            padding: 14px 16px;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 10px;
-            font-size: 13px;
-        }
-        .location-banner .loc-text { flex: 1; color: var(--text); }
-        .location-banner .loc-sub  { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
     </style>
 <base target="_blank">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -882,14 +889,40 @@
             <span class="top-brand">NabulAir · Controllo Remoto</span>
         </div>
         <div class="topbar-right">
-            <div class="user-chip">
-                <span id="topUsername">—</span>
-                <span id="topRoleBadge" class="role-badge"></span>
+            <div class="profile-menu-wrap">
+                <div class="user-chip" onclick="toggleProfileMenu()" style="cursor:pointer;" title="Menu profilo">
+                    <span id="topUsername">—</span>
+                    <span id="topRoleBadge" class="role-badge"></span>
+                    <span style="font-size:10px; color:var(--text-secondary);">▾</span>
+                </div>
+                <div class="profile-dropdown" id="profileDropdown">
+                    <button onclick="openChangePassword()">🔑 Cambia password</button>
+                    <button onclick="togglePushFromMenu()">🔔 <span id="pushMenuLabel">Notifiche push</span></button>
+                    <button class="danger" onclick="logout()">⏏ Esci</button>
+                </div>
             </div>
             <button class="btn-icon" onclick="refreshAll()">↺ Aggiorna</button>
             <button class="btn-icon btn-logout" onclick="logout()">Esci</button>
         </div>
     </header>
+
+    <!-- Modale cambio password -->
+    <div class="modal-overlay" id="modalChangePassword" onclick="closeChangePassword(event)">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <h3>🔑 Cambia password</h3>
+            <label>Password attuale</label>
+            <input type="password" id="cpCurrent" placeholder="••••••••">
+            <label>Nuova password</label>
+            <input type="password" id="cpNew" placeholder="Minimo 6 caratteri">
+            <label>Conferma nuova password</label>
+            <input type="password" id="cpConfirm" placeholder="Ripeti la nuova password">
+            <p class="modal-msg" id="cpMsg"></p>
+            <div class="modal-actions">
+                <button class="modal-btn-cancel" onclick="closeChangePassword()">Annulla</button>
+                <button class="modal-btn-primary" onclick="submitChangePassword()">Salva</button>
+            </div>
+        </div>
+    </div>
 
     <div class="main">
         <!-- Machine selector -->
@@ -904,21 +937,6 @@
 
         <!-- Stats + Comandi = sezione HOME -->
         <div class="remote-section active" id="rsec-home">
-        <!-- Location banner (shown when no location set) -->
-        <div class="location-banner" id="locationBanner" style="display:none;">
-            <div>
-                <div class="loc-text">📍 Condividi la posizione dell'impianto</div>
-                <div class="loc-sub">Attiva il blocco automatico dei cicli in caso di pioggia o vento forte</div>
-            </div>
-            <div style="display:flex; gap:8px;">
-                <button onclick="requestLocation()" style="background:var(--blue); color:#fff; border:none; padding:8px 16px; border-radius:40px; font-weight:700; cursor:pointer; font-size:12px;">📍 Condividi</button>
-                <button onclick="dismissLocationBanner()" style="background:none; border:1px solid var(--border); color:var(--text-secondary); padding:8px 12px; border-radius:40px; cursor:pointer; font-size:12px;">Non ora</button>
-            </div>
-        </div>
-
-        <!-- Meteo widget -->
-        <div id="weatherWidget" style="display:none;"></div>
-
         <!-- Stats -->
         <div class="stats-grid" id="statsGrid">
             <div class="stat-card"><div class="stat-icon">💧</div><div class="stat-label">Acqua</div><div class="stat-value" id="waterStatus">—</div></div>
@@ -983,10 +1001,10 @@
             <div style="display:flex; gap:12px; margin-top:20px; flex-wrap:wrap;">
                 <button class="btn-add" onclick="showAddProgramModal()">➕ Nuovo programma</button>
                 <button class="btn-add" onclick="savePrograms(false)" style="background:var(--blue); color:#fff;">💾 Salva nel cloud</button>
-                <button class="btn-add" onclick="savePrograms(true)" style="background:var(--green);">📡 Salva e invia a Nabulair</button>
+                <button class="btn-add" onclick="savePrograms(true)" style="background:var(--green);">📡 Salva e invia all'ESP32</button>
             </div>
             <div class="info-note">
-                📌 I programmi vengono salvati nel cloud. Usa "Salva e invia" per trasferirli a Nabulair (entro ~60 secondi).
+                📌 I programmi vengono salvati nel cloud. Usa "Salva e invia" per trasferirli all'ESP32 (entro ~60 secondi).
             </div>
         </div>
         </div><!-- /rsec-programmi -->
@@ -1016,7 +1034,7 @@
 </div>
 
 <!-- Push permission banner -->
-<div id="pushBanner" style="display:none; position:fixed; bottom:70px; left:12px; right:12px; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:14px 16px; z-index:300; display:none; align-items:center; gap:12px; flex-wrap:wrap;">
+<div id="pushBanner" style="display:none; position:fixed; bottom:70px; left:12px; right:12px; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:14px 16px; z-index:300; align-items:center; gap:12px; flex-wrap:wrap;">
     <span style="font-size:13px; flex:1;">🔔 Attiva le notifiche per ricevere gli allarmi anche quando l'app è chiusa</span>
     <div style="display:flex; gap:8px;">
         <button onclick="requestPush()" style="background:var(--green); color:#000; border:none; padding:8px 16px; border-radius:40px; font-weight:700; cursor:pointer; font-size:12px;">Attiva</button>
@@ -1092,6 +1110,11 @@
         else if (currentUser.role === 'installer') roleBadge.textContent = 'Installatore';
         else roleBadge.textContent = 'Cliente';
         await loadMachines();
+        // Aggiorna label push nel menu profilo
+        if (Notification.permission === 'granted') {
+            const lbl = document.getElementById('pushMenuLabel');
+            if (lbl) lbl.textContent = 'Disattiva notifiche push';
+        }
     }
 
     // ==================== API ====================
@@ -1143,7 +1166,7 @@
 
     async function loadMachineData() {
         if (!currentMachineId) return;
-        await Promise.all([loadStatus(), loadPrograms(), loadPause(), loadLastCommand(), loadWeather()]);
+        await Promise.all([loadStatus(), loadPrograms(), loadPause(), loadLastCommand()]);
     }
 
     async function loadStatus() {
@@ -1350,7 +1373,7 @@
             if (data.success) {
                 showToast('✅ ' + data.message);
                 if (sendToDevice && data.command_id) {
-                    showCmdStatus("sent", "📡 Invio programmi a Nabulair...");
+                    showCmdStatus("sent", "📡 Invio programmi all'ESP32...");
                     startCmdPoll(data.command_id, 'update_programs');
                 }
             } else {
@@ -1629,8 +1652,61 @@
         if (cicli.length > 20) el.innerHTML += `<div style="text-align:center; color:var(--text-secondary); font-size:12px; padding:10px;">... e altri ${cicli.length - 20} cicli</div>`;
     }
 
+    // ── Profile menu ──
+    function toggleProfileMenu() {
+        const dd = document.getElementById('profileDropdown');
+        dd.classList.toggle('open');
+    }
+    document.addEventListener('click', function(e) {
+        const wrap = document.querySelector('.profile-menu-wrap');
+        if (wrap && !wrap.contains(e.target)) {
+            document.getElementById('profileDropdown')?.classList.remove('open');
+        }
+    });
+
+    // ── Cambio password ──
+    function openChangePassword() {
+        document.getElementById('profileDropdown').classList.remove('open');
+        document.getElementById('cpCurrent').value = '';
+        document.getElementById('cpNew').value = '';
+        document.getElementById('cpConfirm').value = '';
+        document.getElementById('cpMsg').textContent = '';
+        document.getElementById('cpMsg').style.color = 'var(--red)';
+        document.getElementById('modalChangePassword').classList.add('open');
+    }
+    function closeChangePassword(e) {
+        if (!e || e.target === document.getElementById('modalChangePassword'))
+            document.getElementById('modalChangePassword').classList.remove('open');
+    }
+    async function submitChangePassword() {
+        const currentPassword = document.getElementById('cpCurrent').value.trim();
+        const newPassword     = document.getElementById('cpNew').value.trim();
+        const confirm         = document.getElementById('cpConfirm').value.trim();
+        const msg             = document.getElementById('cpMsg');
+        msg.style.color = 'var(--red)';
+        if (!currentPassword || !newPassword || !confirm) { msg.textContent = 'Compila tutti i campi'; return; }
+        if (newPassword.length < 6)  { msg.textContent = 'La nuova password deve essere di almeno 6 caratteri'; return; }
+        if (newPassword !== confirm)  { msg.textContent = 'Le password non coincidono'; return; }
+        msg.style.color = 'var(--text-secondary)';
+        msg.textContent = 'Salvataggio…';
+        try {
+            const res = await api('POST', '/change-password', { currentPassword, newPassword });
+            if (res.success) {
+                msg.style.color = 'var(--green)';
+                msg.textContent = '✓ Password aggiornata!';
+                setTimeout(() => closeChangePassword(), 1500);
+            } else {
+                msg.style.color = 'var(--red)';
+                msg.textContent = res.message || 'Errore';
+            }
+        } catch(e) {
+            msg.style.color = 'var(--red)';
+            msg.textContent = 'Errore di rete';
+        }
+    }
+
     // ── Web Push ──
-    let pushDismissed = false;
+    let pushDismissed = localStorage.getItem('nabulair_push_dismissed') === '1';
 
     async function initPush() {
         if (pushDismissed) return;
@@ -1658,8 +1734,28 @@
 
     function dismissPushBanner() {
         pushDismissed = true;
+        localStorage.setItem('nabulair_push_dismissed', '1');
         const banner = document.getElementById('pushBanner');
         if (banner) banner.style.display = 'none';
+    }
+
+    async function togglePushFromMenu() {
+        document.getElementById('profileDropdown').classList.remove('open');
+        if (Notification.permission === 'granted') {
+            // Disattiva
+            try {
+                const reg = await navigator.serviceWorker.ready;
+                const sub = await reg.pushManager.getSubscription();
+                if (sub) await sub.unsubscribe();
+                await api('DELETE', '/push/unsubscribe');
+                showToast('🔕 Notifiche push disattivate');
+                document.getElementById('pushMenuLabel').textContent = 'Attiva notifiche push';
+            } catch(e) { console.error(e); }
+        } else {
+            pushDismissed = false;
+            localStorage.removeItem('nabulair_push_dismissed');
+            await requestPush();
+        }
     }
 
     async function subscribePush(notify = false) {
@@ -1697,148 +1793,6 @@
     } else {
         document.getElementById('loginScreen').style.display = 'flex';
     }
-    // ── Meteo e posizione ──
-    let locationDismissed = localStorage.getItem('nabulair_loc_dismissed') === '1';
-
-    async function loadWeather() {
-        if (!currentMachineId) return;
-        try {
-            const data = await apiGet(`/machines/${currentMachineId}/weather`);
-            if (!data.success) return;
-
-            const banner = document.getElementById('locationBanner');
-            const widget = document.getElementById('weatherWidget');
-
-            if (!data.configured) {
-                // Nessuna posizione — mostra banner se non già scartato
-                if (!locationDismissed) banner.style.display = 'flex';
-                widget.style.display = 'none';
-                return;
-            }
-
-            banner.style.display = 'none';
-            widget.style.display = 'block';
-            renderWeatherWidget(data);
-        } catch(e) {}
-    }
-
-    function renderWeatherWidget(data) {
-        const w = data.weather || {};
-        const blocked = data.weather_block;
-        const widget = document.getElementById('weatherWidget');
-
-        const icon = getWeatherIcon(w.weather_code);
-        const updatedAgo = w.updated_at
-            ? Math.round((Date.now() - new Date(w.updated_at)) / 60000) + ' min fa'
-            : '—';
-
-        widget.className = `weather-widget ${blocked ? 'blocked' : 'ok'}`;
-        widget.innerHTML = `
-            <div class="weather-main">
-                <div class="weather-icon">${icon}</div>
-                <div>
-                    <div class="weather-desc">${w.description || '—'}</div>
-                    <div class="weather-sub">${data.location_name || 'Posizione impianto'} · aggiornato ${updatedAgo}</div>
-                </div>
-            </div>
-            <div class="weather-stats">
-                <div class="weather-stat">
-                    <span>${w.temperature !== undefined ? w.temperature.toFixed(1) + '°' : '—'}</span>
-                    <span>Temp.</span>
-                </div>
-                <div class="weather-stat">
-                    <span>${w.wind_speed !== undefined ? w.wind_speed.toFixed(0) + ' km/h' : '—'}</span>
-                    <span>Vento</span>
-                </div>
-                <div class="weather-stat">
-                    <span>${w.precipitation !== undefined ? w.precipitation.toFixed(1) + ' mm' : '—'}</span>
-                    <span>Pioggia</span>
-                </div>
-                <div class="weather-stat">
-                    <span>${w.humidity !== undefined ? w.humidity + '%' : '—'}</span>
-                    <span>Umidità</span>
-                </div>
-            </div>
-            ${blocked ? `
-            <div class="weather-block-msg">
-                ⚠️ Cicli automatici sospesi — ${w.block_reason || 'condizioni meteo avverse'}
-            </div>` : ''}
-        `;
-    }
-
-    function getWeatherIcon(code) {
-        if (!code || code === 0) return '☀️';
-        if (code <= 3)  return '⛅';
-        if (code <= 49) return '🌫️';
-        if (code <= 59) return '🌦️';
-        if (code <= 69) return '🌧️';
-        if (code <= 79) return '❄️';
-        if (code <= 86) return '🌦️';
-        return '⛈️';
-    }
-
-    function dismissLocationBanner() {
-        locationDismissed = true;
-        localStorage.setItem('nabulair_loc_dismissed', '1');
-        document.getElementById('locationBanner').style.display = 'none';
-    }
-
-    async function requestLocation() {
-        if (!navigator.geolocation) {
-            showToast('❌ Geolocalizzazione non supportata dal browser');
-            return;
-        }
-
-        const banner = document.getElementById('locationBanner');
-        banner.innerHTML = `
-            <div class="loc-text">📍 Rilevamento posizione in corso...</div>
-        `;
-
-        navigator.geolocation.getCurrentPosition(
-            async (pos) => {
-                const { latitude: lat, longitude: lon } = pos.coords;
-
-                // Cerca nome comune tramite Open-Meteo geocoding
-                let location_name = null;
-                try {
-                    const geoRes = await fetch(
-                        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
-                        { headers: { 'Accept-Language': 'it' } }
-                    );
-                    const geoData = await geoRes.json();
-                    const addr = geoData.address || {};
-                    location_name = addr.city || addr.town || addr.village || addr.municipality || null;
-                } catch(e) {}
-
-                try {
-                    const res = await apiPut(`/machines/${currentMachineId}/location`, {
-                        lat, lon, location_name
-                    });
-                    if (res.success) {
-                        showToast('📍 Posizione salvata — meteo attivato!');
-                        banner.style.display = 'none';
-                        await loadWeather();
-                    } else {
-                        showToast('❌ ' + (res.message || 'Errore salvataggio'));
-                        banner.style.display = 'none';
-                    }
-                } catch(e) {
-                    showToast('❌ Errore di rete');
-                    banner.style.display = 'none';
-                }
-            },
-            (err) => {
-                banner.style.display = 'none';
-                if (err.code === 1) {
-                    showToast('⚠️ Permesso posizione negato');
-                } else {
-                    showToast('❌ Impossibile rilevare la posizione');
-                }
-            },
-            { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
-        );
-    }
-
     // Register service worker (push notifications)
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw-remote.js')
