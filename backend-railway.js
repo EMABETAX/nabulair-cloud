@@ -601,6 +601,37 @@ app.get('/api/me', authenticateToken, (req, res) => {
     res.json({ success: true, user: req.user });
 });
 
+// CAMBIO PASSWORD (utente autenticato)
+// ─────────────────────────────────────────────
+
+app.post('/api/change-password', authenticateToken, async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword)
+        return res.status(400).json({ success: false, message: 'Dati mancanti' });
+    if (newPassword.length < 6)
+        return res.status(400).json({ success: false, message: 'La nuova password deve essere di almeno 6 caratteri' });
+    try {
+        const result = await pool.query(
+            'SELECT password_hash FROM users WHERE id = $1',
+            [req.user.id]
+        );
+        if (!result.rows.length)
+            return res.status(404).json({ success: false, message: 'Utente non trovato' });
+
+        const valid = await bcrypt.compare(currentPassword, result.rows[0].password_hash);
+        if (!valid)
+            return res.status(401).json({ success: false, message: 'Password attuale non corretta' });
+
+        const hash = await bcrypt.hash(newPassword, 10);
+        await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, req.user.id]);
+        console.log(`🔑 Password aggiornata per utente ${req.user.id} (${req.user.username})`);
+        res.json({ success: true, message: 'Password aggiornata con successo' });
+    } catch (error) {
+        console.error('Errore change-password:', error.message);
+        res.status(500).json({ success: false, message: 'Errore interno' });
+    }
+});
+
 app.get('/api/machines', authenticateToken, async (req, res) => {
     try {
         let baseQuery = `
