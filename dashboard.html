@@ -598,6 +598,43 @@
             margin-bottom: 18px;
         }
 
+        /* Firmware dropzone */
+        .fw-dropzone {
+            border: 2px dashed var(--border);
+            border-radius: 20px;
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 20px;
+        }
+        .fw-dropzone.dragover {
+            border-color: var(--blue);
+            background: var(--blue-dim);
+            color: var(--blue);
+        }
+        .fw-dropzone .fw-icon { font-size: 36px; margin-bottom: 8px; }
+        .fw-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .fw-item-name { font-weight: 700; font-size: 14px; }
+        .fw-item-meta { font-size: 12px; color: var(--text-secondary); display:flex; gap:10px; flex-wrap:wrap; margin-top:4px; }
+        .fw-badge {
+            padding: 3px 10px; border-radius: 40px; font-size: 11px; font-weight: 700;
+            background: var(--blue-dim); color: var(--blue);
+        }
+        .fw-badge.littlefs { background: var(--amber-dim); color: var(--amber); }
+
         .form-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1155,6 +1192,51 @@
                 </div>
             </section>
 
+            <section class="section-page" id="section-firmware">
+                <div class="page-title">📦 Firmware OTA</div>
+                <div class="page-sub">Carica i file .bin da inviare agli impianti via aggiornamento cloud (non serve l'IP locale)</div>
+
+                <div class="form-card">
+                    <h3>⬆️ Carica nuovo firmware</h3>
+                    <div class="fw-dropzone" id="fwDropzone" onclick="document.getElementById('fwFileInput').click()">
+                        <div class="fw-icon">📁</div>
+                        <div><strong>Trascina qui il file .bin</strong> oppure clicca per selezionarlo</div>
+                        <div style="font-size:12px; margin-top:6px;">Max 4MB</div>
+                    </div>
+                    <input type="file" id="fwFileInput" accept=".bin" style="display:none;" onchange="onFwFileSelected(this.files)">
+                    <div id="fwUploadForm" style="display:none;">
+                        <div class="form-grid">
+                            <div>
+                                <label>Tipo</label>
+                                <select id="fwType" style="width:100%; padding:10px; background:var(--surface); border:1px solid var(--border); border-radius:12px; color:var(--text);">
+                                    <option value="firmware">Firmware (app)</option>
+                                    <option value="littlefs">LittleFS (filesystem)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Versione (opzionale)</label>
+                                <input type="text" id="fwVersion" placeholder="es. 1.6.0" style="width:100%; padding:10px; background:var(--surface); border:1px solid var(--border); border-radius:12px; color:var(--text);">
+                            </div>
+                        </div>
+                        <div style="margin-bottom:14px;">
+                            <label>Note (opzionale)</label>
+                            <input type="text" id="fwNotes" placeholder="es. fix sensore acqua" style="width:100%; padding:10px; background:var(--surface); border:1px solid var(--border); border-radius:12px; color:var(--text);">
+                        </div>
+                        <div id="fwSelectedFile" style="font-size:13px; color:var(--text-secondary); margin-bottom:14px;"></div>
+                        <div style="display:flex; gap:12px;">
+                            <button class="btn-add" onclick="uploadFirmware()" id="fwUploadBtn">⬆️ Carica</button>
+                            <button class="btn-sm btn-delete" onclick="cancelFwUpload()">Annulla</button>
+                        </div>
+                        <div id="fwUploadMsg" style="margin-top:10px; font-size:13px;"></div>
+                    </div>
+                </div>
+
+                <div class="form-card">
+                    <h3>📋 Firmware caricati</h3>
+                    <div id="firmwareList"></div>
+                </div>
+            </section>
+
             <section class="section-page" id="section-telegram">
                 <div class="page-title">📱 Telegram Bot</div>
                 <div class="page-sub">Configura il webhook — va fatto una sola volta dopo ogni deploy</div>
@@ -1268,6 +1350,7 @@
                 <button class="nav-item" onclick="showSection('installers')"><span class="nav-icon">🔧</span> Installatori</button>
                 <button class="nav-item" onclick="showSection('clients')"><span class="nav-icon">👥</span> Clienti</button>
                 <button class="nav-item" onclick="showSection('stats'); loadAdminStats();"><span class="nav-icon">📊</span> Statistiche</button>
+                <button class="nav-item" onclick="showSection('firmware'); loadFirmwareList();"><span class="nav-icon">📦</span> Firmware OTA</button>
                 <hr class="sidebar-divider">
                 <div class="sidebar-label">Sistema</div>
                 <button class="nav-item" onclick="showSection('telegram')"><span class="nav-icon">📱</span> Telegram Bot</button>
@@ -1279,6 +1362,7 @@
                 <button class="bnav-tab active" data-section="machines" onclick="bnavGo('machines')"><span class="bnav-icon">🏭</span>Impianti</button>
                 <button class="bnav-tab" data-section="clients" onclick="bnavGo('clients')"><span class="bnav-icon">👥</span>Clienti</button>
                 <button class="bnav-tab" data-section="stats" onclick="bnavGo('stats'); loadAdminStats();"><span class="bnav-icon">📊</span>Stats</button>
+                <button class="bnav-tab" data-section="firmware" onclick="bnavGo('firmware'); loadFirmwareList();"><span class="bnav-icon">📦</span>OTA</button>
                 <button class="bnav-tab" data-section="telegram" onclick="bnavGo('telegram')"><span class="bnav-icon">📱</span>Bot</button>
             `;
             document.getElementById('bottomNav').style.display = 'block';
@@ -1290,6 +1374,7 @@
                 <div class="sidebar-label">Menu</div>
                 <button class="nav-item active" onclick="showSection('machines')"><span class="nav-icon">🏭</span> I Tuoi Impianti</button>
                 <button class="nav-item" onclick="showSection('clients')"><span class="nav-icon">👥</span> Clienti</button>
+                <button class="nav-item" onclick="showSection('firmware'); loadFirmwareList();"><span class="nav-icon">📦</span> Firmware OTA</button>
                 <hr class="sidebar-divider">
                 <div class="sidebar-label">Sistema</div>
                 <button class="nav-item" onclick="showSection('telegram')"><span class="nav-icon">📱</span> Telegram Bot</button>
@@ -1297,6 +1382,7 @@
             document.getElementById('bottomNavInner').innerHTML = `
                 <button class="bnav-tab active" data-section="machines" onclick="bnavGo('machines')"><span class="bnav-icon">🏭</span>Impianti</button>
                 <button class="bnav-tab" data-section="clients" onclick="bnavGo('clients')"><span class="bnav-icon">👥</span>Clienti</button>
+                <button class="bnav-tab" data-section="firmware" onclick="bnavGo('firmware'); loadFirmwareList();"><span class="bnav-icon">📦</span>OTA</button>
                 <button class="bnav-tab" data-section="telegram" onclick="bnavGo('telegram')"><span class="bnav-icon">📱</span>Bot</button>
             `;
             document.getElementById('bottomNav').style.display = 'block';
@@ -1306,6 +1392,7 @@
         }
         loadMachines();
         loadAlerts();
+        loadFirmwareList();
     }
 
     function showSection(name) {
@@ -1315,6 +1402,7 @@
         if (name === 'telegram') loadWebhookStatus();
         if (name === 'installers') renderInstallers();
         if (name === 'clients') renderClientsTable();
+        if (name === 'firmware') loadFirmwareList();
     }
 
     // ==================== API ====================
@@ -1482,6 +1570,20 @@
                 ${ (m.latitude != null && m.longitude != null)
                     ? `<div class="detail-row"><span class="label">Posizione</span><span class="value">📍 ${esc(m.location_name || `${m.latitude.toFixed(3)}, ${m.longitude.toFixed(3)}`)}</span></div>`
                     : `<div style="color:var(--text-secondary); font-size:13px;">📍 Posizione non configurata — il cliente può impostarla dall'app.</div>`
+                }
+            </div>
+            <div class="detail-section">
+                <h4>📦 Aggiornamento OTA</h4>
+                <div class="detail-row"><span class="label">Firmware attuale</span><span class="value td-mono">${esc(m.firmware_version || '—')}</span></div>
+                ${ firmwareCache.length
+                    ? `<div class="assign-box" style="margin-top:10px;">
+                        <select id="ota-fw-${m.id}">
+                            ${firmwareCache.map(f => `<option value="${f.id}|${f.fw_type}">${f.fw_type === 'littlefs' ? '🗂️' : '📦'} ${esc(f.filename)}${f.version ? ` (v${esc(f.version)})` : ''}</option>`).join('')}
+                        </select>
+                        <button class="btn-save-sm" onclick="sendOtaToMachine(${m.id})">🚀 Invia aggiornamento</button>
+                       </div>
+                       <div style="font-size:11px; color:var(--text-secondary); margin-top:8px;">L'impianto scaricherà e installerà l'aggiornamento al prossimo ping (entro 60s), poi si riavvierà.</div>`
+                    : `<div style="font-size:13px; color:var(--text-secondary); margin-top:8px;">Nessun firmware caricato. Vai su <a href="#" onclick="showSection('firmware'); loadFirmwareList(); return false;" style="color:var(--blue);">Firmware OTA</a> per caricarne uno.</div>`
                 }
             </div>
         `;
@@ -1965,6 +2067,141 @@
     }
 
     function refreshAll() { loadMachines(); loadAlerts(); }
+
+    // ── Firmware OTA ──
+    let fwSelectedFile = null;
+
+    function setupFwDropzone() {
+        const dz = document.getElementById('fwDropzone');
+        if (!dz || dz.dataset.bound) return;
+        dz.dataset.bound = '1';
+        dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+        dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+        dz.addEventListener('drop', e => {
+            e.preventDefault();
+            dz.classList.remove('dragover');
+            if (e.dataTransfer.files.length) onFwFileSelected(e.dataTransfer.files);
+        });
+    }
+
+    function onFwFileSelected(files) {
+        if (!files || !files.length) return;
+        const file = files[0];
+        if (!file.name.toLowerCase().endsWith('.bin')) {
+            alert('Il file deve avere estensione .bin');
+            return;
+        }
+        if (file.size > 4 * 1024 * 1024) {
+            alert('Il file supera i 4MB massimi');
+            return;
+        }
+        fwSelectedFile = file;
+        document.getElementById('fwSelectedFile').textContent = `📄 ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+        document.getElementById('fwUploadMsg').textContent = '';
+        document.getElementById('fwUploadForm').style.display = 'block';
+    }
+
+    function cancelFwUpload() {
+        fwSelectedFile = null;
+        document.getElementById('fwFileInput').value = '';
+        document.getElementById('fwVersion').value = '';
+        document.getElementById('fwNotes').value = '';
+        document.getElementById('fwUploadMsg').textContent = '';
+        document.getElementById('fwUploadForm').style.display = 'none';
+    }
+
+    async function uploadFirmware() {
+        if (!fwSelectedFile) return;
+        const msg = document.getElementById('fwUploadMsg');
+        const btn = document.getElementById('fwUploadBtn');
+        btn.disabled = true;
+        msg.style.color = 'var(--text-secondary)';
+        msg.textContent = 'Caricamento in corso…';
+
+        const formData = new FormData();
+        formData.append('firmware', fwSelectedFile);
+        formData.append('fw_type', document.getElementById('fwType').value);
+        formData.append('version', document.getElementById('fwVersion').value);
+        formData.append('notes', document.getElementById('fwNotes').value);
+
+        try {
+            const res = await fetch(`${API}/firmware/upload`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+            const data = await res.json();
+            if (data.success) {
+                msg.style.color = 'var(--green)';
+                msg.textContent = '✅ Firmware caricato!';
+                setTimeout(() => { cancelFwUpload(); loadFirmwareList(); }, 1000);
+            } else {
+                msg.style.color = 'var(--red)';
+                msg.textContent = '❌ ' + (data.message || 'Errore upload');
+            }
+        } catch (e) {
+            msg.style.color = 'var(--red)';
+            msg.textContent = '❌ Errore di rete';
+        }
+        btn.disabled = false;
+    }
+
+    let firmwareCache = [];
+
+    async function loadFirmwareList() {
+        setupFwDropzone();
+        try {
+            const data = await apiGet('/firmware');
+            firmwareCache = data.success ? data.firmware : [];
+            renderFirmwareList();
+        } catch (e) {}
+    }
+
+    function renderFirmwareList() {
+        const el = document.getElementById('firmwareList');
+        if (!el) return;
+        if (!firmwareCache.length) {
+            el.innerHTML = '<div class="empty-state">📭 Nessun firmware caricato</div>';
+            return;
+        }
+        el.innerHTML = firmwareCache.map(f => `
+            <div class="fw-item">
+                <div>
+                    <div class="fw-item-name">${esc(f.filename)}</div>
+                    <div class="fw-item-meta">
+                        <span class="fw-badge ${f.fw_type === 'littlefs' ? 'littlefs' : ''}">${f.fw_type === 'littlefs' ? 'LittleFS' : 'Firmware'}</span>
+                        ${f.version ? `<span>v${esc(f.version)}</span>` : ''}
+                        <span>${(f.size_bytes/1024).toFixed(1)} KB</span>
+                        <span>${new Date(f.created_at).toLocaleDateString('it-IT')}</span>
+                        ${f.uploaded_by ? `<span>👤 ${esc(f.uploaded_by)}</span>` : ''}
+                        ${f.notes ? `<span>📝 ${esc(f.notes)}</span>` : ''}
+                    </div>
+                </div>
+                <button class="btn-sm btn-delete" onclick="deleteFirmware(${f.id})">🗑 Elimina</button>
+            </div>
+        `).join('');
+    }
+
+    async function deleteFirmware(id) {
+        if (!confirm('Eliminare questo firmware?')) return;
+        await api('DELETE', `/firmware/${id}`);
+        loadFirmwareList();
+    }
+
+    // Invia firmware OTA a una macchina (dal dettaglio impianto)
+    async function sendOtaToMachine(machineId) {
+        const select = document.getElementById(`ota-fw-${machineId}`);
+        if (!select || !select.value) { alert('Seleziona un firmware'); return; }
+        const [firmwareId, fwType] = select.value.split('|');
+        const cmdType = fwType === 'littlefs' ? 'ota_littlefs' : 'ota_firmware';
+        if (!confirm(`Inviare l'aggiornamento OTA selezionato a questo impianto?\n\nVerrà applicato al prossimo ping (entro 60s) e l'impianto si riavvierà.`)) return;
+        const res = await apiPost(`/machines/${machineId}/command`, { type: cmdType, payload: { firmware_id: parseInt(firmwareId) } });
+        if (res.success) {
+            alert('✅ ' + res.message);
+        } else {
+            alert('❌ ' + (res.message || 'Errore invio comando'));
+        }
+    }
 
     // Auto refresh
     if (token && currentUser && currentUser.role !== 'client') { bootApp(); } else if (token && currentUser && currentUser.role === 'client') { window.location.href = '/remote.html'; }
