@@ -1080,7 +1080,7 @@
                 <div class="data-table-wrap">
                     <table class="data-table">
                         <thead>
-                            <tr><th>Nome</th><th>MAC</th><th>Stato</th><th>Sensori</th><th>Meteo</th><th>Cliente</th><th>Installatore</th><th>Azioni</th>
+                            <tr><th>Nome</th><th>MAC</th><th>Stato</th><th>Sensori</th><th>Cliente</th><th>Installatore</th><th>Azioni</th>
                         </thead>
                         <tbody id="machinesTbody"></tbody>
                     </table>
@@ -1415,18 +1415,6 @@
                 actions += ` <button class="btn-row btn-row-edit" onclick="editMachine(${m.id})">✎</button>`;
                 actions += ` <button class="btn-row btn-row-del" onclick="deleteMachine(${m.id})">🗑</button>`;
             }
-            // Meteo
-            let weatherCell = '<span style="color:var(--muted); font-size:12px;">—</span>';
-            if (m.lat && m.lon) {
-                const w = m.weather_cache || {};
-                const blocked = m.weather_block;
-                const icon = w.weather_code !== undefined ? getWeatherIconDash(w.weather_code) : '🌤️';
-                weatherCell = `<span title="${w.description || ''}" style="cursor:default;">
-                    ${icon} ${w.temperature !== undefined ? w.temperature.toFixed(0)+'°' : ''}
-                    ${blocked ? '<span style="color:var(--amber); font-size:11px;">⚠️ stop</span>' : ''}
-                </span>`;
-            }
-
             return `<tr>
                 <td><strong>${esc(m.machine_name || 'Impianto')}</strong></td>
                 <td class="td-mono">${m.mac_address || '—'}</td>
@@ -1435,7 +1423,6 @@
                     <span class="td-sensor ${!online ? 'unknown' : waterOk ? 'ok' : 'err'}">${!online ? '❓ N/D' : waterOk ? '💧 OK' : '💧 ❌'}</span>
                     <span class="td-sensor ${!online ? 'unknown' : insOk ? 'ok' : 'err'}">${!online ? '❓ N/D' : insOk ? '🧪 OK' : '🧪 ❌'}</span>
                 </td>
-                <td>${weatherCell}</td>
                 <td>${esc(clientName)}</td>
                 <td>${esc(instName)}</td>
                 <td class="td-actions">${actions}</td>
@@ -1489,6 +1476,13 @@
                     <span style="font-size:18px">🧪</span>
                     <span>${!online ? '❓ N/D (offline)' : insOk ? 'Insetticida OK' : 'Insetticida esaurito!'}</span>
                 </div>
+            </div>
+            <div class="detail-section">
+                <h4>🌤️ Meteo</h4>
+                ${ (m.latitude != null && m.longitude != null)
+                    ? `<div class="detail-row"><span class="label">Posizione</span><span class="value">📍 ${esc(m.location_name || `${m.latitude.toFixed(3)}, ${m.longitude.toFixed(3)}`)}</span></div>`
+                    : `<div style="color:var(--text-secondary); font-size:13px;">📍 Posizione non configurata — il cliente può impostarla dall'app.</div>`
+                }
             </div>
         `;
 
@@ -1563,39 +1557,6 @@
             `;
         }
 
-        // Meteo section
-        right += `
-            <div class="detail-section">
-                <h4>🌤️ Meteo</h4>
-                ${m.lat && m.lon ? `
-                    <div style="font-size:13px; margin-bottom:10px;">
-                        📍 ${esc(m.location_name || `${parseFloat(m.lat).toFixed(4)}, ${parseFloat(m.lon).toFixed(4)}`)}
-                    </div>
-                    ${m.weather_cache ? `
-                    <div style="background:var(--surface); border-radius:12px; padding:12px; font-size:13px; display:flex; gap:16px; flex-wrap:wrap;">
-                        <span>${getWeatherIconDash(m.weather_cache.weather_code)} ${m.weather_cache.description || '—'}</span>
-                        <span>🌡️ ${m.weather_cache.temperature?.toFixed(1)}°C</span>
-                        <span>💨 ${m.weather_cache.wind_speed?.toFixed(0)} km/h</span>
-                        <span>🌧️ ${m.weather_cache.precipitation?.toFixed(1)} mm/h</span>
-                    </div>
-                    ${m.weather_block ? `<div style="margin-top:8px; padding:8px 12px; background:var(--amber-dim); border-radius:10px; font-size:12px; color:var(--amber);">⚠️ Cicli bloccati: ${esc(m.weather_cache.block_reason || 'condizioni avverse')}</div>` : ''}
-                    ` : '<div style="color:var(--text-secondary); font-size:12px;">Caricamento meteo...</div>'}
-                    ${isAdmin || isInstaller ? `
-                    <div style="margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                        <label style="font-size:12px; color:var(--text-secondary);">Soglia vento (km/h):</label>
-                        <input type="number" id="windThreshold-${m.id}" value="${m.wind_threshold || 20}" min="5" max="100" style="width:70px; padding:6px; background:var(--card); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:12px;">
-                        <label style="font-size:12px; color:var(--text-secondary);">Pioggia (mm/h):</label>
-                        <input type="number" id="rainThreshold-${m.id}" value="${m.rain_threshold || 0.1}" min="0.1" max="10" step="0.1" style="width:70px; padding:6px; background:var(--card); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:12px;">
-                        <button class="btn-save-sm" onclick="saveWeatherSettings(${m.id})">💾 Salva soglie</button>
-                    </div>` : ''}
-                ` : `
-                    <div style="color:var(--text-secondary); font-size:13px;">
-                        📍 Posizione non configurata — il cliente può impostarla dall'app.
-                    </div>
-                `}
-            </div>
-        `;
-
         if (isAdmin) {
             right += `
                 <div class="detail-section">
@@ -1637,7 +1598,7 @@
         try {
             const res = await apiPost(`/machines/${machineId}/command`, { type: cmd, payload });
             if (res.success) {
-                statusEl.textContent = '✅ Comando inviato a Nabulair';
+                statusEl.textContent = '✅ Comando inviato all\'ESP32';
                 statusEl.style.color = 'var(--green)';
             } else {
                 statusEl.textContent = '❌ ' + (res.message || 'Errore');
@@ -1811,14 +1772,6 @@
         });
     }
 
-    async function saveWeatherSettings(machineId) {
-        const wt = parseFloat(document.getElementById(`windThreshold-${machineId}`)?.value) || 20;
-        const rt = parseFloat(document.getElementById(`rainThreshold-${machineId}`)?.value) || 0.1;
-        const res = await apiPut(`/machines/${machineId}/weather-settings`, { wind_threshold: wt, rain_threshold: rt });
-        if (res.success) { showToast('✅ Soglie meteo salvate'); await loadMachines(); openDetail(machineId); }
-        else alert(res.message || 'Errore');
-    }
-
     async function deleteMachine(id) {
         if (!confirm('Eliminare definitivamente questo impianto?')) return;
         const res = await apiDel(`/machines/${id}`);
@@ -1892,30 +1845,6 @@
 
     // ==================== UTILS ====================
     function esc(text) { if (!text) return ''; const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
-
-    function showToast(msg) {
-        let t = document.getElementById('dash-toast');
-        if (!t) {
-            t = document.createElement('div');
-            t.id = 'dash-toast';
-            t.style.cssText = 'position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:var(--surface); border-left:4px solid var(--green); padding:12px 24px; border-radius:40px; font-size:13px; font-weight:500; opacity:0; transition:opacity 0.3s; z-index:9999; white-space:nowrap; max-width:90vw;';
-            document.body.appendChild(t);
-        }
-        t.textContent = msg;
-        t.style.opacity = '1';
-        setTimeout(() => { t.style.opacity = '0'; }, 3500);
-    }
-
-    function getWeatherIconDash(code) {
-        if (!code || code === 0) return '☀️';
-        if (code <= 3)  return '⛅';
-        if (code <= 49) return '🌫️';
-        if (code <= 59) return '🌦️';
-        if (code <= 69) return '🌧️';
-        if (code <= 79) return '❄️';
-        if (code <= 86) return '🌦️';
-        return '⛈️';
-    }
     // ── Statistiche cicli (admin) ──
     let adminChart = null;
 
