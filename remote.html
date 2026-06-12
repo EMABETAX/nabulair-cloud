@@ -315,6 +315,57 @@
         .modal-btn-cancel { background: var(--card); border: 1px solid var(--border) !important; color: var(--text-secondary); }
         .modal-msg { font-size: 12px; margin-top: 10px; min-height: 16px; }
 
+        /* Weather */
+        .weather-current {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            flex-wrap: wrap;
+            padding: 8px 0 18px;
+        }
+        .weather-icon { font-size: 48px; }
+        .weather-temp {
+            font-family: var(--font-display);
+            font-size: 36px;
+            font-weight: 800;
+        }
+        .weather-loc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-bottom: 6px;
+        }
+        .weather-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        .weather-forecast {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .weather-forecast-day {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 10px 4px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .weather-forecast-day .wf-icon { font-size: 22px; margin: 4px 0; }
+        .weather-forecast-day .wf-temp { font-weight: 700; }
+        .weather-forecast-day .wf-temp .wf-min { color: var(--text-secondary); font-weight: 400; }
+        .weather-actions {
+            display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 14px;
+        }
+        .weather-actions button {
+            background: none; border: 1px solid var(--border); color: var(--text-secondary);
+            padding: 6px 14px; border-radius: 40px; font-size: 11px; cursor: pointer;
+        }
+        .weather-actions button:hover { border-color: var(--blue); color: var(--blue); }
+
         /* Main layout */
         .main {
             max-width: 1200px;
@@ -924,6 +975,21 @@
         </div>
     </div>
 
+    <!-- Modale posizione manuale -->
+    <div class="modal-overlay" id="modalLocation" onclick="closeLocationModal(event)">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <h3>📍 Imposta posizione</h3>
+            <label>Comune / Città</label>
+            <input type="text" id="locCity" placeholder="es. Vittorio Veneto" onkeydown="if(event.key==='Enter') searchLocation()">
+            <p class="modal-msg" id="locMsg"></p>
+            <div id="locResults" style="margin-top:8px; display:flex; flex-direction:column; gap:6px;"></div>
+            <div class="modal-actions">
+                <button class="modal-btn-cancel" onclick="closeLocationModal()">Annulla</button>
+                <button class="modal-btn-primary" onclick="searchLocation()">Cerca</button>
+            </div>
+        </div>
+    </div>
+
     <div class="main">
         <!-- Machine selector -->
         <div class="machine-selector" id="machineSelector" style="display:none;">
@@ -943,6 +1009,18 @@
             <div class="stat-card"><div class="stat-icon">🧪</div><div class="stat-label">Insetticida</div><div class="stat-value" id="insecticideStatus">—</div></div>
             <div class="stat-card"><div class="stat-icon">⏱️</div><div class="stat-label">Ultimo ping</div><div class="stat-value" id="lastSeen" style="font-size:16px;">—</div></div>
             <div class="stat-card"><div class="stat-icon">📡</div><div class="stat-label">IP Locale</div><div class="stat-value" id="localIp" style="font-size:14px;">—</div></div>
+        </div>
+
+        <!-- Meteo -->
+        <div class="panel" id="weatherPanel">
+            <div class="panel-title">🌤️ Meteo</div>
+            <div id="weatherContent">
+                <div class="empty-state" style="padding:20px;">📍 Posizione non configurata</div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:8px;">
+                    <button class="btn-add" onclick="useMyLocation()" id="btnUseLocation">📍 Usa la mia posizione</button>
+                    <button class="btn-add" style="background:var(--blue); color:#fff;" onclick="showManualLocationModal()">✏️ Imposta manualmente</button>
+                </div>
+            </div>
         </div>
 
         <!-- Commands -->
@@ -1059,6 +1137,8 @@
     let programs = [];
     let cmdPollTimer = null;
     let lastCommandVisible = true;
+    let currentMachineLocation = null;
+    let weatherCache = {}; // key: "lat,lon" -> { data, ts }
 
     // ==================== LOGIN ====================
     async function doLogin() {
@@ -1207,6 +1287,10 @@
             }
             const ipEl = document.getElementById('localIp');
             ipEl.textContent = m.sta_ip || '—';
+
+            // Meteo
+            currentMachineLocation = { latitude: m.latitude, longitude: m.longitude, location_name: m.location_name };
+            loadWeather();
         } catch (e) { }
     }
 
@@ -1650,6 +1734,209 @@
             </div>
         `).join('');
         if (cicli.length > 20) el.innerHTML += `<div style="text-align:center; color:var(--text-secondary); font-size:12px; padding:10px;">... e altri ${cicli.length - 20} cicli</div>`;
+    }
+
+    // ── Meteo / Geolocalizzazione ──
+
+    // Mappa codici WMO -> emoji + descrizione (in italiano)
+    const WMO_MAP = {
+        0:  ['☀️', 'Cielo sereno'],
+        1:  ['🌤️', 'Prevalentemente sereno'],
+        2:  ['⛅', 'Parzialmente nuvoloso'],
+        3:  ['☁️', 'Nuvoloso'],
+        45: ['🌫️', 'Nebbia'],
+        48: ['🌫️', 'Nebbia con brina'],
+        51: ['🌦️', 'Pioviggine leggera'],
+        53: ['🌦️', 'Pioviggine moderata'],
+        55: ['🌦️', 'Pioviggine intensa'],
+        56: ['🌧️', 'Pioviggine gelata leggera'],
+        57: ['🌧️', 'Pioviggine gelata intensa'],
+        61: ['🌧️', 'Pioggia debole'],
+        63: ['🌧️', 'Pioggia moderata'],
+        65: ['🌧️', 'Pioggia intensa'],
+        66: ['🌧️', 'Pioggia gelata leggera'],
+        67: ['🌧️', 'Pioggia gelata intensa'],
+        71: ['🌨️', 'Neve debole'],
+        73: ['🌨️', 'Neve moderata'],
+        75: ['❄️', 'Neve intensa'],
+        77: ['❄️', 'Granelli di neve'],
+        80: ['🌦️', 'Rovesci debole'],
+        81: ['🌧️', 'Rovesci moderati'],
+        82: ['⛈️', 'Rovesci violenti'],
+        85: ['🌨️', 'Rovesci di neve debole'],
+        86: ['❄️', 'Rovesci di neve intensi'],
+        95: ['⛈️', 'Temporale'],
+        96: ['⛈️', 'Temporale con grandine debole'],
+        99: ['⛈️', 'Temporale con grandine forte']
+    };
+    function wmoIcon(code) { return (WMO_MAP[code] || ['🌡️', 'N/D'])[0]; }
+    function wmoDesc(code) { return (WMO_MAP[code] || ['🌡️', 'N/D'])[1]; }
+
+    async function loadWeather() {
+        const content = document.getElementById('weatherContent');
+        const loc = currentMachineLocation;
+        if (!loc || loc.latitude == null || loc.longitude == null) {
+            content.innerHTML = `
+                <div class="empty-state" style="padding:20px;">📍 Posizione non configurata</div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:8px;">
+                    <button class="btn-add" onclick="useMyLocation()" id="btnUseLocation">📍 Usa la mia posizione</button>
+                    <button class="btn-add" style="background:var(--blue); color:#fff;" onclick="showManualLocationModal()">✏️ Imposta manualmente</button>
+                </div>
+            `;
+            return;
+        }
+
+        const { latitude, longitude, location_name } = loc;
+        const cacheKey = `${latitude.toFixed(3)},${longitude.toFixed(3)}`;
+        const now = Date.now();
+        let weather;
+        if (weatherCache[cacheKey] && (now - weatherCache[cacheKey].ts) < 10 * 60 * 1000) {
+            weather = weatherCache[cacheKey].data;
+        } else {
+            try {
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,weather_code&forecast_days=4&timezone=auto`;
+                const res = await fetch(url);
+                weather = await res.json();
+                weatherCache[cacheKey] = { data: weather, ts: now };
+            } catch (e) {
+                content.innerHTML = `<div class="empty-state" style="padding:20px;">⚠️ Impossibile recuperare il meteo</div>
+                    <div class="weather-actions"><button onclick="showManualLocationModal()">✏️ Cambia posizione</button></div>`;
+                return;
+            }
+        }
+
+        if (!weather || !weather.current) {
+            content.innerHTML = `<div class="empty-state" style="padding:20px;">⚠️ Dati meteo non disponibili</div>`;
+            return;
+        }
+
+        const cur = weather.current;
+        const daily = weather.daily;
+        const locLabel = location_name || `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
+
+        let forecastHtml = '';
+        if (daily && daily.time) {
+            const dayNames = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+            forecastHtml = '<div class="weather-forecast">' + daily.time.map((d, i) => {
+                if (i === 0) return ''; // oggi già mostrato sopra
+                const dayName = dayNames[new Date(d).getDay()];
+                return `
+                    <div class="weather-forecast-day">
+                        <div>${dayName}</div>
+                        <div class="wf-icon">${wmoIcon(daily.weather_code[i])}</div>
+                        <div class="wf-temp">${Math.round(daily.temperature_2m_max[i])}° <span class="wf-min">${Math.round(daily.temperature_2m_min[i])}°</span></div>
+                    </div>`;
+            }).join('') + '</div>';
+        }
+
+        content.innerHTML = `
+            <div class="weather-loc">📍 ${esc(locLabel)}</div>
+            <div class="weather-current">
+                <div class="weather-icon">${wmoIcon(cur.weather_code)}</div>
+                <div>
+                    <div class="weather-temp">${Math.round(cur.temperature_2m)}°C</div>
+                    <div class="weather-desc">${wmoDesc(cur.weather_code)} · 💧 ${cur.relative_humidity_2m}% · 💨 ${Math.round(cur.wind_speed_10m)} km/h</div>
+                </div>
+            </div>
+            ${forecastHtml}
+            <div class="weather-actions">
+                <button onclick="useMyLocation()">📍 Usa la mia posizione</button>
+                <button onclick="showManualLocationModal()">✏️ Cambia posizione</button>
+            </div>
+        `;
+    }
+
+    async function saveLocation(latitude, longitude, location_name) {
+        try {
+            const res = await api('PUT', `/machines/${currentMachineId}/location`, { latitude, longitude, location_name: location_name || null });
+            if (res.success) {
+                currentMachineLocation = { latitude, longitude, location_name: location_name || null };
+                delete weatherCache[`${latitude.toFixed(3)},${longitude.toFixed(3)}`];
+                showToast('📍 Posizione aggiornata');
+                loadWeather();
+            } else {
+                showToast('❌ ' + (res.message || 'Errore salvataggio posizione'));
+            }
+        } catch (e) {
+            showToast('❌ Errore di rete');
+        }
+    }
+
+    function useMyLocation() {
+        if (!navigator.geolocation) {
+            showToast('❌ Geolocalizzazione non supportata dal browser');
+            return;
+        }
+        const btn = document.getElementById('btnUseLocation');
+        if (btn) btn.textContent = '⏳ Rilevamento...';
+        navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+                const { latitude, longitude } = pos.coords;
+                // Reverse geocoding (best-effort) per ottenere il nome della località
+                let locationName = null;
+                try {
+                    const r = await fetch(`https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&language=it&count=1`);
+                    const j = await r.json();
+                    if (j.results && j.results.length) {
+                        locationName = j.results[0].name + (j.results[0].admin1 ? `, ${j.results[0].admin1}` : '');
+                    }
+                } catch (e) {}
+                await saveLocation(latitude, longitude, locationName);
+            },
+            (err) => {
+                if (btn) btn.textContent = '📍 Usa la mia posizione';
+                if (err.code === err.PERMISSION_DENIED) {
+                    showToast('❌ Permesso negato. Puoi impostare la posizione manualmente, oppure abilitarla dalle impostazioni del browser.');
+                } else {
+                    showToast('❌ Impossibile rilevare la posizione');
+                }
+            },
+            { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 }
+        );
+    }
+
+    function showManualLocationModal() {
+        document.getElementById('locCity').value = '';
+        document.getElementById('locMsg').textContent = '';
+        document.getElementById('locResults').innerHTML = '';
+        document.getElementById('modalLocation').classList.add('open');
+        setTimeout(() => document.getElementById('locCity').focus(), 100);
+    }
+    function closeLocationModal(e) {
+        if (!e || e.target === document.getElementById('modalLocation'))
+            document.getElementById('modalLocation').classList.remove('open');
+    }
+
+    async function searchLocation() {
+        const q = document.getElementById('locCity').value.trim();
+        const msg = document.getElementById('locMsg');
+        const results = document.getElementById('locResults');
+        results.innerHTML = '';
+        if (!q) { msg.textContent = 'Inserisci un nome di città o comune'; msg.style.color = 'var(--red)'; return; }
+        msg.style.color = 'var(--text-secondary)';
+        msg.textContent = 'Ricerca…';
+        try {
+            const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=it`);
+            const j = await r.json();
+            if (!j.results || !j.results.length) {
+                msg.style.color = 'var(--red)';
+                msg.textContent = 'Nessun risultato trovato';
+                return;
+            }
+            msg.textContent = '';
+            results.innerHTML = j.results.map(res => {
+                const label = [res.name, res.admin2, res.admin1, res.country].filter(Boolean).join(', ');
+                return `<button type="button" class="btn-sm" style="text-align:left; border-color:var(--border); color:var(--text); background:var(--surface); padding:10px 12px;" onclick='selectLocation(${res.latitude}, ${res.longitude}, ${JSON.stringify(label)})'>📍 ${esc(label)}</button>`;
+            }).join('');
+        } catch (e) {
+            msg.style.color = 'var(--red)';
+            msg.textContent = 'Errore di rete';
+        }
+    }
+
+    function selectLocation(lat, lon, name) {
+        closeLocationModal();
+        saveLocation(lat, lon, name);
     }
 
     // ── Profile menu ──
