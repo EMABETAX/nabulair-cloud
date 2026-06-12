@@ -7,6 +7,7 @@ const { Pool } = require('pg');
 const path = require('path');
 const { Resend } = require('resend');
 const webpush = require('web-push');
+const multer = require('multer');
 
 // VAPID keys — genera con: npx web-push generate-vapid-keys
 // Metti in variabili d'ambiente Railway
@@ -152,6 +153,22 @@ async function initDatabase() {
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS latitude FLOAT DEFAULT NULL`).catch(() => {});
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS longitude FLOAT DEFAULT NULL`).catch(() => {});
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS location_name VARCHAR(120) DEFAULT NULL`).catch(() => {});
+
+        // Firmware OTA caricati da dashboard (drag & drop)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS firmware_files (
+                id SERIAL PRIMARY KEY,
+                token VARCHAR(64) UNIQUE NOT NULL,
+                filename VARCHAR(255) NOT NULL,
+                fw_type VARCHAR(20) NOT NULL DEFAULT 'firmware',
+                version VARCHAR(30),
+                notes VARCHAR(255),
+                size_bytes INTEGER,
+                data BYTEA NOT NULL,
+                uploaded_by INTEGER REFERENCES users(id),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `).catch(e => console.log('Tabella firmware_files già esistente'));
 
         await pool.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(50)`).catch(() => {});
 
@@ -769,6 +786,22 @@ app.get('/api/machine/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
 
     try {
+        const machineId = parseInt(id);
+        const ownerCheck = await queryWithRetry(
+            'SELECT installer_id, client_id FROM machines WHERE id = $1',
+            [machineId]
+        );
+        if (ownerCheck.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Macchina non trovata' });
+        }
+        const owner = ownerCheck.rows[0];
+        if (req.user.role === 'installer' && owner.installer_id !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+        if (req.user.role === 'client' && owner.client_id !== req.user.client_id) {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+
         const result = await queryWithRetry(`
             SELECT 
                 m.id,
@@ -1509,7 +1542,8 @@ app.post('/api/ping', async (req, res) => {
 
 app.post('/api/machines/:id/command', authenticateToken, async (req, res) => {
     const machineId = parseInt(req.params.id);
-    const { type, payload } = req.body;
+    const { type } = req.body;
+    let { payload } = req.body;
 
     // AGGIUNTI sync_time e start_cycle
     const ALLOWED_TYPES = ['update_programs', 'ota_firmware', 'ota_littlefs', 'reboot', 'sync_time', 'start_cycle', 'stop_cycle', 'wash_cycle', 'test_cycle'];
@@ -1517,9 +1551,15 @@ app.post('/api/machines/:id/command', authenticateToken, async (req, res) => {
         return res.status(400).json({ success: false, message: `Tipo comando non valido. Validi: ${ALLOWED_TYPES.join(', ')}` });
     }
 
+    // I clienti non possono eseguire comandi "potenti" (OTA/reboot), solo admin/installatore
+    const RESTRICTED_TYPES = ['ota_firmware', 'ota_littlefs', 'reboot'];
+    if (req.user.role === 'client' && RESTRICTED_TYPES.includes(type)) {
+        return res.status(403).json({ success: false, message: 'Operazione non consentita per il tuo ruolo' });
+    }
+
     try {
         const machineResult = await queryWithRetry(
-            'SELECT id, machine_name, installer_id FROM machines WHERE id = $1',
+            'SELECT id, machine_name, installer_id, client_id FROM machines WHERE id = $1',
             [machineId]
         );
         if (machineResult.rows.length === 0) {
@@ -1530,6 +1570,31 @@ app.post('/api/machines/:id/command', authenticateToken, async (req, res) => {
 
         if (req.user.role === 'installer' && machine.installer_id !== req.user.id) {
             return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+        if (req.user.role === 'client' && machine.client_id !== req.user.client_id) {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+
+        // ── OTA: risolvi firmware_id -> URL di download ──
+        if ((type === 'ota_firmware' || type === 'ota_littlefs')) {
+            const firmwareId = payload?.firmware_id;
+            if (!firmwareId) {
+                return res.status(400).json({ success: false, message: 'firmware_id obbligatorio nel payload' });
+            }
+            const fwResult = await queryWithRetry(
+                'SELECT token, fw_type, filename FROM firmware_files WHERE id = $1',
+                [firmwareId]
+            );
+            if (fwResult.rows.length === 0) {
+                return res.status(404).json({ success: false, message: 'Firmware non trovato' });
+            }
+            const fw = fwResult.rows[0];
+            const expectedType = type === 'ota_firmware' ? 'firmware' : 'littlefs';
+            if (fw.fw_type !== expectedType) {
+                return res.status(400).json({ success: false, message: `Il file caricato è di tipo "${fw.fw_type}", non "${expectedType}"` });
+            }
+            const baseUrl = `${req.protocol}://${req.get('host')}`;
+            payload = { url: `${baseUrl}/api/firmware/download/${fw.token}`, filename: fw.filename };
         }
 
         await queryWithRetry(
@@ -1602,6 +1667,21 @@ app.post('/api/command/:id/confirm', async (req, res) => {
 app.get('/api/machines/:id/commands', authenticateToken, async (req, res) => {
     const machineId = parseInt(req.params.id);
     try {
+        const machineCheck = await queryWithRetry(
+            'SELECT installer_id, client_id FROM machines WHERE id = $1',
+            [machineId]
+        );
+        if (machineCheck.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Macchina non trovata' });
+        }
+        const machine = machineCheck.rows[0];
+        if (req.user.role === 'installer' && machine.installer_id !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+        if (req.user.role === 'client' && machine.client_id !== req.user.client_id) {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+
         const result = await queryWithRetry(
             `SELECT c.id, c.type, c.status, c.created_at, c.executed_at, u.username as sent_by
              FROM commands c
@@ -1613,6 +1693,98 @@ app.get('/api/machines/:id/commands', authenticateToken, async (req, res) => {
         res.json({ success: true, commands: result.rows });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────
+// FIRMWARE OTA — upload, lista, download, eliminazione
+// ─────────────────────────────────────────────
+
+const firmwareUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 4 * 1024 * 1024 }, // 4MB max
+    fileFilter: (req, file, cb) => {
+        if (!file.originalname.toLowerCase().endsWith('.bin')) {
+            return cb(new Error('Il file deve avere estensione .bin'));
+        }
+        cb(null, true);
+    }
+});
+
+// POST /api/firmware/upload — admin/installatore caricano un firmware (drag & drop)
+app.post('/api/firmware/upload', authenticateToken, requireRole('admin', 'installer'), (req, res) => {
+    firmwareUpload.single('firmware')(req, res, async (err) => {
+        if (err) {
+            return res.status(400).json({ success: false, message: err.message });
+        }
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'Nessun file ricevuto' });
+        }
+        const fwType = req.body.fw_type === 'littlefs' ? 'littlefs' : 'firmware';
+        const version = (req.body.version || '').slice(0, 30) || null;
+        const notes = (req.body.notes || '').slice(0, 255) || null;
+        const token = crypto.randomBytes(24).toString('hex');
+
+        try {
+            const result = await queryWithRetry(
+                `INSERT INTO firmware_files (token, filename, fw_type, version, notes, size_bytes, data, uploaded_by)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, filename, fw_type, version, notes, size_bytes, created_at`,
+                [token, req.file.originalname, fwType, version, notes, req.file.size, req.file.buffer, req.user.id]
+            );
+            console.log(`📦 Firmware caricato: ${req.file.originalname} (${fwType}, ${(req.file.size/1024).toFixed(1)} KB) da ${req.user.username}`);
+            res.json({ success: true, firmware: result.rows[0] });
+        } catch (error) {
+            console.error('Errore upload firmware:', error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    });
+});
+
+// GET /api/firmware — lista firmware caricati (senza i dati binari)
+app.get('/api/firmware', authenticateToken, requireRole('admin', 'installer'), async (req, res) => {
+    try {
+        const result = await queryWithRetry(
+            `SELECT f.id, f.filename, f.fw_type, f.version, f.notes, f.size_bytes, f.created_at, u.username as uploaded_by
+             FROM firmware_files f
+             LEFT JOIN users u ON f.uploaded_by = u.id
+             ORDER BY f.created_at DESC LIMIT 50`
+        );
+        res.json({ success: true, firmware: result.rows });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// DELETE /api/firmware/:id — admin/installatore eliminano un firmware
+app.delete('/api/firmware/:id', authenticateToken, requireRole('admin', 'installer'), async (req, res) => {
+    try {
+        await queryWithRetry('DELETE FROM firmware_files WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// GET /api/firmware/download/:token — pubblico (l'ESP32 lo scarica senza autenticazione)
+app.get('/api/firmware/download/:token', async (req, res) => {
+    try {
+        const result = await queryWithRetry(
+            'SELECT filename, size_bytes, data FROM firmware_files WHERE token = $1',
+            [req.params.token]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).send('Firmware non trovato');
+        }
+        const fw = result.rows[0];
+        res.set({
+            'Content-Type': 'application/octet-stream',
+            'Content-Disposition': `attachment; filename="${fw.filename}"`,
+            'Content-Length': fw.size_bytes
+        });
+        res.send(fw.data);
+    } catch (error) {
+        console.error('Errore download firmware:', error.message);
+        res.status(500).send('Errore server');
     }
 });
 
