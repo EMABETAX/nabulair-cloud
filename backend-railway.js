@@ -148,6 +148,11 @@ async function initDatabase() {
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS insecticide_ok BOOLEAN DEFAULT NULL`).catch(() => {});
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS flow FLOAT DEFAULT 0`).catch(() => {});
 
+        // Posizione per il meteo (impostata dal cliente dall'app)
+        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS latitude FLOAT DEFAULT NULL`).catch(() => {});
+        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS longitude FLOAT DEFAULT NULL`).catch(() => {});
+        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS location_name VARCHAR(120) DEFAULT NULL`).catch(() => {});
+
         await pool.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(50)`).catch(() => {});
 
         await pool.query(`
@@ -653,6 +658,9 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
                 m.installer_id,
                 m.paused,
                 m.pause_until,
+                m.latitude,
+                m.longitude,
+                m.location_name,
                 c.name as client_name,
                 c.telegram_chat_id
             FROM machines m
@@ -776,6 +784,9 @@ app.get('/api/machine/:id', authenticateToken, async (req, res) => {
                 m.installer_id,
                 m.paused,
                 m.pause_until,
+                m.latitude,
+                m.longitude,
+                m.location_name,
                 m.created_at,
                 CASE 
                     WHEN m.last_seen > NOW() - INTERVAL '5 minutes' THEN 'online' 
@@ -1787,6 +1798,51 @@ app.put('/api/machines/:id/pause', authenticateToken, async (req, res) => {
         res.json({ success: true, message: paused ? 'Pausa attivata' : 'Programmi ripresi' });
     } catch (error) {
         console.error('Errore PUT pause:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────
+// POSIZIONE (per il meteo) — impostata dal cliente dall'app
+// ─────────────────────────────────────────────
+
+app.put('/api/machines/:id/location', authenticateToken, async (req, res) => {
+    const machineId = parseInt(req.params.id);
+    const { latitude, longitude, location_name } = req.body;
+
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+        return res.status(400).json({ success: false, message: 'Coordinate latitude/longitude obbligatorie' });
+    }
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+        return res.status(400).json({ success: false, message: 'Coordinate non valide' });
+    }
+
+    try {
+        const machineCheck = await queryWithRetry(
+            'SELECT installer_id, client_id FROM machines WHERE id = $1',
+            [machineId]
+        );
+        if (machineCheck.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Macchina non trovata' });
+        }
+        const machine = machineCheck.rows[0];
+
+        if (req.user.role === 'installer' && machine.installer_id !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+        if (req.user.role === 'client' && machine.client_id !== req.user.client_id) {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+
+        await queryWithRetry(
+            'UPDATE machines SET latitude = $1, longitude = $2, location_name = $3 WHERE id = $4',
+            [latitude, longitude, location_name || null, machineId]
+        );
+
+        console.log(`📍 Macchina ${machineId}: posizione impostata su ${location_name || `${latitude},${longitude}`}`);
+        res.json({ success: true, message: 'Posizione salvata' });
+    } catch (error) {
+        console.error('Errore PUT location:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
