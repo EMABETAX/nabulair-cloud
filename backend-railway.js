@@ -665,8 +665,9 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
                 m.last_seen, 
                 m.firmware_version, 
                 CASE 
-                    WHEN m.last_seen > NOW() - INTERVAL '5 minutes' THEN 'online' 
-                    ELSE 'offline' 
+                    WHEN m.last_seen <= NOW() - INTERVAL '5 minutes' THEN 'offline'
+                    WHEN m.status = 'active' THEN 'active'
+                    ELSE 'online' 
                 END as status,
                 m.water_ok,
                 m.insecticide_ok,
@@ -822,8 +823,9 @@ app.get('/api/machine/:id', authenticateToken, async (req, res) => {
                 m.location_name,
                 m.created_at,
                 CASE 
-                    WHEN m.last_seen > NOW() - INTERVAL '5 minutes' THEN 'online' 
-                    ELSE 'offline' 
+                    WHEN m.last_seen <= NOW() - INTERVAL '5 minutes' THEN 'offline'
+                    WHEN m.status = 'active' THEN 'active'
+                    ELSE 'online' 
                 END as status,
                 c.name as client_name,
                 c.email,
@@ -1046,6 +1048,10 @@ app.put('/api/clients/:id', authenticateToken, async (req, res) => {
             );
             if (checkResult.rows.length === 0) {
                 return res.status(403).json({ success: false, message: 'Puoi modificare solo i clienti che hai creato tu' });
+            }
+        } else if (req.user.role === 'client') {
+            if (req.user.client_id != id) {
+                return res.status(403).json({ success: false, message: 'Puoi modificare solo il tuo profilo' });
             }
         } else if (req.user.role !== 'admin') {
             return res.status(403).json({ success: false, message: 'Accesso negato' });
