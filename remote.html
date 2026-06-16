@@ -1259,8 +1259,7 @@
             const data = await apiGet(`/machine/${currentMachineId}`);
             if (!data.success) return;
             const m = data.machine;
-            const online = m.status === 'online';
-            document.getElementById('statusLed').classList.toggle('online', online);
+            const online = m.status === 'online' || m.status === 'active';
             document.getElementById('statusText').textContent = online ? '🟢 Online' : '🔴 Offline';
 
             const waterOk = m.water_ok === true;
