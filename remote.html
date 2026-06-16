@@ -906,8 +906,51 @@
         .toast.show {
             opacity: 1;
         }
+
+        /* ── Toggle visibilità password ── */
+        .pw-wrap {
+            position: relative;
+            width: 100%;
+        }
+        .pw-wrap input {
+            width: 100%;
+            padding-right: 44px !important;
+            box-sizing: border-box;
+        }
+        .pw-toggle {
+            position: absolute;
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            padding: 0;
+            color: var(--text-secondary);
+            opacity: 0.7;
+        }
+        .pw-toggle:hover { opacity: 1; }
+        .pw-toggle svg { width: 18px; height: 18px; }
+        .pw-toggle .eye-off { display: none; }
+        .pw-toggle.shown .eye-on { display: none; }
+        .pw-toggle.shown .eye-off { display: block; }
     </style>
 <base target="_blank">
+<script>
+    // Mostra/nasconde un campo password adiacente all'occhiolino cliccato
+    function togglePwVisibility(btn) {
+        const input = btn.parentElement.querySelector('input');
+        if (!input) return;
+        const showing = input.type === 'password';
+        input.type = showing ? 'text' : 'password';
+        btn.classList.toggle('shown', showing);
+    }
+</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
@@ -919,7 +962,13 @@
         <p>Area Clienti</p>
         <div id="loginForm">
             <input type="text" id="loginUser" placeholder="Username" autocomplete="username">
-            <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()">
+            <div class="pw-wrap">
+                <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()">
+                <button type="button" class="pw-toggle" onclick="togglePwVisibility(this)" aria-label="Mostra/nascondi password">
+                    <svg class="eye-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg class="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0112 19c-7 0-11-7-11-7a18.5 18.5 0 015.06-5.94M9.9 4.24A10.94 10.94 0 0112 5c7 0 11 7 11 7a18.5 18.5 0 01-2.16 3.19M14.12 14.12a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+            </div>
             <button class="btn-login" onclick="doLogin()">Accedi</button>
             <button class="btn-forgot" onclick="showForgot()">Password dimenticata?</button>
             <div class="login-err" id="loginError"></div>
@@ -967,11 +1016,29 @@
         <div class="modal-box" onclick="event.stopPropagation()">
             <h3>🔑 Cambia password</h3>
             <label>Password attuale</label>
-            <input type="password" id="cpCurrent" placeholder="••••••••">
+            <div class="pw-wrap">
+                <input type="password" id="cpCurrent" placeholder="••••••••">
+                <button type="button" class="pw-toggle" onclick="togglePwVisibility(this)" aria-label="Mostra/nascondi password">
+                    <svg class="eye-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg class="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0112 19c-7 0-11-7-11-7a18.5 18.5 0 015.06-5.94M9.9 4.24A10.94 10.94 0 0112 5c7 0 11 7 11 7a18.5 18.5 0 01-2.16 3.19M14.12 14.12a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+            </div>
             <label>Nuova password</label>
-            <input type="password" id="cpNew" placeholder="Minimo 6 caratteri">
+            <div class="pw-wrap">
+                <input type="password" id="cpNew" placeholder="Minimo 6 caratteri">
+                <button type="button" class="pw-toggle" onclick="togglePwVisibility(this)" aria-label="Mostra/nascondi password">
+                    <svg class="eye-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg class="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0112 19c-7 0-11-7-11-7a18.5 18.5 0 015.06-5.94M9.9 4.24A10.94 10.94 0 0112 5c7 0 11 7 11 7a18.5 18.5 0 01-2.16 3.19M14.12 14.12a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+            </div>
             <label>Conferma nuova password</label>
-            <input type="password" id="cpConfirm" placeholder="Ripeti la nuova password">
+            <div class="pw-wrap">
+                <input type="password" id="cpConfirm" placeholder="Ripeti la nuova password">
+                <button type="button" class="pw-toggle" onclick="togglePwVisibility(this)" aria-label="Mostra/nascondi password">
+                    <svg class="eye-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg class="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0112 19c-7 0-11-7-11-7a18.5 18.5 0 015.06-5.94M9.9 4.24A10.94 10.94 0 0112 5c7 0 11 7 11 7a18.5 18.5 0 01-2.16 3.19M14.12 14.12a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+            </div>
             <p class="modal-msg" id="cpMsg"></p>
             <div class="modal-actions">
                 <button class="modal-btn-cancel" onclick="closeChangePassword()">Annulla</button>
