@@ -1474,8 +1474,8 @@
         filteredMachines = allMachines.filter(m => {
             const textMatch = (m.machine_name||'').toLowerCase().includes(search) || (m.mac_address||'').toLowerCase().includes(search);
             let statusMatch = true;
-            if (status === 'online') statusMatch = m.status === 'online';
-            if (status === 'offline') statusMatch = m.status !== 'online';
+            if (status === 'online') statusMatch = m.status === 'online' || m.status === 'active';
+            if (status === 'offline') statusMatch = m.status === 'offline';
             if (status === 'alert') statusMatch = m.water_ok === false || m.insecticide_ok === false;
             let clientMatch = true, instMatch = true;
             if (clientId) clientMatch = m.client_id == clientId;
@@ -1493,10 +1493,7 @@
         }
         const isAdmin = currentUser.role === 'admin';
         tbody.innerHTML = filteredMachines.map(m => {
-            const online = m.status === 'online';
-            const waterOk = m.water_ok === true;
-            const insOk = m.insecticide_ok === true;
-            const clientName = m.client_name || (m.client_id ? allClients.find(c=>c.id==m.client_id)?.name : '') || '—';
+            const online = m.status === 'online' || m.status === 'active';
             const instName = m.installer_name || (m.installer_id ? allUsers.find(u=>u.id==m.installer_id)?.username : '') || '—';
             let actions = `<button class="btn-row btn-row-view" onclick="openDetail(${m.id})">👁 Dettaglio</button>`;
             if (isAdmin) {
@@ -1520,8 +1517,8 @@
 
     function renderTopPills() {
         if (currentUser.role !== 'admin') return;
-        const online = allMachines.filter(m => m.status === 'online').length;
-        const offline = allMachines.filter(m => m.status !== 'online').length;
+        const online = allMachines.filter(m => m.status === 'online' || m.status === 'active').length;
+        const offline = allMachines.filter(m => m.status === 'offline').length;
         const alerts = allMachines.filter(m => m.water_ok === false || m.insecticide_ok === false).length;
         document.getElementById('topPills').innerHTML = `
             <div class="pill">Totale <span>${allMachines.length}</span></div>
@@ -1538,11 +1535,7 @@
         const m = allMachines.find(x => x.id === id);
         if (!m) return;
         currentDetailId = id;
-        const online = m.status === 'online';
-        const waterOk = m.water_ok === true;
-        const insOk = m.insecticide_ok === true;
-        const isAdmin = currentUser.role === 'admin';
-        const isInstaller = currentUser.role === 'installer';
+        const online = m.status === 'online' || m.status === 'active';
 
         document.getElementById('detailTitle').textContent = esc(m.machine_name || 'Impianto');
         document.getElementById('detailSub').textContent = `${m.mac_address || '—'} · IP ${m.sta_ip || '—'}`;
