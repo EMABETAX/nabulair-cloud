@@ -631,6 +631,11 @@
             border: 1px solid rgba(239, 68, 68, 0.3);
         }
 
+        .cmd-status-box.executed .cmd-spinner,
+        .cmd-status-box.failed .cmd-spinner {
+            display: none;
+        }
+
         .cmd-spinner {
             width: 16px;
             height: 16px;
@@ -1350,7 +1355,8 @@
         const textEl = document.getElementById('cmdStatusText');
         box.className = `cmd-status-box show ${state}`;
         textEl.textContent = text;
-        if (state === 'sent') setTimeout(() => { if (box.classList.contains('show') && state === 'sent') box.classList.remove('show'); }, 8000);
+        const hideDelay = state === 'sent' ? 8000 : 5000;
+        setTimeout(() => { if (box.classList.contains('show') && box.classList.contains(state)) box.classList.remove('show'); }, hideDelay);
     }
 
     function setButtonsDisabled(disabled) {
