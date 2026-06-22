@@ -1335,6 +1335,7 @@
         location.reload();
     }
 
+    // ==================== BOOTAPP SICURA E PROTETTA ====================
     function bootApp() {
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('appShell').style.display = 'block';
@@ -1348,26 +1349,26 @@
         const bottomNav = document.getElementById('bottomNav');
         const bottomNavInner = document.getElementById('bottomNavInner');
 
-        if (!sidebar) return;
-
         if (currentUser.role === 'admin') {
-            sidebar.classList.add('visible');
-            sidebar.innerHTML = `
-                <div class="sidebar-label">Menu</div>
-                <button class="nav-item active" onclick="showSection('machines')"><span class="nav-icon">🏭</span> Impianti</button>
-                <button class="nav-item" onclick="showSection('installers')"><span class="nav-icon">🔧</span> Installatori</button>
-                <button class="nav-item" onclick="showSection('clients')"><span class="nav-icon">👥</span> Clienti</button>
-                <button class="nav-item" onclick="showSection('stats'); loadAdminStats();"><span class="nav-icon">📊</span> Statistiche</button>
-                <button class="nav-item" onclick="showSection('firmware'); loadFirmwareList();"><span class="nav-icon">📦</span> Firmware OTA</button>
-                <hr class="sidebar-divider">
-                <div class="sidebar-label">Sistema</div>
-                <button class="nav-item" onclick="showSection('telegram')"><span class="nav-icon">📱</span> Telegram Bot</button>
-            `;
-            document.getElementById('filterClient').style.display = 'inline-block';
-            document.getElementById('filterInstaller').style.display = 'inline-block';
-            document.getElementById('preregisterCard').style.display = 'block';
+            if (sidebar) {
+                sidebar.classList.add('visible');
+                sidebar.innerHTML = `
+                    <div class="sidebar-label">Menu</div>
+                    <button class="nav-item active" onclick="showSection('machines')"><span class="nav-icon">🏭</span> Impianti</button>
+                    <button class="nav-item" onclick="showSection('installers')"><span class="nav-icon">🔧</span> Installatori</button>
+                    <button class="nav-item" onclick="showSection('clients')"><span class="nav-icon">👥</span> Clienti</button>
+                    <button class="nav-item" onclick="showSection('stats'); loadAdminStats();"><span class="nav-icon">📊</span> Statistiche</button>
+                    <button class="nav-item" onclick="showSection('firmware'); loadFirmwareList();"><span class="nav-icon">📦</span> Firmware OTA</button>
+                    <hr class="sidebar-divider">
+                    <div class="sidebar-label">Sistema</div>
+                    <button class="nav-item" onclick="showSection('telegram')"><span class="nav-icon">📱</span> Telegram Bot</button>
+                `;
+            }
+            if (document.getElementById('filterClient')) document.getElementById('filterClient').style.display = 'inline-block';
+            if (document.getElementById('filterInstaller')) document.getElementById('filterInstaller').style.display = 'inline-block';
+            if (document.getElementById('preregisterCard')) document.getElementById('preregisterCard').style.display = 'block';
 
-            // Controllo di sicurezza prima di impostare l'innerHTML
+            // Controllo sicuro per evitare l'errore Uncaught TypeError
             if (bottomNavInner) {
                 bottomNavInner.innerHTML = `
                     <button class="bnav-tab active" data-section="machines" onclick="bnavGo('machines')"><span class="bnav-icon">🏭</span>Impianti</button>
@@ -1382,18 +1383,20 @@
             loadClients();
             loadUsers();
         } else { // installer
-            sidebar.classList.add('visible');
-            sidebar.innerHTML = `
-                <div class="sidebar-label">Menu</div>
-                <button class="nav-item active" onclick="showSection('machines')"><span class="nav-icon">🏭</span> I Tuoi Impianti</button>
-                <button class="nav-item" onclick="showSection('clients')"><span class="nav-icon">👥</span> Clienti</button>
-                <button class="nav-item" onclick="showSection('firmware'); loadFirmwareList();"><span class="nav-icon">📦</span> Firmware OTA</button>
-                <hr class="sidebar-divider">
-                <div class="sidebar-label">Sistema</div>
-                <button class="nav-item" onclick="showSection('telegram')"><span class="nav-icon">📱</span> Telegram Bot</button>
-            `;
+            if (sidebar) {
+                sidebar.classList.add('visible');
+                sidebar.innerHTML = `
+                    <div class="sidebar-label">Menu</div>
+                    <button class="nav-item active" onclick="showSection('machines')"><span class="nav-icon">🏭</span> I Tuoi Impianti</button>
+                    <button class="nav-item" onclick="showSection('clients')"><span class="nav-icon">👥</span> Clienti</button>
+                    <button class="nav-item" onclick="showSection('firmware'); loadFirmwareList();"><span class="nav-icon">📦</span> Firmware OTA</button>
+                    <hr class="sidebar-divider">
+                    <div class="sidebar-label">Sistema</div>
+                    <button class="nav-item" onclick="showSection('telegram')"><span class="nav-icon">📱</span> Telegram Bot</button>
+                `;
+            }
             
-            // Controllo di sicurezza prima di impostare l'innerHTML
+            // Controllo sicuro per evitare l'errore Uncaught TypeError
             if (bottomNavInner) {
                 bottomNavInner.innerHTML = `
                     <button class="bnav-tab active" data-section="machines" onclick="bnavGo('machines')"><span class="bnav-icon">🏭</span>Impianti</button>
@@ -1404,12 +1407,12 @@
             }
             if (bottomNav) bottomNav.style.display = 'block';
             
-            document.getElementById('machinesTitle').textContent = '🏭 I Tuoi Impianti';
-            document.getElementById('machinesSub').textContent = 'Impianti assegnati a te';
+            if (document.getElementById('machinesTitle')) document.getElementById('machinesTitle').textContent = '🏭 I Tuoi Impianti';
+            if (document.getElementById('machinesSub')) document.getElementById('machinesSub').textContent = 'Impianti assegnati a te';
             loadClients();
         }
 
-        // Questi comandi ora verranno eseguiti senza bloccarsi!
+        // Caricamento dei dati (Ora verrà eseguito sempre!)
         loadMachines();
         loadAlerts();
         loadFirmwareList();
