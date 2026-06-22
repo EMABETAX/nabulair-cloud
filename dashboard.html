@@ -1333,7 +1333,7 @@
     }
 
     // ==================== BOOTAPP ROBUSTA ====================
-    function bootApp() {
+        function bootApp() {
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('appShell').style.display = 'block';
 
@@ -1342,7 +1342,7 @@
         badge.textContent = currentUser.role === 'admin' ? 'Admin' : 'Installatore';
         badge.className = `role-badge role-${currentUser.role}`;
 
-        // ==== GARANTISCE CHE bottomNav E bottomNavInner ESISTANO ====
+        // ===== CREAZIONE DINAMICA DI bottomNav E bottomNavInner (FIX ANTI-NULL) =====
         let bottomNav = document.getElementById('bottomNav');
         let bottomNavInner = document.getElementById('bottomNavInner');
 
