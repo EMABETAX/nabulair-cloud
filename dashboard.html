@@ -1592,34 +1592,64 @@ const apiDel  = (ep) => api('DELETE', ep);
     }
 
     function renderMachinesTable() {
-        const tbody = document.getElementById('machinesTbody');
-        if (!filteredMachines.length) {
-            tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="big">📭</div><p>Nessun impianto trovato</p></td></tr>';
-            return;
-        }
-        const isAdmin = currentUser.role === 'admin';
-        tbody.innerHTML = filteredMachines.map(m => {
-            const online = m.status === 'online' || m.status === 'active';
-            const instName = m.installer_name || (m.installer_id ? allUsers.find(u=>u.id==m.installer_id)?.username : '') || '—';
-            let actions = `<button class="btn-row btn-row-view" onclick="openDetail(${m.id})">👁 Dettaglio</button>`;
-            if (isAdmin) {
-                actions += ` <button class="btn-row btn-row-edit" onclick="editMachine(${m.id})">✎</button>`;
-                actions += ` <button class="btn-row btn-row-del" onclick="deleteMachine(${m.id})">🗑</button>`;
-            }
-            return `<tr>
-                <td><strong>${esc(m.machine_name || 'Impianto')}</strong></td>
-                <td class="td-mono">${m.mac_address || '—'}</td>
-                <td><span class="td-status"><span class="td-dot ${online?'online':'offline'}"></span>${online?'Online':'Offline'}</span></td>
-                <td>
-                    <span class="td-sensor ${!online ? 'unknown' : waterOk ? 'ok' : 'err'}">${!online ? '❓ N/D' : waterOk ? '💧 OK' : '💧 ❌'}</span>
-                    <span class="td-sensor ${!online ? 'unknown' : insOk ? 'ok' : 'err'}">${!online ? '❓ N/D' : insOk ? '🧪 OK' : '🧪 ❌'}</span>
-                </td>
-                <td>${esc(clientName)}</td>
-                <td>${esc(instName)}</td>
-                <td class="td-actions">${actions}</td>
-            </tr>`;
-        }).join('');
+    const tbody = document.getElementById('machinesTbody');
+    if (!tbody) return;
+
+    if (!filteredMachines || !filteredMachines.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="big">📭</div><p>Nessun impianto trovato</p></td></tr>';
+        return;
     }
+
+    const isAdmin = currentUser?.role === 'admin';
+    const isInstaller = currentUser?.role === 'installer';
+
+    tbody.innerHTML = filteredMachines.map(m => {
+        // Determina lo stato online/offline
+        const online = (m.status === 'online' || m.status === 'active');
+        
+        // Sensori: se offline, mostriamo "N/D", altrimenti usiamo i valori booleani
+        const waterOk = online && m.water_ok === true;
+        const waterErr = online && m.water_ok === false;
+        const waterUnknown = !online || m.water_ok === null || m.water_ok === undefined;
+        
+        const insOk = online && m.insecticide_ok === true;
+        const insErr = online && m.insecticide_ok === false;
+        const insUnknown = !online || m.insecticide_ok === null || m.insecticide_ok === undefined;
+
+        // Nome cliente
+        const clientName = m.client_name || (allClients.find(c => c.id === m.client_id)?.name) || '—';
+        
+        // Nome installatore
+        const instName = m.installer_name || (allUsers.find(u => u.id === m.installer_id)?.username) || '—';
+
+        // Azioni
+        let actions = `<button class="btn-row btn-row-view" onclick="openDetail(${m.id})">👁 Dettaglio</button>`;
+        if (isAdmin) {
+            actions += ` <button class="btn-row btn-row-edit" onclick="editMachine(${m.id})">✎</button>`;
+            actions += ` <button class="btn-row btn-row-del" onclick="deleteMachine(${m.id})">🗑</button>`;
+        } else if (isInstaller) {
+            // Se vuoi dare anche all'installatore la possibilità di modificare, sblocca qui
+            // actions += ` <button class="btn-row btn-row-edit" onclick="editMachine(${m.id})">✎</button>`;
+        }
+
+        return `<tr>
+            <td><strong>${esc(m.machine_name || 'Impianto')}</strong></td>
+            <td class="td-mono">${m.mac_address || '—'}</td>
+            <td><span class="td-status"><span class="td-dot ${online ? 'online' : 'offline'}"></span>${online ? 'Online' : 'Offline'}</span></td>
+            <td>
+                <span class="td-sensor ${waterUnknown ? 'unknown' : (waterOk ? 'ok' : 'err')}">
+                    ${waterUnknown ? '❓ N/D' : (waterOk ? '💧 OK' : '💧 ❌')}
+                </span>
+                <span class="td-sensor ${insUnknown ? 'unknown' : (insOk ? 'ok' : 'err')}">
+                    ${insUnknown ? '❓ N/D' : (insOk ? '🧪 OK' : '🧪 ❌')}
+                </span>
+            </td>
+            <td>${esc(clientName)}</td>
+            <td>${esc(instName)}</td>
+            <td class="td-actions">${actions}</td>
+        </tr>`;
+    }).join('');
+}
 
     function renderTopPills() {
         if (currentUser.role !== 'admin') return;
