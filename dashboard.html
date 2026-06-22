@@ -1047,6 +1047,7 @@
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<base target="_blank">
 </head>
 <body>
 
@@ -1066,6 +1067,10 @@
     <header class="topbar">
         <div class="topbar-left">
             <div class="top-logo"><img src="logo.png" alt="NabulAir"></div>
+<nav class="bottom-nav" id="bottomNav" style="display:none;">
+    <div class="bottom-nav-inner" id="bottomNavInner"></div>
+</nav>
+
             <span class="top-brand">NabulAir</span>
             <div class="top-pills" id="topPills"></div>
         </div>
@@ -1494,6 +1499,9 @@
         const isAdmin = currentUser.role === 'admin';
         tbody.innerHTML = filteredMachines.map(m => {
             const online = m.status === 'online' || m.status === 'active';
+            const waterOk = m.water_ok === true;
+            const insOk = m.insecticide_ok === true;
+            const clientName = m.client_name || (m.client_id ? allClients.find(c=>c.id==m.client_id)?.name : '') || '—';
             const instName = m.installer_name || (m.installer_id ? allUsers.find(u=>u.id==m.installer_id)?.username : '') || '—';
             let actions = `<button class="btn-row btn-row-view" onclick="openDetail(${m.id})">👁 Dettaglio</button>`;
             if (isAdmin) {
@@ -1536,6 +1544,8 @@
         if (!m) return;
         currentDetailId = id;
         const online = m.status === 'online' || m.status === 'active';
+        const isAdmin = currentUser.role === 'admin';
+        const isInstaller = currentUser.role === 'installer';
 
         document.getElementById('detailTitle').textContent = esc(m.machine_name || 'Impianto');
         document.getElementById('detailSub').textContent = `${m.mac_address || '—'} · IP ${m.sta_ip || '—'}`;
@@ -1549,13 +1559,13 @@
             </div>
             <div class="detail-section">
                 <h4>🧪 Sensori</h4>
-                <div class="sensor-big ${!online ? 'unknown' : waterOk ? 'ok' : 'err'}">
+                <div class="sensor-big ${!online ? 'unknown' : m.water_ok ? 'ok' : 'err'}">
                     <span style="font-size:18px">💧</span>
-                    <span>${!online ? '❓ N/D (offline)' : waterOk ? 'Acqua presente' : 'Acqua assente — rabboccare!'}</span>
+                    <span>${!online ? '❓ N/D (offline)' : m.water_ok ? 'Acqua presente' : 'Acqua assente — rabboccare!'}</span>
                 </div>
-                <div class="sensor-big ${!online ? 'unknown' : insOk ? 'ok' : 'err'}">
+                <div class="sensor-big ${!online ? 'unknown' : m.insecticide_ok ? 'ok' : 'err'}">
                     <span style="font-size:18px">🧪</span>
-                    <span>${!online ? '❓ N/D (offline)' : insOk ? 'Insetticida OK' : 'Insetticida esaurito!'}</span>
+                    <span>${!online ? '❓ N/D (offline)' : m.insecticide_ok ? 'Insetticida OK' : 'Insetticida esaurito!'}</span>
                 </div>
             </div>
             <div class="detail-section">
@@ -2208,8 +2218,6 @@
     }
 </script>
 
-<nav class="bottom-nav" id="bottomNav" style="display:none;">
-    <div class="bottom-nav-inner" id="bottomNavInner"></div>
-</nav>
+
 </body>
 </html>
