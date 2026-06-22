@@ -52,6 +52,10 @@ app.get('/remote', (req, res) => {
     res.sendFile(path.join(__dirname, 'remote.html'));
 });
 
+app.get('/remote.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'remote.html'));
+});
+
 const JWT_SECRET = process.env.JWT_SECRET;
 const DATABASE_URL = process.env.DATABASE_URL;
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -680,9 +684,11 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
                 m.longitude,
                 m.location_name,
                 c.name as client_name,
-                c.telegram_chat_id
+                c.telegram_chat_id,
+                u.username as installer_name
             FROM machines m
             LEFT JOIN clients c ON m.client_id = c.id
+            LEFT JOIN users u ON m.installer_id = u.id
         `;
         let whereClause = '';
         let params = [];
@@ -2190,43 +2196,9 @@ app.get('/health', async (req, res) => {
 });
 
 app.get('/', (req, res) => {
-    res.json({ 
-        message: 'NabulAir Cloud API', 
-        version: '2.9',
-        status: 'online',
-        ssl_db: false,
-        features: ['Auth', 'Multi-role', 'Telegram Alerts', 'Admin Panel', 'DB Auto-Retry', 'Installer can create and see clients', 'Installer can configure Telegram', 'Offline Detection', 'Machine Pre-registration', 'Full CRUD for machines and users', 'Client login with own password', 'Machine Programs Management', 'Global Pause / Vacation Mode', 'Auto-sync NTP & Programs (fixed)'],
-        endpoints: [
-            'GET /',
-            'GET /health',
-            'GET /dashboard',
-            'GET /remote',
-            'POST /api/setup',
-            'POST /api/login',
-            'GET /api/me',
-            'GET /api/machines (protected + realtime status)',
-            'POST /api/machines/preregister (admin)',
-            'PUT /api/machines/:id (admin)',
-            'DELETE /api/machines/:id (admin)',
-            'GET /api/alerts (protected)',
-            'GET /api/clients (admin + installer)',
-            'POST /api/clients (admin + installer)',
-            'PUT /api/clients/:id (admin + installer)',
-            'DELETE /api/clients/:id (admin only)',
-            'GET /api/users (admin)',
-            'POST /api/users (admin)',
-            'PUT /api/users/:id (admin)',
-            'DELETE /api/users/:id (admin)',
-            'PUT /api/machines/:id/assign (admin + installer)',
-            'POST /api/register',
-            'POST /api/ping',
-            'GET /api/machines/:id/programs',
-            'PUT /api/machines/:id/programs',
-            'GET /api/machines/:id/pause',
-            'PUT /api/machines/:id/pause'
-        ]
-    });
+    res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
+
 
 startOfflineDetectionJob();
 
