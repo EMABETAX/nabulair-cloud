@@ -1486,34 +1486,37 @@
     }
 
     function renderMachinesTable() {
-        const tbody = document.getElementById('machinesTbody');
-        if (!filteredMachines.length) {
-            tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="big">📭</div><p>Nessun impianto trovato</p></td></tr>';
-            return;
-        }
-        const isAdmin = currentUser.role === 'admin';
-        tbody.innerHTML = filteredMachines.map(m => {
-            const online = m.status === 'online' || m.status === 'active';
-            const instName = m.installer_name || (m.installer_id ? allUsers.find(u=>u.id==m.installer_id)?.username : '') || '—';
-            let actions = `<button class="btn-row btn-row-view" onclick="openDetail(${m.id})">👁 Dettaglio</button>`;
-            if (isAdmin) {
-                actions += ` <button class="btn-row btn-row-edit" onclick="editMachine(${m.id})">✎</button>`;
-                actions += ` <button class="btn-row btn-row-del" onclick="deleteMachine(${m.id})">🗑</button>`;
-            }
-            return `<tr>
-                <td><strong>${esc(m.machine_name || 'Impianto')}</strong></td>
-                <td class="td-mono">${m.mac_address || '—'}</td>
-                <td><span class="td-status"><span class="td-dot ${online?'online':'offline'}"></span>${online?'Online':'Offline'}</span></td>
-                <td>
-                    <span class="td-sensor ${!online ? 'unknown' : waterOk ? 'ok' : 'err'}">${!online ? '❓ N/D' : waterOk ? '💧 OK' : '💧 ❌'}</span>
-                    <span class="td-sensor ${!online ? 'unknown' : insOk ? 'ok' : 'err'}">${!online ? '❓ N/D' : insOk ? '🧪 OK' : '🧪 ❌'}</span>
-                </td>
-                <td>${esc(clientName)}</td>
-                <td>${esc(instName)}</td>
-                <td class="td-actions">${actions}</td>
-            </tr>`;
-        }).join('');
+    const tbody = document.getElementById('machinesTbody');
+    if (!filteredMachines.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="big">📭</div><p>Nessun impianto trovato</p></td></tr>';
+        return;
     }
+    const isAdmin = currentUser.role === 'admin';
+    tbody.innerHTML = filteredMachines.map(m => {
+        const online = m.status === 'online' || m.status === 'active';
+        const waterOk = m.water_ok;          // ← corretto
+        const insOk = m.insecticide_ok;      // ← corretto
+        const clientName = m.client_name || (allClients.find(c => c.id == m.client_id)?.name) || '—';
+        const instName = m.installer_name || (m.installer_id ? allUsers.find(u=>u.id==m.installer_id)?.username : '') || '—';
+        let actions = `<button class="btn-row btn-row-view" onclick="openDetail(${m.id})">👁 Dettaglio</button>`;
+        if (isAdmin) {
+            actions += ` <button class="btn-row btn-row-edit" onclick="editMachine(${m.id})">✎</button>`;
+            actions += ` <button class="btn-row btn-row-del" onclick="deleteMachine(${m.id})">🗑</button>`;
+        }
+        return `<tr>
+            <td><strong>${esc(m.machine_name || 'Impianto')}</strong></td>
+            <td class="td-mono">${m.mac_address || '—'}</td>
+            <td><span class="td-status"><span class="td-dot ${online?'online':'offline'}"></span>${online?'Online':'Offline'}</span></td>
+            <td>
+                <span class="td-sensor ${!online ? 'unknown' : waterOk ? 'ok' : 'err'}">${!online ? '❓ N/D' : waterOk ? '💧 OK' : '💧 ❌'}</span>
+                <span class="td-sensor ${!online ? 'unknown' : insOk ? 'ok' : 'err'}">${!online ? '❓ N/D' : insOk ? '🧪 OK' : '🧪 ❌'}</span>
+            </td>
+            <td>${esc(clientName)}</td>
+            <td>${esc(instName)}</td>
+            <td class="td-actions">${actions}</td>
+        </tr>`;
+    }).join('');
+}
 
     function renderTopPills() {
         if (currentUser.role !== 'admin') return;
