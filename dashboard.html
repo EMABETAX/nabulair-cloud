@@ -1472,18 +1472,27 @@
 
     // ==================== MACHINES ====================
     async function loadMachines() {
-        try {
-            const data = await apiGet('/machines');
-            if (data.success) {
-                allMachines = data.machines;
-                populateFilterDropdowns();
-                filterMachines();
-                renderTopPills();
-            }
-        } catch(e) {
-            document.getElementById('machinesTbody').innerHTML = '<tr><td colspan="7" class="empty-state"><div class="big">❌</div><p>Errore di connessione</p></td></tr>';
-        }
+    try {
+        console.log("Caricamento macchine...");
+
+        allMachines = await apiGet('/api/machines');
+
+        console.log("RISPOSTA:", allMachines);
+
+        renderMachinesTable();
+
+    } catch (e) {
+        console.error("ERRORE LOAD MACHINES:", e);
+
+        document.getElementById('machinesTbody').innerHTML = `
+            <tr>
+                <td colspan="7" class="empty-state">
+                    <div class="big">❌</div>
+                    <p>${e.message}</p>
+                </td>
+            </tr>`;
     }
+}
 
     function populateFilterDropdowns() {
         if (currentUser.role !== 'admin') return;
