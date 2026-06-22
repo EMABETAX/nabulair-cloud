@@ -1337,19 +1337,25 @@
 
     // ==================== BOOTAPP SICURA E PROTETTA ====================
     function bootApp() {
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('appShell').style.display = 'block';
+        // Mostra la dashboard e nasconde il login in sicurezza
+        if (document.getElementById('loginScreen')) document.getElementById('loginScreen').style.display = 'none';
+        if (document.getElementById('appShell')) document.getElementById('appShell').style.display = 'block';
 
-        document.getElementById('topUsername').textContent = currentUser.username;
+        if (currentUser && document.getElementById('topUsername')) {
+            document.getElementById('topUsername').textContent = currentUser.username;
+        }
+        
         const badge = document.getElementById('topRoleBadge');
-        badge.textContent = currentUser.role === 'admin' ? 'Admin' : 'Installatore';
-        badge.className = `role-badge role-${currentUser.role}`;
+        if (badge && currentUser) {
+            badge.textContent = currentUser.role === 'admin' ? 'Admin' : 'Installatore';
+            badge.className = `role-badge role-${currentUser.role}`;
+        }
 
         const sidebar = document.getElementById('sidebar');
         const bottomNav = document.getElementById('bottomNav');
         const bottomNavInner = document.getElementById('bottomNavInner');
 
-        if (currentUser.role === 'admin') {
+        if (currentUser && currentUser.role === 'admin') {
             if (sidebar) {
                 sidebar.classList.add('visible');
                 sidebar.innerHTML = `
@@ -1368,7 +1374,7 @@
             if (document.getElementById('filterInstaller')) document.getElementById('filterInstaller').style.display = 'inline-block';
             if (document.getElementById('preregisterCard')) document.getElementById('preregisterCard').style.display = 'block';
 
-            // Controllo sicuro per evitare l'errore Uncaught TypeError
+            // SOLUZIONE ERRORE: Controlla se l'elemento esiste prima di scrivere innerHTML
             if (bottomNavInner) {
                 bottomNavInner.innerHTML = `
                     <button class="bnav-tab active" data-section="machines" onclick="bnavGo('machines')"><span class="bnav-icon">🏭</span>Impianti</button>
@@ -1382,7 +1388,7 @@
 
             loadClients();
             loadUsers();
-        } else { // installer
+        } else if (currentUser) { // installer
             if (sidebar) {
                 sidebar.classList.add('visible');
                 sidebar.innerHTML = `
@@ -1396,7 +1402,6 @@
                 `;
             }
             
-            // Controllo sicuro per evitare l'errore Uncaught TypeError
             if (bottomNavInner) {
                 bottomNavInner.innerHTML = `
                     <button class="bnav-tab active" data-section="machines" onclick="bnavGo('machines')"><span class="bnav-icon">🏭</span>Impianti</button>
@@ -1412,7 +1417,7 @@
             loadClients();
         }
 
-        // Caricamento dei dati (Ora verrà eseguito sempre!)
+        // Avvia i caricamenti stabili che non si interromperanno più!
         loadMachines();
         loadAlerts();
         loadFirmwareList();
