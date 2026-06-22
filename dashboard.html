@@ -1368,7 +1368,9 @@
             document.getElementById('preregisterCard').style.display = 'block';
             document.getElementById('bottomNavInner').innerHTML = `
                 <button class="bnav-tab active" data-section="machines" onclick="bnavGo('machines')"><span class="bnav-icon">🏭</span>Impianti</button>
+                <button class="bnav-tab" data-section="installers" onclick="bnavGo('installers')"><span class="bnav-icon">🔧</span>Installatori</button>
                 <button class="bnav-tab" data-section="clients" onclick="bnavGo('clients')"><span class="bnav-icon">👥</span>Clienti</button>
+                <button class="bnav-tab" data-section="stats" onclick="bnavGo('stats'); loadAdminStats();"><span class="bnav-icon">📊</span>Statistiche</button>
                 <button class="bnav-tab" data-section="firmware" onclick="bnavGo('firmware'); loadFirmwareList();"><span class="bnav-icon">📦</span>OTA</button>
                 <button class="bnav-tab" data-section="telegram" onclick="bnavGo('telegram')"><span class="bnav-icon">📱</span>Bot</button>
             `;
@@ -1388,7 +1390,9 @@
             `;
             document.getElementById('bottomNavInner').innerHTML = `
                 <button class="bnav-tab active" data-section="machines" onclick="bnavGo('machines')"><span class="bnav-icon">🏭</span>Impianti</button>
+                <button class="bnav-tab" data-section="installers" onclick="bnavGo('installers')"><span class="bnav-icon">🔧</span>Installatori</button>
                 <button class="bnav-tab" data-section="clients" onclick="bnavGo('clients')"><span class="bnav-icon">👥</span>Clienti</button>
+                <button class="bnav-tab" data-section="stats" onclick="bnavGo('stats'); loadAdminStats();"><span class="bnav-icon">📊</span>Statistiche</button>
                 <button class="bnav-tab" data-section="firmware" onclick="bnavGo('firmware'); loadFirmwareList();"><span class="bnav-icon">📦</span>OTA</button>
                 <button class="bnav-tab" data-section="telegram" onclick="bnavGo('telegram')"><span class="bnav-icon">📱</span>Bot</button>
             `;
