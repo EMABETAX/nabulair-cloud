@@ -1337,15 +1337,17 @@
 
     // ==================== BOOTAPP SICURA E PROTETTA ====================
     function bootApp() {
+        console.log("🚀 bootApp avviata...");
+        
         if (document.getElementById('loginScreen')) document.getElementById('loginScreen').style.display = 'none';
         if (document.getElementById('appShell')) document.getElementById('appShell').style.display = 'block';
 
-        if (document.getElementById('topUsername')) {
+        if (document.getElementById('topUsername') && currentUser) {
             document.getElementById('topUsername').textContent = currentUser.username;
         }
         
         const badge = document.getElementById('topRoleBadge');
-        if (badge) {
+        if (badge && currentUser) {
             badge.textContent = currentUser.role === 'admin' ? 'Admin' : 'Installatore';
             badge.className = `role-badge role-${currentUser.role}`;
         }
@@ -1354,7 +1356,7 @@
         const bottomNav = document.getElementById('bottomNav');
         const bottomNavInner = document.getElementById('bottomNavInner');
 
-        if (currentUser.role === 'admin') {
+        if (currentUser && currentUser.role === 'admin') {
             if (sidebar) {
                 sidebar.classList.add('visible');
                 sidebar.innerHTML = `
@@ -1373,7 +1375,7 @@
             if (document.getElementById('filterInstaller')) document.getElementById('filterInstaller').style.display = 'inline-block';
             if (document.getElementById('preregisterCard')) document.getElementById('preregisterCard').style.display = 'block';
             
-            // MODIFICA PROTETTA: Esegue l'azione SOLO se l'elemento esiste davvero
+            // CONTROLLO DI SICUREZZA: Esegue solo se l'elemento esiste nel DOM HTML
             if (bottomNavInner) {
                 bottomNavInner.innerHTML = `
                     <button class="bnav-tab active" data-section="machines" onclick="bnavGo('machines')"><span class="bnav-icon">🏭</span>Impianti</button>
@@ -1387,8 +1389,8 @@
             
             loadClients();
             loadUsers();
-        } else { 
-            // Sezione Installatore protetta
+        } else if (currentUser) { 
+            // Profilo Installatore sicuro
             if (sidebar) {
                 sidebar.classList.add('visible');
                 sidebar.innerHTML = `
@@ -1411,10 +1413,12 @@
             }
             if (bottomNav) bottomNav.style.display = 'block';
             if (document.getElementById('machinesTitle')) document.getElementById('machinesTitle').textContent = '🏭 I Tuoi Impianti';
+            if (document.getElementById('machinesSub')) document.getElementById('machinesSub').textContent = 'Impianti assegnati a te';
             loadClients();
         }
 
-        // Questo blocco ora verrà SEMPRE eseguito senza bloccarsi!
+        // CARICAMENTO FLUIDO: Questo blocco non verrà mai più saltato!
+        console.log("🚀 Avvio loadMachines()...");
         loadMachines();
         loadAlerts();
     }
