@@ -1475,22 +1475,42 @@
     try {
         console.log("Caricamento macchine...");
 
-        allMachines = await apiGet('/api/machines');
+        // ✅ Verifica che il token esista prima di fare la chiamata
+        if (!token) {
+            console.warn("Token mancante, reindirizzamento al login...");
+            logout();
+            return;
+        }
 
-        console.log("RISPOSTA:", allMachines);
+        // ✅ CORRETTO: passo solo 'machines', la funzione apiGet() aggiunge '/api'
+        const data = await apiGet('machines');
 
-        renderMachinesTable();
-
-    } catch (e) {
-        console.error("ERRORE LOAD MACHINES:", e);
-
-        document.getElementById('machinesTbody').innerHTML = `
-            <tr>
-                <td colspan="7" class="empty-state">
+        if (data.success) {
+            allMachines = data.machines || [];
+            console.log("Macchine caricate:", allMachines.length);
+            renderMachinesTable();
+            renderTopPills();
+            populateFilterDropdowns();
+            populatePreregInstallers();
+        } else {
+            console.error("Errore dal server:", data.message || "Errore sconosciuto");
+            // Se il token non è valido, logout automatico
+            if (data.message === "Token mancante" || data.message === "Token non valido") {
+                logout();
+            }
+            document.getElementById('machinesTbody').innerHTML = `
+                <tr><td colspan="7" class="empty-state">
                     <div class="big">❌</div>
-                    <p>${e.message}</p>
-                </td>
-            </tr>`;
+                    <p>${data.message || 'Errore nel caricamento delle macchine'}</p>
+                </td></tr>`;
+        }
+    } catch (e) {
+        console.error("ERRORE LOAD MACHINES:", e.message);
+        document.getElementById('machinesTbody').innerHTML = `
+            <tr><td colspan="7" class="empty-state">
+                <div class="big">⚠️</div>
+                <p>${e.message}</p>
+            </td></tr>`;
     }
 }
 
