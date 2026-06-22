@@ -1433,18 +1433,53 @@
     }
 
     // ==================== API ====================
-    async function api(method, endpoint, body) {
-        const opts = { method, headers: { 'Authorization': `Bearer ${token}` } };
-        if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
-        const res = await fetch(API + endpoint, opts);
-        if (res.status === 401) { logout(); return { success: false }; }
-        return res.json();
+async function api(method, endpoint, body) {
+    // Normalizza l'endpoint: rimuove slash iniziali e "api/" ridondanti
+    let clean = endpoint;
+    if (typeof clean === 'string') {
+        // Toglie slash iniziale
+        if (clean.startsWith('/')) clean = clean.substring(1);
+        // Toglie "api/" se all'inizio
+        if (clean.startsWith('api/')) clean = clean.substring(4);
     }
-    const apiGet = ep => api('GET', ep);
-    const apiPost = (ep, b) => api('POST', ep, b);
-    const apiPut = (ep, b) => api('PUT', ep, b);
-    const apiDel = ep => api('DELETE', ep);
+    const url = `${API}/${clean}`;  // API = '/api'
 
+    const opts = {
+        method,
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        }
+    };
+    if (body) {
+        opts.body = JSON.stringify(body);
+    }
+
+    try {
+        const res = await fetch(url, opts);
+        if (res.status === 401) {
+            logout();
+            return { success: false };
+        }
+        // Se la risposta non è JSON (es. HTML), evitiamo errori di parsing
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return await res.json();
+        } else {
+            // Se il server risponde con HTML (es. 404), restituiamo un errore
+            console.error('Risposta non JSON da', url);
+            return { success: false, message: 'Errore server (risposta non JSON)' };
+        }
+    } catch (e) {
+        console.error('Fetch error:', e.message);
+        return { success: false, message: e.message };
+    }
+}
+
+const apiGet  = ep => api('GET', ep);
+const apiPost = (ep, b) => api('POST', ep, b);
+const apiPut  = (ep, b) => api('PUT', ep, b);
+const apiDel  = (ep) => api('DELETE', ep);
     // ==================== ALERTS ====================
     async function loadAlerts() {
         try {
