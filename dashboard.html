@@ -1358,14 +1358,20 @@
             document.getElementById('filterClient').style.display = 'inline-block';
             document.getElementById('filterInstaller').style.display = 'inline-block';
             document.getElementById('preregisterCard').style.display = 'block';
-            document.getElementById('bottomNavInner').innerHTML = `
-                <button class="bnav-tab active" data-section="machines" onclick="bnavGo('machines')"><span class="bnav-icon">🏭</span>Impianti</button>
-                <button class="bnav-tab" data-section="clients" onclick="bnavGo('clients')"><span class="bnav-icon">👥</span>Clienti</button>
-                <button class="bnav-tab" data-section="stats" onclick="bnavGo('stats'); loadAdminStats();"><span class="bnav-icon">📊</span>Stats</button>
-                <button class="bnav-tab" data-section="firmware" onclick="bnavGo('firmware'); loadFirmwareList();"><span class="bnav-icon">📦</span>OTA</button>
-                <button class="bnav-tab" data-section="telegram" onclick="bnavGo('telegram')"><span class="bnav-icon">📱</span>Bot</button>
-            `;
-            document.getElementById('bottomNav').style.display = 'block';
+
+            const bottomNavInner = document.getElementById('bottomNavInner');
+            if (bottomNavInner) {
+                bottomNavInner.innerHTML = `
+                    <button class="bnav-tab active" data-section="machines" onclick="bnavGo('machines')"><span class="bnav-icon">🏭</span>Impianti</button>
+                    <button class="bnav-tab" data-section="clients" onclick="bnavGo('clients')"><span class="bnav-icon">👥</span>Clienti</button>
+                    <button class="bnav-tab" data-section="stats" onclick="bnavGo('stats'); loadAdminStats();"><span class="bnav-icon">📊</span>Stats</button>
+                    <button class="bnav-tab" data-section="firmware" onclick="bnavGo('firmware'); loadFirmwareList();"><span class="bnav-icon">📦</span>OTA</button>
+                    <button class="bnav-tab" data-section="telegram" onclick="bnavGo('telegram')"><span class="bnav-icon">📱</span>Bot</button>
+                `;
+            }
+            const bottomNav = document.getElementById('bottomNav');
+            if (bottomNav) bottomNav.style.display = 'block';
+
             loadClients();
             loadUsers();
         } else { // installer
@@ -1379,13 +1385,18 @@
                 <div class="sidebar-label">Sistema</div>
                 <button class="nav-item" onclick="showSection('telegram')"><span class="nav-icon">📱</span> Telegram Bot</button>
             `;
-            document.getElementById('bottomNavInner').innerHTML = `
-                <button class="bnav-tab active" data-section="machines" onclick="bnavGo('machines')"><span class="bnav-icon">🏭</span>Impianti</button>
-                <button class="bnav-tab" data-section="clients" onclick="bnavGo('clients')"><span class="bnav-icon">👥</span>Clienti</button>
-                <button class="bnav-tab" data-section="firmware" onclick="bnavGo('firmware'); loadFirmwareList();"><span class="bnav-icon">📦</span>OTA</button>
-                <button class="bnav-tab" data-section="telegram" onclick="bnavGo('telegram')"><span class="bnav-icon">📱</span>Bot</button>
-            `;
-            document.getElementById('bottomNav').style.display = 'block';
+            const bottomNavInner = document.getElementById('bottomNavInner');
+            if (bottomNavInner) {
+                bottomNavInner.innerHTML = `
+                    <button class="bnav-tab active" data-section="machines" onclick="bnavGo('machines')"><span class="bnav-icon">🏭</span>Impianti</button>
+                    <button class="bnav-tab" data-section="clients" onclick="bnavGo('clients')"><span class="bnav-icon">👥</span>Clienti</button>
+                    <button class="bnav-tab" data-section="firmware" onclick="bnavGo('firmware'); loadFirmwareList();"><span class="bnav-icon">📦</span>OTA</button>
+                    <button class="bnav-tab" data-section="telegram" onclick="bnavGo('telegram')"><span class="bnav-icon">📱</span>Bot</button>
+                `;
+            }
+            const bottomNav = document.getElementById('bottomNav');
+            if (bottomNav) bottomNav.style.display = 'block';
+
             document.getElementById('machinesTitle').textContent = '🏭 I Tuoi Impianti';
             document.getElementById('machinesSub').textContent = 'Impianti assegnati a te';
             loadClients();
@@ -1486,37 +1497,37 @@
     }
 
     function renderMachinesTable() {
-    const tbody = document.getElementById('machinesTbody');
-    if (!filteredMachines.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="big">📭</div><p>Nessun impianto trovato</p></td></tr>';
-        return;
-    }
-    const isAdmin = currentUser.role === 'admin';
-    tbody.innerHTML = filteredMachines.map(m => {
-        const online = m.status === 'online' || m.status === 'active';
-        const waterOk = m.water_ok;          // ← corretto
-        const insOk = m.insecticide_ok;      // ← corretto
-        const clientName = m.client_name || (allClients.find(c => c.id == m.client_id)?.name) || '—';
-        const instName = m.installer_name || (m.installer_id ? allUsers.find(u=>u.id==m.installer_id)?.username : '') || '—';
-        let actions = `<button class="btn-row btn-row-view" onclick="openDetail(${m.id})">👁 Dettaglio</button>`;
-        if (isAdmin) {
-            actions += ` <button class="btn-row btn-row-edit" onclick="editMachine(${m.id})">✎</button>`;
-            actions += ` <button class="btn-row btn-row-del" onclick="deleteMachine(${m.id})">🗑</button>`;
+        const tbody = document.getElementById('machinesTbody');
+        if (!filteredMachines.length) {
+            tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="big">📭</div><p>Nessun impianto trovato</p></td></tr>';
+            return;
         }
-        return `<tr>
-            <td><strong>${esc(m.machine_name || 'Impianto')}</strong></td>
-            <td class="td-mono">${m.mac_address || '—'}</td>
-            <td><span class="td-status"><span class="td-dot ${online?'online':'offline'}"></span>${online?'Online':'Offline'}</span></td>
-            <td>
-                <span class="td-sensor ${!online ? 'unknown' : waterOk ? 'ok' : 'err'}">${!online ? '❓ N/D' : waterOk ? '💧 OK' : '💧 ❌'}</span>
-                <span class="td-sensor ${!online ? 'unknown' : insOk ? 'ok' : 'err'}">${!online ? '❓ N/D' : insOk ? '🧪 OK' : '🧪 ❌'}</span>
-            </td>
-            <td>${esc(clientName)}</td>
-            <td>${esc(instName)}</td>
-            <td class="td-actions">${actions}</td>
-        </tr>`;
-    }).join('');
-}
+        const isAdmin = currentUser.role === 'admin';
+        tbody.innerHTML = filteredMachines.map(m => {
+            const online = m.status === 'online' || m.status === 'active';
+            const waterOk = m.water_ok;
+            const insOk = m.insecticide_ok;
+            const clientName = m.client_name || (allClients.find(c => c.id == m.client_id)?.name) || '—';
+            const instName = m.installer_name || (m.installer_id ? allUsers.find(u=>u.id==m.installer_id)?.username : '') || '—';
+            let actions = `<button class="btn-row btn-row-view" onclick="openDetail(${m.id})">👁 Dettaglio</button>`;
+            if (isAdmin) {
+                actions += ` <button class="btn-row btn-row-edit" onclick="editMachine(${m.id})">✎</button>`;
+                actions += ` <button class="btn-row btn-row-del" onclick="deleteMachine(${m.id})">🗑</button>`;
+            }
+            return `<tr>
+                <td><strong>${esc(m.machine_name || 'Impianto')}</strong></td>
+                <td class="td-mono">${m.mac_address || '—'}</td>
+                <td><span class="td-status"><span class="td-dot ${online?'online':'offline'}"></span>${online?'Online':'Offline'}</span></td>
+                <td>
+                    <span class="td-sensor ${!online ? 'unknown' : waterOk ? 'ok' : 'err'}">${!online ? '❓ N/D' : waterOk ? '💧 OK' : '💧 ❌'}</span>
+                    <span class="td-sensor ${!online ? 'unknown' : insOk ? 'ok' : 'err'}">${!online ? '❓ N/D' : insOk ? '🧪 OK' : '🧪 ❌'}</span>
+                </td>
+                <td>${esc(clientName)}</td>
+                <td>${esc(instName)}</td>
+                <td class="td-actions">${actions}</td>
+            </tr>`;
+        }).join('');
+    }
 
     function renderTopPills() {
         if (currentUser.role !== 'admin') return;
