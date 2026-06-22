@@ -1295,7 +1295,6 @@
     let allClients = [];
     let allUsers = [];
     let filteredMachines = [];
-    let firmwareCache = [];
 
     // ==================== LOGIN ====================
     async function doLogin() {
@@ -1333,7 +1332,6 @@
         location.reload();
     }
 
-    // ==================== BOOTAPP ROBUSTA ====================
     function bootApp() {
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('appShell').style.display = 'block';
@@ -1343,27 +1341,7 @@
         badge.textContent = currentUser.role === 'admin' ? 'Admin' : 'Installatore';
         badge.className = `role-badge role-${currentUser.role}`;
 
-        // ==== CREAZIONE DINAMICA DI bottomNav E bottomNavInner (FIX ANTI-NULL) ====
-        let bottomNav = document.getElementById('bottomNav');
-        let bottomNavInner = document.getElementById('bottomNavInner');
-
-        if (!bottomNav) {
-            bottomNav = document.createElement('nav');
-            bottomNav.className = 'bottom-nav';
-            bottomNav.id = 'bottomNav';
-            bottomNav.style.display = 'none';
-            document.body.appendChild(bottomNav);
-        }
-        if (!bottomNavInner) {
-            bottomNavInner = document.createElement('div');
-            bottomNavInner.className = 'bottom-nav-inner';
-            bottomNavInner.id = 'bottomNavInner';
-            bottomNav.appendChild(bottomNavInner);
-        }
-
         const sidebar = document.getElementById('sidebar');
-        if (!sidebar) return;
-
         if (currentUser.role === 'admin') {
             sidebar.classList.add('visible');
             sidebar.innerHTML = `
@@ -1380,16 +1358,14 @@
             document.getElementById('filterClient').style.display = 'inline-block';
             document.getElementById('filterInstaller').style.display = 'inline-block';
             document.getElementById('preregisterCard').style.display = 'block';
-
-            bottomNavInner.innerHTML = `
+            document.getElementById('bottomNavInner').innerHTML = `
                 <button class="bnav-tab active" data-section="machines" onclick="bnavGo('machines')"><span class="bnav-icon">🏭</span>Impianti</button>
                 <button class="bnav-tab" data-section="clients" onclick="bnavGo('clients')"><span class="bnav-icon">👥</span>Clienti</button>
                 <button class="bnav-tab" data-section="stats" onclick="bnavGo('stats'); loadAdminStats();"><span class="bnav-icon">📊</span>Stats</button>
                 <button class="bnav-tab" data-section="firmware" onclick="bnavGo('firmware'); loadFirmwareList();"><span class="bnav-icon">📦</span>OTA</button>
                 <button class="bnav-tab" data-section="telegram" onclick="bnavGo('telegram')"><span class="bnav-icon">📱</span>Bot</button>
             `;
-            bottomNav.style.display = 'block';
-
+            document.getElementById('bottomNav').style.display = 'block';
             loadClients();
             loadUsers();
         } else { // installer
@@ -1403,24 +1379,22 @@
                 <div class="sidebar-label">Sistema</div>
                 <button class="nav-item" onclick="showSection('telegram')"><span class="nav-icon">📱</span> Telegram Bot</button>
             `;
-            bottomNavInner.innerHTML = `
+            document.getElementById('bottomNavInner').innerHTML = `
                 <button class="bnav-tab active" data-section="machines" onclick="bnavGo('machines')"><span class="bnav-icon">🏭</span>Impianti</button>
                 <button class="bnav-tab" data-section="clients" onclick="bnavGo('clients')"><span class="bnav-icon">👥</span>Clienti</button>
                 <button class="bnav-tab" data-section="firmware" onclick="bnavGo('firmware'); loadFirmwareList();"><span class="bnav-icon">📦</span>OTA</button>
                 <button class="bnav-tab" data-section="telegram" onclick="bnavGo('telegram')"><span class="bnav-icon">📱</span>Bot</button>
             `;
-            bottomNav.style.display = 'block';
+            document.getElementById('bottomNav').style.display = 'block';
             document.getElementById('machinesTitle').textContent = '🏭 I Tuoi Impianti';
             document.getElementById('machinesSub').textContent = 'Impianti assegnati a te';
             loadClients();
         }
-
         loadMachines();
         loadAlerts();
         loadFirmwareList();
     }
 
-    // ==================== SECTION NAVIGATION ====================
     function showSection(name) {
         document.querySelectorAll('.section-page').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -1429,13 +1403,6 @@
         if (name === 'installers') renderInstallers();
         if (name === 'clients') renderClientsTable();
         if (name === 'firmware') loadFirmwareList();
-        if (name === 'stats') loadAdminStats();
-    }
-
-    function bnavGo(section) {
-        showSection(section);
-        document.querySelectorAll('.bnav-tab').forEach(t => t.classList.remove('active'));
-        document.querySelector(`.bnav-tab[data-section="${section}"]`)?.classList.add('active');
     }
 
     // ==================== API ====================
@@ -1527,9 +1494,6 @@
         const isAdmin = currentUser.role === 'admin';
         tbody.innerHTML = filteredMachines.map(m => {
             const online = m.status === 'online' || m.status === 'active';
-            const waterOk = m.water_ok;
-            const insOk = m.insecticide_ok;
-            const clientName = m.client_name || (allClients.find(c => c.id == m.client_id)?.name) || '—';
             const instName = m.installer_name || (m.installer_id ? allUsers.find(u=>u.id==m.installer_id)?.username : '') || '—';
             let actions = `<button class="btn-row btn-row-view" onclick="openDetail(${m.id})">👁 Dettaglio</button>`;
             if (isAdmin) {
@@ -1564,7 +1528,7 @@
         `;
     }
 
-    // ==================== DETAIL MODAL ====================
+    // ==================== DETAIL MODAL (without programs, with reboot/OTA and remote link) ====================
     let currentDetailId = null;
 
     function openDetail(id) {
@@ -1669,6 +1633,7 @@
             </div>
         `;
 
+        // Admin/Installer commands (reboot, OTA)
         if (isAdmin || isInstaller) {
             right += `
                 <div class="detail-section">
@@ -1975,7 +1940,6 @@
 
     // ==================== UTILS ====================
     function esc(text) { if (!text) return ''; const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
-
     // ── Statistiche cicli (admin) ──
     let adminChart = null;
 
@@ -1983,6 +1947,7 @@
         const machineId = document.getElementById('statsMachineFilter').value;
         const days = document.getElementById('statsDays').value;
 
+        // Popola filtro macchine se vuoto
         const sel = document.getElementById('statsMachineFilter');
         if (sel.options.length <= 1 && allMachines.length) {
             allMachines.forEach(m => {
@@ -1994,6 +1959,7 @@
         }
 
         if (!machineId) {
+            // Carica tutte le macchine in parallelo e aggrega
             if (!allMachines.length) return;
             const results = await Promise.all(
                 allMachines.map(m => apiGet(`/machines/${m.id}/cicli?days=${days}&limit=200`).catch(() => null))
@@ -2096,6 +2062,8 @@
     function refreshAll() { loadMachines(); loadAlerts(); }
 
     // ── Firmware OTA ──
+    let fwSelectedFile = null;
+
     function setupFwDropzone() {
         const dz = document.getElementById('fwDropzone');
         if (!dz || dz.dataset.bound) return;
@@ -2171,6 +2139,8 @@
         btn.disabled = false;
     }
 
+    let firmwareCache = [];
+
     async function loadFirmwareList() {
         setupFwDropzone();
         try {
@@ -2211,6 +2181,7 @@
         loadFirmwareList();
     }
 
+    // Invia firmware OTA a una macchina (dal dettaglio impianto)
     async function sendOtaToMachine(machineId) {
         const select = document.getElementById(`ota-fw-${machineId}`);
         if (!select || !select.value) { alert('Seleziona un firmware'); return; }
@@ -2225,17 +2196,16 @@
         }
     }
 
-    // ==================== AUTO START ====================
-    if (token && currentUser && currentUser.role !== 'client') { bootApp(); }
-    else if (token && currentUser && currentUser.role === 'client') { window.location.href = '/remote.html'; }
+    // Auto refresh
+    if (token && currentUser && currentUser.role !== 'client') { bootApp(); } else if (token && currentUser && currentUser.role === 'client') { window.location.href = '/remote.html'; }
     else { document.getElementById('loginScreen').style.display = 'flex'; }
+    setInterval(() => { if (token && currentUser?.role !== 'client') { loadMachines(); loadAlerts(); } }, 30000);
 
-    setInterval(() => {
-        if (token && currentUser?.role !== 'client') {
-            loadMachines();
-            loadAlerts();
-        }
-    }, 30000);
+    function bnavGo(section) {
+        showSection(section);
+        document.querySelectorAll('.bnav-tab').forEach(t => t.classList.remove('active'));
+        document.querySelector(`.bnav-tab[data-section="${section}"]`)?.classList.add('active');
+    }
 </script>
 
 <nav class="bottom-nav" id="bottomNav" style="display:none;">
