@@ -1254,7 +1254,10 @@
 </div>
 
 <!-- Modali -->
-<div class="modal-bg" id="qrModal">
+<nav class="bottom-nav" id="bottomNav" style="display: none;">
+        <div class="bottom-nav-inner" id="bottomNavInner"></div>
+    </nav>
+    <div class="modal-bg" id="qrModal">
     <div class="modal-box" style="text-align:center; padding:32px;">
         <button class="modal-close-btn" onclick="closeQR()">×</button>
         <h3>📲 Attiva notifiche Telegram</h3>
@@ -1342,6 +1345,11 @@
         badge.className = `role-badge role-${currentUser.role}`;
 
         const sidebar = document.getElementById('sidebar');
+        const bottomNav = document.getElementById('bottomNav');
+        const bottomNavInner = document.getElementById('bottomNavInner');
+
+        if (!sidebar) return;
+
         if (currentUser.role === 'admin') {
             sidebar.classList.add('visible');
             sidebar.innerHTML = `
@@ -1358,14 +1366,19 @@
             document.getElementById('filterClient').style.display = 'inline-block';
             document.getElementById('filterInstaller').style.display = 'inline-block';
             document.getElementById('preregisterCard').style.display = 'block';
-            document.getElementById('bottomNavInner').innerHTML = `
-                <button class="bnav-tab active" data-section="machines" onclick="bnavGo('machines')"><span class="bnav-icon">🏭</span>Impianti</button>
-                <button class="bnav-tab" data-section="clients" onclick="bnavGo('clients')"><span class="bnav-icon">👥</span>Clienti</button>
-                <button class="bnav-tab" data-section="stats" onclick="bnavGo('stats'); loadAdminStats();"><span class="bnav-icon">📊</span>Stats</button>
-                <button class="bnav-tab" data-section="firmware" onclick="bnavGo('firmware'); loadFirmwareList();"><span class="bnav-icon">📦</span>OTA</button>
-                <button class="bnav-tab" data-section="telegram" onclick="bnavGo('telegram')"><span class="bnav-icon">📱</span>Bot</button>
-            `;
-            document.getElementById('bottomNav').style.display = 'block';
+
+            // Controllo di sicurezza prima di impostare l'innerHTML
+            if (bottomNavInner) {
+                bottomNavInner.innerHTML = `
+                    <button class="bnav-tab active" data-section="machines" onclick="bnavGo('machines')"><span class="bnav-icon">🏭</span>Impianti</button>
+                    <button class="bnav-tab" data-section="clients" onclick="bnavGo('clients')"><span class="bnav-icon">👥</span>Clienti</button>
+                    <button class="bnav-tab" data-section="stats" onclick="bnavGo('stats'); loadAdminStats();"><span class="bnav-icon">📊</span>Stats</button>
+                    <button class="bnav-tab" data-section="firmware" onclick="bnavGo('firmware'); loadFirmwareList();"><span class="bnav-icon">📦</span>OTA</button>
+                    <button class="bnav-tab" data-section="telegram" onclick="bnavGo('telegram')"><span class="bnav-icon">📱</span>Bot</button>
+                `;
+            }
+            if (bottomNav) bottomNav.style.display = 'block';
+
             loadClients();
             loadUsers();
         } else { // installer
@@ -1379,22 +1392,28 @@
                 <div class="sidebar-label">Sistema</div>
                 <button class="nav-item" onclick="showSection('telegram')"><span class="nav-icon">📱</span> Telegram Bot</button>
             `;
-            document.getElementById('bottomNavInner').innerHTML = `
-                <button class="bnav-tab active" data-section="machines" onclick="bnavGo('machines')"><span class="bnav-icon">🏭</span>Impianti</button>
-                <button class="bnav-tab" data-section="clients" onclick="bnavGo('clients')"><span class="bnav-icon">👥</span>Clienti</button>
-                <button class="bnav-tab" data-section="firmware" onclick="bnavGo('firmware'); loadFirmwareList();"><span class="bnav-icon">📦</span>OTA</button>
-                <button class="bnav-tab" data-section="telegram" onclick="bnavGo('telegram')"><span class="bnav-icon">📱</span>Bot</button>
-            `;
-            document.getElementById('bottomNav').style.display = 'block';
+            
+            // Controllo di sicurezza prima di impostare l'innerHTML
+            if (bottomNavInner) {
+                bottomNavInner.innerHTML = `
+                    <button class="bnav-tab active" data-section="machines" onclick="bnavGo('machines')"><span class="bnav-icon">🏭</span>Impianti</button>
+                    <button class="bnav-tab" data-section="clients" onclick="bnavGo('clients')"><span class="bnav-icon">👥</span>Clienti</button>
+                    <button class="bnav-tab" data-section="firmware" onclick="bnavGo('firmware'); loadFirmwareList();"><span class="bnav-icon">📦</span>OTA</button>
+                    <button class="bnav-tab" data-section="telegram" onclick="bnavGo('telegram')"><span class="bnav-icon">📱</span>Bot</button>
+                `;
+            }
+            if (bottomNav) bottomNav.style.display = 'block';
+            
             document.getElementById('machinesTitle').textContent = '🏭 I Tuoi Impianti';
             document.getElementById('machinesSub').textContent = 'Impianti assegnati a te';
             loadClients();
         }
+
+        // Questi comandi ora verranno eseguiti senza bloccarsi!
         loadMachines();
         loadAlerts();
         loadFirmwareList();
     }
-
     function showSection(name) {
         document.querySelectorAll('.section-page').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
