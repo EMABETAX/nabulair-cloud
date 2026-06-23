@@ -1605,14 +1605,13 @@ app.post('/api/machines/:id/command', authenticateToken, async (req, res) => {
             if (fw.fw_type !== expectedType) {
                 return res.status(400).json({ success: false, message: `Il file caricato è di tipo "${fw.fw_type}", non "${expectedType}"` });
             }
-            // Genera URL HTTP per l'ESP32 - l'OTA Arduino non supporta HTTPS senza certificato
-            // Railway è dietro proxy, req.protocol è sempre HTTP. Usiamo l'host header.
-            const host = req.get('host');
-            // Se siamo su Railway, usiamo il dominio HTTP. Il proxy Railway reindirizza a HTTPS
-            // ma l'ESP32 deve essere configurato con WiFiClientSecure per HTTPS.
-            // Per compatibilità con OTA standard, usiamo HTTP esplicito.
-            const baseUrl = `http://${host}`;
+            // Railway termina HTTPS esternamente — l'ESP32 usa WiFiClientSecure con setInsecure()
+            // quindi HTTPS funziona senza certificato. Usiamo APP_URL che è sempre HTTPS.
+            // http:// genera un 301 redirect da Railway che l'ESP32 non riesce a seguire
+            // durante lo streaming di un file binario grande.
+            const baseUrl = process.env.APP_URL || `https://${req.get('host')}`;
             payload = { url: `${baseUrl}/api/firmware/download/${fw.token}`, filename: fw.filename };
+            console.log(`☁️ OTA URL generato: ${payload.url}`);
         }
 
         await queryWithRetry(
@@ -1786,20 +1785,28 @@ app.delete('/api/firmware/:id', authenticateToken, requireRole('admin', 'install
 // GET /api/firmware/download/:token — pubblico (l'ESP32 lo scarica senza autenticazione)
 app.get('/api/firmware/download/:token', async (req, res) => {
     try {
+        console.log(`📥 OTA download: token=${req.params.token}, proto=${req.headers['x-forwarded-proto'] || req.protocol}`);
         const result = await queryWithRetry(
             'SELECT filename, size_bytes, data FROM firmware_files WHERE token = $1',
             [req.params.token]
         );
         if (result.rows.length === 0) {
+            console.log(`📥 OTA download: token non trovato`);
             return res.status(404).send('Firmware non trovato');
         }
         const fw = result.rows[0];
+        // Converti esplicitamente in Buffer (il tipo bytea di PostgreSQL può arrivare come oggetto)
+        const buffer = Buffer.isBuffer(fw.data) ? fw.data : Buffer.from(fw.data);
+        console.log(`📥 OTA download: ${fw.filename}, ${buffer.length} bytes → invio...`);
         res.set({
             'Content-Type': 'application/octet-stream',
             'Content-Disposition': `attachment; filename="${fw.filename}"`,
-            'Content-Length': fw.size_bytes
+            'Content-Length': buffer.length,
+            'Cache-Control': 'no-cache',
+            'X-Content-Type-Options': 'nosniff'
         });
-        res.send(fw.data);
+        res.end(buffer);
+        console.log(`📥 OTA download completato: ${buffer.length} bytes`);
     } catch (error) {
         console.error('Errore download firmware:', error.message);
         res.status(500).send('Errore server');
