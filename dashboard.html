@@ -1047,6 +1047,7 @@
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<base target="_blank">
 </head>
 <body>
 
@@ -1101,6 +1102,48 @@
                     </div>
                     <button class="btn-add" onclick="preregisterMachine()">Pre-registra</button>
                 </div>
+                <!-- Upload Firmware Globale -->
+                <div class="form-card" id="firmwareUploadCard" style="display:none;">
+                    <h3>📦 Carica Firmware OTA</h3>
+                    <p style="color:var(--text-secondary); font-size:13px; margin-bottom:14px;">
+                        Carica un file .bin qui. Poi assegna l'aggiornamento a ciascun impianto dal suo pannello di dettaglio.
+                    </p>
+                    <div class="fw-dropzone" id="fwDropzone" onclick="document.getElementById('fwFileInput').click()">
+                        <div class="fw-icon">📁</div>
+                        <div><strong>Trascina qui il file .bin</strong> oppure clicca per selezionarlo</div>
+                        <div style="font-size:12px; margin-top:6px;">Max 4MB</div>
+                    </div>
+                    <input type="file" id="fwFileInput" accept=".bin" style="display:none;" onchange="onFwFileSelected(this.files)">
+                    <div id="fwUploadForm" style="display:none;">
+                        <div class="form-grid" style="grid-template-columns: 1fr 1fr; margin-top:12px;">
+                            <div>
+                                <label style="font-size:11px; color:var(--text-secondary); font-weight:600; text-transform:uppercase;">Tipo</label>
+                                <select id="fwType" style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:12px; color:var(--text); margin-top:6px;">
+                                    <option value="firmware">Firmware (app)</option>
+                                    <option value="littlefs">LittleFS (filesystem)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size:11px; color:var(--text-secondary); font-weight:600; text-transform:uppercase;">Versione (opzionale)</label>
+                                <input type="text" id="fwVersion" placeholder="es. 1.6.0" style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:12px; color:var(--text); margin-top:6px;">
+                            </div>
+                        </div>
+                        <div style="margin-top:12px;">
+                            <label style="font-size:11px; color:var(--text-secondary); font-weight:600; text-transform:uppercase;">Note (opzionale)</label>
+                            <input type="text" id="fwNotes" placeholder="es. fix sensore acqua" style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:12px; color:var(--text); margin-top:6px;">
+                        </div>
+                        <div id="fwSelectedFile" style="font-size:13px; color:var(--text-secondary); margin:14px 0;"></div>
+                        <div style="display:flex; gap:12px;">
+                            <button class="btn-add" onclick="uploadFirmware()" id="fwUploadBtn">⬆️ Carica</button>
+                            <button class="btn-cancel" onclick="cancelFwUpload()">Annulla</button>
+                        </div>
+                        <div id="fwUploadMsg" style="margin-top:10px; font-size:13px;"></div>
+                    </div>
+
+                    <h4 style="margin-top:24px; margin-bottom:12px; font-family:var(--font-display); font-size:14px;">📋 Firmware caricati</h4>
+                    <div id="firmwareList"></div>
+                </div>
+
 
                 <div class="filters-bar" id="machineFilters">
                     <input type="text" id="filterSearch" placeholder="🔍 Cerca nome o MAC..." oninput="filterMachines()">
@@ -1189,51 +1232,6 @@
                     <canvas id="adminStatsChart" style="max-height:250px; margin-bottom:20px;"></canvas>
                     <div id="adminStatsSummary" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:16px;"></div>
                     <div id="adminCicliList"></div>
-                </div>
-            </section>
-
-            <section class="section-page" id="section-firmware">
-                <div class="page-title">📦 Firmware OTA</div>
-                <div class="page-sub">Carica i file .bin da inviare agli impianti via aggiornamento cloud (non serve l'IP locale)</div>
-
-                <div class="form-card">
-                    <h3>⬆️ Carica nuovo firmware</h3>
-                    <div class="fw-dropzone" id="fwDropzone" onclick="document.getElementById('fwFileInput').click()">
-                        <div class="fw-icon">📁</div>
-                        <div><strong>Trascina qui il file .bin</strong> oppure clicca per selezionarlo</div>
-                        <div style="font-size:12px; margin-top:6px;">Max 4MB</div>
-                    </div>
-                    <input type="file" id="fwFileInput" accept=".bin" style="display:none;" onchange="onFwFileSelected(this.files)">
-                    <div id="fwUploadForm" style="display:none;">
-                        <div class="form-grid">
-                            <div>
-                                <label>Tipo</label>
-                                <select id="fwType" style="width:100%; padding:10px; background:var(--surface); border:1px solid var(--border); border-radius:12px; color:var(--text);">
-                                    <option value="firmware">Firmware (app)</option>
-                                    <option value="littlefs">LittleFS (filesystem)</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label>Versione (opzionale)</label>
-                                <input type="text" id="fwVersion" placeholder="es. 1.6.0" style="width:100%; padding:10px; background:var(--surface); border:1px solid var(--border); border-radius:12px; color:var(--text);">
-                            </div>
-                        </div>
-                        <div style="margin-bottom:14px;">
-                            <label>Note (opzionale)</label>
-                            <input type="text" id="fwNotes" placeholder="es. fix sensore acqua" style="width:100%; padding:10px; background:var(--surface); border:1px solid var(--border); border-radius:12px; color:var(--text);">
-                        </div>
-                        <div id="fwSelectedFile" style="font-size:13px; color:var(--text-secondary); margin-bottom:14px;"></div>
-                        <div style="display:flex; gap:12px;">
-                            <button class="btn-add" onclick="uploadFirmware()" id="fwUploadBtn">⬆️ Carica</button>
-                            <button class="btn-sm btn-delete" onclick="cancelFwUpload()">Annulla</button>
-                        </div>
-                        <div id="fwUploadMsg" style="margin-top:10px; font-size:13px;"></div>
-                    </div>
-                </div>
-
-                <div class="form-card">
-                    <h3>📋 Firmware caricati</h3>
-                    <div id="firmwareList"></div>
                 </div>
             </section>
 
@@ -1417,6 +1415,12 @@
         console.log("🚀 Avvio loadMachines()...");
         loadMachines();
         loadAlerts();
+
+        // Carica lista firmware per admin/installer (nella card upload)
+        if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'installer')) {
+            document.getElementById('firmwareUploadCard').style.display = 'block';
+            loadFirmwareList();
+        }
     }
     function showSection(name) {
         document.querySelectorAll('.section-page').forEach(s => s.classList.remove('active'));
@@ -1707,46 +1711,18 @@ const apiDel  = (ep) => api('DELETE', ep);
         <div class="detail-section">
             <h4>📦 Aggiornamento OTA</h4>
             <div class="detail-row"><span class="label">Firmware attuale</span><span class="value td-mono">${esc(m.firmware_version || '—')}</span></div>
-
-            <div class="fw-dropzone" id="modal-fwDropzone-${m.id}" style="margin-top:12px;"
-                 onclick="document.getElementById('modal-fwInput-${m.id}').click()">
-                <div class="fw-icon">📁</div>
-                <div><strong>Trascina qui il .bin</strong> o clicca per selezionarlo</div>
-                <div style="font-size:11px;margin-top:4px;color:var(--text-secondary);">Max 4MB · Firmware o LittleFS</div>
-            </div>
-            <input type="file" id="modal-fwInput-${m.id}" accept=".bin" style="display:none;"
-                   onchange="onModalFwSelected(this.files, ${m.id})">
-
-            <div id="modal-fwForm-${m.id}" style="display:none; margin-top:10px;">
-                <div style="display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
-                    <select id="modal-fwType-${m.id}" style="flex:1; min-width:120px; padding:8px; background:var(--surface); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:13px;">
-                        <option value="firmware">📦 Firmware (app)</option>
-                        <option value="littlefs">🗂️ LittleFS (filesystem)</option>
+            ${ firmwareCache.length
+                ? `<div class="assign-box" style="margin-top:10px;">
+                    <label style="font-size:11px; color:var(--text-secondary); font-weight:600; text-transform:uppercase;">Seleziona firmware caricato</label>
+                    <select id="ota-fw-${m.id}" style="margin-top:6px;">
+                        <option value="">— Scegli firmware —</option>
+                        ${firmwareCache.map(f => `<option value="${f.id}|${f.fw_type}">${f.fw_type === 'littlefs' ? '🗂️' : '📦'} ${esc(f.filename)}${f.version ? ` (v${esc(f.version)})` : ''}</option>`).join('')}
                     </select>
-                    <input type="text" id="modal-fwVer-${m.id}" placeholder="Versione (es. 1.6.0)" style="flex:1; min-width:100px; padding:8px; background:var(--surface); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:13px;">
-                </div>
-                <div id="modal-fwName-${m.id}" style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;"></div>
-                <div style="display:flex; gap:8px;">
-                    <button class="btn-save-sm" onclick="uploadAndSendOta(${m.id})">🚀 Carica e invia OTA</button>
-                    <button class="btn-sm btn-delete" onclick="cancelModalFw(${m.id})">Annulla</button>
-                </div>
-                <div id="modal-fwMsg-${m.id}" style="font-size:12px;margin-top:8px;"></div>
-            </div>
-
-            ${ firmwareCache.length ? `
-            <div style="margin-top:14px; border-top:1px solid var(--border); padding-top:12px;">
-                <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">📋 Oppure scegli un firmware già caricato:</div>
-                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-                    <select id="ota-fw-${m.id}" style="flex:1; padding:8px; background:var(--surface); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:13px;">
-                        ${firmwareCache.map(f => `<option value="${f.id}|${f.fw_type}">${f.fw_type === 'littlefs' ? '🗂️' : '📦'} ${esc(f.filename)}${f.version ? ` (v${esc(f.version)})` : ''} · ${(f.size_bytes/1024).toFixed(0)}KB</option>`).join('')}
-                    </select>
-                    <button class="btn-save-sm" onclick="sendOtaToMachine(${m.id})">🚀 Invia</button>
-                </div>
-            </div>` : '' }
-
-            <div id="ota-status-${m.id}" style="font-size:12px;margin-top:8px;color:var(--text-secondary);">
-                L'impianto applicherà l'aggiornamento al prossimo ping (entro 60s) e si riavvierà.
-            </div>
+                    <button class="btn-save-sm" onclick="sendOtaToMachine(${m.id})" style="margin-top:10px;">🚀 Invia aggiornamento a questo impianto</button>
+                   </div>
+                   <div style="font-size:11px; color:var(--text-secondary); margin-top:8px;">L'impianto scaricherà e installerà l'aggiornamento al prossimo ping (entro 60s), poi si riavvierà automaticamente.</div>`
+                : `<div style="font-size:13px; color:var(--text-secondary); margin-top:8px;">⚠️ Nessun firmware caricato. Carica un file .bin dalla sezione <strong>📦 Carica Firmware OTA</strong> sopra la lista impianti.</div>`
+            }
         </div>
     `;
 
@@ -1808,14 +1784,9 @@ const apiDel  = (ep) => api('DELETE', ep);
                 <h4>🛠 Manutenzione</h4>
                 <div class="cmd-grid">
                     <button class="btn-cmd btn-cmd-reboot" onclick="sendMachineCmd(${m.id},'reboot')">🔄 Riavvia ESP</button>
-                    <button class="btn-cmd btn-cmd-ota" onclick="toggleOtaPanel(${m.id})">⬆️ OTA Firmware</button>
+                    <button class="btn-cmd btn-cmd-ota" onclick="syncMachineTime(${m.id})">🕐 Sincronizza NTP</button>
                 </div>
                 <div class="cmd-status" id="cmd-status-${m.id}"></div>
-                <div class="ota-panel" id="ota-panel-${m.id}">
-                    <input type="text" id="ota-url-${m.id}" placeholder="https://.../firmware.bin">
-                    <button class="btn-cmd btn-cmd-ota" style="width:100%" onclick="sendMachineCmd(${m.id},'ota_firmware')">🚀 Avvia aggiornamento</button>
-                    <div class="info-note">💡 L'OTA funziona sempre, anche da remoto.</div>
-                </div>
             </div>
         `;
     }
@@ -1875,6 +1846,25 @@ const apiDel  = (ep) => api('DELETE', ep);
 
     function toggleOtaPanel(id) {
         document.getElementById(`ota-panel-${id}`).classList.toggle('open');
+    }
+
+    async function syncMachineTime(machineId) {
+        const statusEl = document.getElementById(`cmd-status-${machineId}`);
+        statusEl.textContent = '⏳ Sincronizzazione NTP...';
+        statusEl.style.color = 'var(--amber)';
+        try {
+            const res = await apiPost(`/machines/${machineId}/command`, { type: 'sync_time' });
+            if (res.success) {
+                statusEl.textContent = '✅ Sincronizzazione NTP richiesta';
+                statusEl.style.color = 'var(--green)';
+            } else {
+                statusEl.textContent = '❌ ' + (res.message || 'Errore');
+                statusEl.style.color = 'var(--red)';
+            }
+        } catch(e) {
+            statusEl.textContent = '❌ Errore di rete';
+            statusEl.style.color = 'var(--red)';
+        }
     }
 
     async function openQR(machineId, machineName) {
