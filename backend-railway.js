@@ -1605,7 +1605,13 @@ app.post('/api/machines/:id/command', authenticateToken, async (req, res) => {
             if (fw.fw_type !== expectedType) {
                 return res.status(400).json({ success: false, message: `Il file caricato è di tipo "${fw.fw_type}", non "${expectedType}"` });
             }
-            const baseUrl = `${req.protocol}://${req.get('host')}`;
+            // Genera URL HTTP per l'ESP32 - l'OTA Arduino non supporta HTTPS senza certificato
+            // Railway è dietro proxy, req.protocol è sempre HTTP. Usiamo l'host header.
+            const host = req.get('host');
+            // Se siamo su Railway, usiamo il dominio HTTP. Il proxy Railway reindirizza a HTTPS
+            // ma l'ESP32 deve essere configurato con WiFiClientSecure per HTTPS.
+            // Per compatibilità con OTA standard, usiamo HTTP esplicito.
+            const baseUrl = `http://${host}`;
             payload = { url: `${baseUrl}/api/firmware/download/${fw.token}`, filename: fw.filename };
         }
 
