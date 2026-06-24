@@ -245,6 +245,10 @@ async function initDatabase() {
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS last_ntp_sync TIMESTAMP`).catch(() => {});
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS last_prog_sync TIMESTAMP`).catch(() => {});
 
+        // ========== NUOVE COLONNE PER SOGLIE METEO (vento/pioggia) ==========
+        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS wind_threshold FLOAT DEFAULT 40`).catch(() => {});
+        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS rain_threshold FLOAT DEFAULT 5`).catch(() => {});
+
         // MIGRATION RIMOSSA: non azzerare water_ok/insecticide_ok
         // I valori vengono aggiornati solo dal ping dell'ESP32
         console.log('✅ Database inizializzato correttamente (migration sensori disabilitata)');
@@ -683,6 +687,8 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
                 m.latitude,
                 m.longitude,
                 m.location_name,
+                m.wind_threshold,
+                m.rain_threshold,
                 c.name as client_name,
                 c.telegram_chat_id,
                 u.username as installer_name
@@ -827,6 +833,8 @@ app.get('/api/machine/:id', authenticateToken, async (req, res) => {
                 m.latitude,
                 m.longitude,
                 m.location_name,
+                m.wind_threshold,
+                m.rain_threshold,
                 m.created_at,
                 CASE 
                     WHEN m.last_seen <= NOW() - INTERVAL '5 minutes' THEN 'offline'
@@ -2045,6 +2053,70 @@ app.put('/api/machines/:id/location', authenticateToken, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// SOGLIE METEO (vento/pioggia) - impostate da admin/installatore
+// ─────────────────────────────────────────────
+
+app.put('/api/machines/:id/weather', authenticateToken, async (req, res) => {
+    const machineId = parseInt(req.params.id);
+    const { wind_threshold, rain_threshold } = req.body;
+
+    if (wind_threshold === undefined && rain_threshold === undefined) {
+        return res.status(400).json({ success: false, message: 'Almeno un parametro richiesto' });
+    }
+
+    try {
+        // Verifica accesso
+        const machineCheck = await queryWithRetry(
+            'SELECT installer_id, client_id FROM machines WHERE id = $1',
+            [machineId]
+        );
+        if (machineCheck.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Macchina non trovata' });
+        }
+        const machine = machineCheck.rows[0];
+        if (req.user.role === 'installer' && machine.installer_id !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+        if (req.user.role === 'client' && machine.client_id !== req.user.client_id) {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+
+        // Costruisci update
+        const fields = [];
+        const values = [];
+        let idx = 1;
+
+        if (wind_threshold !== undefined) {
+            const val = parseFloat(wind_threshold);
+            if (isNaN(val) || val < 0) {
+                return res.status(400).json({ success: false, message: 'wind_threshold deve essere un numero >= 0' });
+            }
+            fields.push(`wind_threshold = $${idx++}`);
+            values.push(val);
+        }
+        if (rain_threshold !== undefined) {
+            const val = parseFloat(rain_threshold);
+            if (isNaN(val) || val < 0) {
+                return res.status(400).json({ success: false, message: 'rain_threshold deve essere un numero >= 0' });
+            }
+            fields.push(`rain_threshold = $${idx++}`);
+            values.push(val);
+        }
+
+        values.push(machineId);
+        await queryWithRetry(
+            `UPDATE machines SET ${fields.join(', ')} WHERE id = $${idx}`,
+            values
+        );
+
+        res.json({ success: true, message: 'Soglie meteo aggiornate' });
+    } catch (error) {
+        console.error('Errore update weather thresholds:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────
 // STORICO CICLI (v1.5)
 // ─────────────────────────────────────────────
 
@@ -2211,7 +2283,6 @@ app.get('/health', async (req, res) => {
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
-
 
 startOfflineDetectionJob();
 
