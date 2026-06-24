@@ -907,28 +907,6 @@
             text-align: center;
         }
 
-        .ota-panel {
-            margin-top: 12px;
-            padding: 16px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 16px;
-            display: none;
-        }
-
-        .ota-panel.open {
-            display: block;
-        }
-
-        .ota-panel input {
-            width: 100%;
-            padding: 10px;
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text);
-            margin-bottom: 10px;
-            font-size: 12px;
-        }
 
         .info-note {
             background: var(--blue-dim);
@@ -1106,7 +1084,7 @@
                 <div class="form-card" id="firmwareUploadCard" style="display:none;">
                     <h3>📦 Carica Firmware OTA</h3>
                     <p style="color:var(--text-secondary); font-size:13px; margin-bottom:14px;">
-                        Carica un file .bin qui. Poi assegna l'aggiornamento a ciascun impianto dal suo pannello di dettaglio.
+                        Carica un file .bin qui. Poi dal dettaglio dell'impianto seleziona il firmware e invia l'aggiornamento OTA.
                     </p>
                     <div class="fw-dropzone" id="fwDropzone" onclick="document.getElementById('fwFileInput').click()">
                         <div class="fw-icon">📁</div>
@@ -1705,8 +1683,25 @@ const apiDel  = (ep) => api('DELETE', ep);
             <h4>🌤️ Meteo</h4>
             ${ (m.latitude != null && m.longitude != null)
                 ? `<div class="detail-row"><span class="label">Posizione</span><span class="value">📍 ${esc(m.location_name || `${m.latitude.toFixed(3)}, ${m.longitude.toFixed(3)}`)}</span></div>`
-                : `<div style="color:var(--text-secondary); font-size:13px;">📍 Posizione non configurata — il cliente può impostarla dall'app.</div>`
+                : `<div style="color:var(--text-secondary); font-size:13px; margin-bottom:12px;">📍 Posizione non configurata — il cliente può impostarla dall'app.</div>`
             }
+            <div style="margin-top:14px;">
+                <div style="font-size:11px; color:var(--text-secondary); font-weight:600; text-transform:uppercase; margin-bottom:10px;">Soglie blocco automatico</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+                    <div>
+                        <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:4px;">💨 Vento max (km/h)</label>
+                        <input type="number" id="det-wind-${m.id}" value="${m.wind_threshold ?? 40}" min="0" max="200" step="1"
+                            style="width:100%; padding:9px 12px; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:13px;">
+                    </div>
+                    <div>
+                        <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:4px;">🌧️ Pioggia max (mm/h)</label>
+                        <input type="number" id="det-rain-${m.id}" value="${m.rain_threshold ?? 5}" min="0" max="200" step="0.5"
+                            style="width:100%; padding:9px 12px; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:13px;">
+                    </div>
+                </div>
+                <button class="btn-save-sm" onclick="saveWeatherThresholds(${m.id})">💾 Salva soglie</button>
+                <div id="weather-save-status-${m.id}" style="font-size:12px; margin-top:8px;"></div>
+            </div>
         </div>
         <div class="detail-section">
             <h4>📦 Aggiornamento OTA</h4>
@@ -1770,13 +1765,7 @@ const apiDel  = (ep) => api('DELETE', ep);
     left += telegramSection;
 
     // Parte destra
-    let right = `
-        <div class="detail-section">
-            <h4>🎮 Controllo remoto</h4>
-            <a href="/remote.html?machineId=${m.id}" target="_blank" class="btn-qr-big" style="text-decoration:none; display:block; text-align:center;">🌐 Apri controllo remoto (cliente)</a>
-            <div class="info-note" style="margin-top:12px;">Da qui il cliente può avviare/fermare cicli, gestire programmi e attivare la pausa vacanza.</div>
-        </div>
-    `;
+    let right = ``;
 
     if (isAdmin || isInstaller) {
         right += `
@@ -1823,14 +1812,8 @@ const apiDel  = (ep) => api('DELETE', ep);
         const statusEl = document.getElementById(`cmd-status-${machineId}`);
         statusEl.textContent = '⏳ Invio comando...';
         statusEl.style.color = 'var(--amber)';
-        let payload = {};
-        if (cmd === 'ota_firmware') {
-            const url = document.getElementById(`ota-url-${machineId}`)?.value.trim();
-            if (!url) { statusEl.textContent = '❌ Inserisci URL firmware'; statusEl.style.color = 'var(--red)'; return; }
-            payload.url = url;
-        }
         try {
-            const res = await apiPost(`/machines/${machineId}/command`, { type: cmd, payload });
+            const res = await apiPost(`/machines/${machineId}/command`, { type: cmd, payload: {} });
             if (res.success) {
                 statusEl.textContent = '✅ Comando inviato all\'ESP32';
                 statusEl.style.color = 'var(--green)';
@@ -1844,9 +1827,7 @@ const apiDel  = (ep) => api('DELETE', ep);
         }
     }
 
-    function toggleOtaPanel(id) {
-        document.getElementById(`ota-panel-${id}`).classList.toggle('open');
-    }
+    function toggleOtaPanel(id) {} // deprecated
 
     async function syncMachineTime(machineId) {
         const statusEl = document.getElementById(`cmd-status-${machineId}`);
@@ -1864,6 +1845,27 @@ const apiDel  = (ep) => api('DELETE', ep);
         } catch(e) {
             statusEl.textContent = '❌ Errore di rete';
             statusEl.style.color = 'var(--red)';
+        }
+    }
+
+    async function saveWeatherThresholds(machineId) {
+        const windEl = document.getElementById(`det-wind-${machineId}`);
+        const rainEl = document.getElementById(`det-rain-${machineId}`);
+        const statusEl = document.getElementById(`weather-save-status-${machineId}`);
+        const wind = parseFloat(windEl?.value);
+        const rain = parseFloat(rainEl?.value);
+        if (isNaN(wind) || isNaN(rain) || wind < 0 || rain < 0) {
+            statusEl.style.color = 'var(--red)'; statusEl.textContent = '❌ Valori non validi'; return;
+        }
+        statusEl.style.color = 'var(--text-secondary)'; statusEl.textContent = '⏳ Salvataggio...';
+        const res = await apiPut(`/machines/${machineId}/weather`, { wind_threshold: wind, rain_threshold: rain });
+        if (res.success) {
+            statusEl.style.color = 'var(--green)'; statusEl.textContent = '✅ Soglie salvate';
+            const m = allMachines.find(x => x.id === machineId);
+            if (m) { m.wind_threshold = wind; m.rain_threshold = rain; }
+            setTimeout(() => { statusEl.textContent = ''; }, 2500);
+        } else {
+            statusEl.style.color = 'var(--red)'; statusEl.textContent = '❌ ' + (res.message || 'Errore');
         }
     }
 
@@ -2366,8 +2368,5 @@ const apiDel  = (ep) => api('DELETE', ep);
     }
 </script>
 
-<nav class="bottom-nav" id="bottomNav" style="display:none;">
-    <div class="bottom-nav-inner" id="bottomNavInner"></div>
-</nav>
 </body>
 </html>
