@@ -1370,7 +1370,7 @@ app.post('/api/register', async (req, res) => {
 });
 
 app.post('/api/ping', async (req, res) => {
-    const { mac_address, ip, water_ok, insecticide_ok, flow, status } = req.body;
+    const { mac_address, ip, water_ok, insecticide_ok, flow, status, local_time } = req.body;
 
     if (!mac_address) {
         return res.status(400).json({ success: false });
@@ -1379,8 +1379,15 @@ app.post('/api/ping', async (req, res) => {
     // Normalizza MAC in uppercase per coerenza con la pre-registrazione
     const normalizedMac = mac_address.toUpperCase();
 
+    // Controlla se l'ora locale dell'ESP32 è valida (anno >= 2024)
+    // Se sì, aggiorna last_ntp_sync direttamente nel ping — nessun comando separato necessario
+    let ntpSyncValid = false;
+    if (local_time) {
+        const espTime = new Date(local_time);
+        ntpSyncValid = !isNaN(espTime.getTime()) && espTime.getFullYear() >= 2024;
+    }
+
     try {
-        // Aggiorna anche i timestamp di sync se forniti
         await queryWithRetry(
             `UPDATE machines 
              SET last_seen = NOW(), 
@@ -1388,13 +1395,15 @@ app.post('/api/ping', async (req, res) => {
                  status = $2,
                  water_ok = CASE WHEN $3::boolean IS NOT NULL THEN $3::boolean ELSE water_ok END,
                  insecticide_ok = CASE WHEN $4::boolean IS NOT NULL THEN $4::boolean ELSE insecticide_ok END,
-                 flow = COALESCE($5, flow)
+                 flow = COALESCE($5, flow),
+                 last_ntp_sync = CASE WHEN $7 THEN NOW() ELSE last_ntp_sync END
              WHERE mac_address = $6`,
             [ip || null, status || 'online', 
              water_ok !== undefined ? water_ok : null,
              insecticide_ok !== undefined ? insecticide_ok : null,
              flow !== undefined ? flow : null,
-             normalizedMac]
+             normalizedMac,
+             ntpSyncValid]
         );
 
         const machineResult = await queryWithRetry(
@@ -1514,14 +1523,19 @@ app.post('/api/ping', async (req, res) => {
         let pushPrograms = null;
 
         if (machine) {
-            // Richiedi sync NTP se mai fatto o >24h
-            let lastNtp = machine.last_ntp_sync;
-            if (lastNtp) {
-                const hoursSinceNtp = (Date.now() - new Date(lastNtp).getTime()) / 3600000;
-                if (hoursSinceNtp > 24) requestSync = true;
-            } else {
-                requestSync = true; // mai sincronizzato
+            // Richiedi sync NTP solo se:
+            // - l'ESP32 non ha mandato local_time valido in questo ping (non sa che ore sono)
+            // - E l'ultimo sync nel DB è mai avvenuto o >24h fa
+            if (!ntpSyncValid) {
+                let lastNtp = machine.last_ntp_sync;
+                if (lastNtp) {
+                    const hoursSinceNtp = (Date.now() - new Date(lastNtp).getTime()) / 3600000;
+                    if (hoursSinceNtp > 24) requestSync = true;
+                } else {
+                    requestSync = true; // mai sincronizzato
+                }
             }
+            // Se ntpSyncValid=true il DB è già aggiornato sopra, nessun comando necessario
 
             // Push programmi se cloud più recente
             const progResult = await queryWithRetry(
