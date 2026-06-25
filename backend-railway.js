@@ -1370,7 +1370,7 @@ app.post('/api/register', async (req, res) => {
 });
 
 app.post('/api/ping', async (req, res) => {
-    const { mac_address, ip, water_ok, insecticide_ok, flow, status, local_time } = req.body;
+    const { mac_address, ip, water_ok, insecticide_ok, flow, status, local_time, programs_ok } = req.body;
 
     if (!mac_address) {
         return res.status(400).json({ success: false });
@@ -1379,8 +1379,7 @@ app.post('/api/ping', async (req, res) => {
     // Normalizza MAC in uppercase per coerenza con la pre-registrazione
     const normalizedMac = mac_address.toUpperCase();
 
-    // Controlla se l'ora locale dell'ESP32 è valida (anno >= 2024)
-    // Se sì, aggiorna last_ntp_sync direttamente nel ping — nessun comando separato necessario
+    // Ora locale valida → aggiorna last_ntp_sync direttamente
     let ntpSyncValid = false;
     if (local_time) {
         const espTime = new Date(local_time);
@@ -1396,14 +1395,16 @@ app.post('/api/ping', async (req, res) => {
                  water_ok = CASE WHEN $3::boolean IS NOT NULL THEN $3::boolean ELSE water_ok END,
                  insecticide_ok = CASE WHEN $4::boolean IS NOT NULL THEN $4::boolean ELSE insecticide_ok END,
                  flow = COALESCE($5, flow),
-                 last_ntp_sync = CASE WHEN $7 THEN NOW() ELSE last_ntp_sync END
+                 last_ntp_sync  = CASE WHEN $7 THEN NOW() ELSE last_ntp_sync END,
+                 last_prog_sync = CASE WHEN $8 THEN NOW() ELSE last_prog_sync END
              WHERE mac_address = $6`,
-            [ip || null, status || 'online', 
-             water_ok !== undefined ? water_ok : null,
+            [ip || null, status || 'online',
+             water_ok   !== undefined ? water_ok   : null,
              insecticide_ok !== undefined ? insecticide_ok : null,
-             flow !== undefined ? flow : null,
+             flow        !== undefined ? flow        : null,
              normalizedMac,
-             ntpSyncValid]
+             ntpSyncValid,
+             programs_ok === true]
         );
 
         const machineResult = await queryWithRetry(
@@ -1571,6 +1572,28 @@ app.post('/api/ping', async (req, res) => {
         console.error('❌ Errore ping:', error.message);
         console.error('   Stack:', error.stack);
         res.status(500).json({ success: false, command: null, error: error.message });
+    }
+});
+
+// ── ACK ricezione programmi da ESP32 ──
+// Chiamato dall'ESP32 subito dopo aver applicato l'auto-push programmi.
+// Aggiorna last_prog_sync così il backend non rimanda gli stessi programmi.
+app.post('/api/ping/ack-programs', async (req, res) => {
+    const { mac_address, programs_received } = req.body;
+    if (!mac_address || !programs_received) {
+        return res.status(400).json({ success: false });
+    }
+    const normalizedMac = mac_address.toUpperCase();
+    try {
+        await queryWithRetry(
+            'UPDATE machines SET last_prog_sync = NOW() WHERE mac_address = $1',
+            [normalizedMac]
+        );
+        console.log(`📋 ACK programmi da ${normalizedMac} — last_prog_sync aggiornato`);
+        return res.json({ success: true });
+    } catch (err) {
+        console.error('❌ Errore ack-programs:', err.message);
+        return res.status(500).json({ success: false });
     }
 });
 
