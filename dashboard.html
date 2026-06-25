@@ -721,7 +721,7 @@
 
         /* Detail Modal (large) */
         #detailModal .modal-box {
-            max-width: 800px;
+            max-width: 860px;
             padding: 0;
         }
 
@@ -744,6 +744,12 @@
             display: flex;
             flex-direction: column;
             gap: 24px;
+        }
+
+        @media (max-width: 640px) {
+            #detailModal .modal-box { max-width: 100%; }
+            .detail-tab-panel .detail-body { flex-direction: column !important; }
+            .detail-tab-panel .detail-body > div { border-left: none !important; border-top: 1px solid var(--border); }
         }
 
         .detail-section {
@@ -929,6 +935,31 @@
             margin-bottom: 14px;
         }
 
+        /* Detail tabs */
+        .detail-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid var(--border);
+            padding: 0 28px;
+        }
+        .detail-tab {
+            padding: 12px 20px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            transition: all 0.15s;
+            font-family: var(--font-body);
+        }
+        .detail-tab:hover { color: var(--text); }
+        .detail-tab.active { color: var(--green); border-bottom-color: var(--green); }
+        .detail-tab-panel { display: none; }
+        .detail-tab-panel.active { display: block; }
+
         /* Edit modal */
         #editModal .modal-box {
             max-width: 450px;
@@ -1080,16 +1111,40 @@
                     </div>
                     <button class="btn-add" onclick="preregisterMachine()">Pre-registra</button>
                 </div>
-                <!-- Upload Firmware Globale -->
-                <div class="form-card" id="firmwareUploadCard" style="display:none;">
-                    <h3>📦 Carica Firmware OTA</h3>
+                <div class="filters-bar" id="machineFilters">
+                    <input type="text" id="filterSearch" placeholder="🔍 Cerca nome o MAC..." oninput="filterMachines()">
+                    <select id="filterStatus" onchange="filterMachines()">
+                        <option value="">Tutti gli stati</option>
+                        <option value="online">🟢 Online</option>
+                        <option value="offline">🔴 Offline</option>
+                        <option value="alert">🚨 Allarmi</option>
+                    </select>
+                    <select id="filterClient" onchange="filterMachines()" style="display:none"><option value="">Tutti i clienti</option></select>
+                    <select id="filterInstaller" onchange="filterMachines()" style="display:none"><option value="">Tutti gli installatori</option></select>
+                </div>
+
+                <div class="data-table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Nome</th><th>MAC</th><th>Stato</th><th>Sensori</th><th>Cliente</th><th>Installatore</th><th>Azioni</th>
+                        </thead>
+                        <tbody id="machinesTbody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="section-page" id="section-firmware">
+                <div class="page-title">📦 Firmware OTA</div>
+                <div class="page-sub">Carica e gestisci i file firmware per gli aggiornamenti OTA</div>
+                <div class="form-card">
+                    <h3>⬆️ Carica nuovo firmware</h3>
                     <p style="color:var(--text-secondary); font-size:13px; margin-bottom:14px;">
-                        Carica un file .bin qui. Poi dal dettaglio dell'impianto seleziona il firmware e invia l'aggiornamento OTA.
+                        Carica un file .bin qui. Poi dal dettaglio di ogni impianto seleziona il firmware e invia l'aggiornamento OTA.
                     </p>
                     <div class="fw-dropzone" id="fwDropzone" onclick="document.getElementById('fwFileInput').click()">
                         <div class="fw-icon">📁</div>
                         <div><strong>Trascina qui il file .bin</strong> oppure clicca per selezionarlo</div>
-                        <div style="font-size:12px; margin-top:6px;">Max 4MB</div>
+                        <div style="font-size:12px; margin-top:6px;">Max 4MB · .bin</div>
                     </div>
                     <input type="file" id="fwFileInput" accept=".bin" style="display:none;" onchange="onFwFileSelected(this.files)">
                     <div id="fwUploadForm" style="display:none;">
@@ -1117,31 +1172,10 @@
                         </div>
                         <div id="fwUploadMsg" style="margin-top:10px; font-size:13px;"></div>
                     </div>
-
-                    <h4 style="margin-top:24px; margin-bottom:12px; font-family:var(--font-display); font-size:14px;">📋 Firmware caricati</h4>
+                </div>
+                <div class="form-card">
+                    <h3>📋 Firmware caricati</h3>
                     <div id="firmwareList"></div>
-                </div>
-
-
-                <div class="filters-bar" id="machineFilters">
-                    <input type="text" id="filterSearch" placeholder="🔍 Cerca nome o MAC..." oninput="filterMachines()">
-                    <select id="filterStatus" onchange="filterMachines()">
-                        <option value="">Tutti gli stati</option>
-                        <option value="online">🟢 Online</option>
-                        <option value="offline">🔴 Offline</option>
-                        <option value="alert">🚨 Allarmi</option>
-                    </select>
-                    <select id="filterClient" onchange="filterMachines()" style="display:none"><option value="">Tutti i clienti</option></select>
-                    <select id="filterInstaller" onchange="filterMachines()" style="display:none"><option value="">Tutti gli installatori</option></select>
-                </div>
-
-                <div class="data-table-wrap">
-                    <table class="data-table">
-                        <thead>
-                            <tr><th>Nome</th><th>MAC</th><th>Stato</th><th>Sensori</th><th>Cliente</th><th>Installatore</th><th>Azioni</th>
-                        </thead>
-                        <tbody id="machinesTbody"></tbody>
-                    </table>
                 </div>
             </section>
 
@@ -1254,7 +1288,7 @@
             <div><h3 id="detailTitle">🏭 Dettaglio impianto</h3><div style="color:var(--text-secondary); font-size:13px;" id="detailSub"></div></div>
             <button class="modal-close-btn" onclick="closeDetail()">×</button>
         </div>
-        <div class="detail-body" id="detailBody"></div>
+        <div id="detailBody"></div>
     </div>
 </div>
 
@@ -1336,13 +1370,14 @@
             if (sidebar) {
                 sidebar.classList.add('visible');
                 sidebar.innerHTML = `
-                    <div class="sidebar-label">Menu</div>
+                    <div class="sidebar-label">Operativo</div>
                     <button class="nav-item active" onclick="showSection('machines')"><span class="nav-icon">🏭</span> Impianti</button>
                     <button class="nav-item" onclick="showSection('installers')"><span class="nav-icon">🔧</span> Installatori</button>
                     <button class="nav-item" onclick="showSection('clients')"><span class="nav-icon">👥</span> Clienti</button>
                     <button class="nav-item" onclick="showSection('stats'); loadAdminStats();"><span class="nav-icon">📊</span> Statistiche</button>
                     <hr class="sidebar-divider">
                     <div class="sidebar-label">Sistema</div>
+                    <button class="nav-item" onclick="showSection('firmware'); loadFirmwareList();"><span class="nav-icon">📦</span> Firmware OTA</button>
                     <button class="nav-item" onclick="showSection('telegram')"><span class="nav-icon">📱</span> Telegram Bot</button>
                 `;
             }
@@ -1356,7 +1391,7 @@
                     <button class="bnav-tab active" data-section="machines" onclick="bnavGo('machines')"><span class="bnav-icon">🏭</span>Impianti</button>
                     <button class="bnav-tab" data-section="clients" onclick="bnavGo('clients')"><span class="bnav-icon">👥</span>Clienti</button>
                     <button class="bnav-tab" data-section="stats" onclick="bnavGo('stats'); loadAdminStats();"><span class="bnav-icon">📊</span>Stats</button>
-                    <button class="bnav-tab" data-section="telegram" onclick="bnavGo('telegram')"><span class="bnav-icon">📱</span>Bot</button>
+                    <button class="bnav-tab" data-section="firmware" onclick="bnavGo('firmware'); loadFirmwareList();"><span class="bnav-icon">📦</span>Firmware</button>
                 `;
             }
             if (bottomNav) bottomNav.style.display = 'block';
@@ -1368,19 +1403,19 @@
             if (sidebar) {
                 sidebar.classList.add('visible');
                 sidebar.innerHTML = `
-                    <div class="sidebar-label">Menu</div>
+                    <div class="sidebar-label">Operativo</div>
                     <button class="nav-item active" onclick="showSection('machines')"><span class="nav-icon">🏭</span> I Tuoi Impianti</button>
                     <button class="nav-item" onclick="showSection('clients')"><span class="nav-icon">👥</span> Clienti</button>
                     <hr class="sidebar-divider">
                     <div class="sidebar-label">Sistema</div>
-                    <button class="nav-item" onclick="showSection('telegram')"><span class="nav-icon">📱</span> Telegram Bot</button>
+                    <button class="nav-item" onclick="showSection('firmware'); loadFirmwareList();"><span class="nav-icon">📦</span> Firmware OTA</button>
                 `;
             }
             if (bottomNavInner) {
                 bottomNavInner.innerHTML = `
                     <button class="bnav-tab active" data-section="machines" onclick="bnavGo('machines')"><span class="bnav-icon">🏭</span>Impianti</button>
                     <button class="bnav-tab" data-section="clients" onclick="bnavGo('clients')"><span class="bnav-icon">👥</span>Clienti</button>
-                    <button class="bnav-tab" data-section="telegram" onclick="bnavGo('telegram')"><span class="bnav-icon">📱</span>Bot</button>
+                    <button class="bnav-tab" data-section="firmware" onclick="bnavGo('firmware'); loadFirmwareList();"><span class="bnav-icon">📦</span>Firmware</button>
                 `;
             }
             if (bottomNav) bottomNav.style.display = 'block';
@@ -1394,11 +1429,7 @@
         loadMachines();
         loadAlerts();
 
-        // Carica lista firmware per admin/installer (nella card upload)
-        if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'installer')) {
-            document.getElementById('firmwareUploadCard').style.display = 'block';
-            loadFirmwareList();
-        }
+        // Il firmware si carica quando si apre la sezione dedicata (showSection → loadFirmwareList)
     }
     function showSection(name) {
         document.querySelectorAll('.section-page').forEach(s => s.classList.remove('active'));
@@ -1642,51 +1673,105 @@ const apiDel  = (ep) => api('DELETE', ep);
         `;
     }
 
-    // ==================== DETAIL MODAL (without programs, with reboot/OTA and remote link) ====================
+    // ==================== DETAIL MODAL con TAB Info / Avanzato ====================
     let currentDetailId = null;
 
-    function openDetail(id) {
-    const m = allMachines.find(x => x.id === id);
-    if (!m) {
-        alert("Macchina non trovata");
-        return;
+    function switchDetailTab(tabName) {
+        document.querySelectorAll('.detail-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabName));
+        document.querySelectorAll('.detail-tab-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === tabName));
     }
-    currentDetailId = id;
-    const online = (m.status === 'online' || m.status === 'active');
-    const isAdmin = currentUser?.role === 'admin';
-    const isInstaller = currentUser?.role === 'installer';
-    const waterOk = online && m.water_ok === true;
-    const insOk = online && m.insecticide_ok === true;
 
-    document.getElementById('detailTitle').textContent = esc(m.machine_name || 'Impianto');
-    document.getElementById('detailSub').textContent = `${m.mac_address || '—'} · IP ${m.sta_ip || '—'}`;
+    function openDetail(id) {
+        const m = allMachines.find(x => x.id === id);
+        if (!m) { alert("Macchina non trovata"); return; }
+        currentDetailId = id;
+        const online = (m.status === 'online' || m.status === 'active');
+        const isAdmin = currentUser?.role === 'admin';
+        const isInstaller = currentUser?.role === 'installer';
+        const waterOk = online && m.water_ok === true;
+        const insOk   = online && m.insecticide_ok === true;
 
-    let left = `
-        <div class="detail-section">
-            <h4>📡 Stato</h4>
-            <div class="detail-row"><span class="label">Connessione</span><span class="value" style="color:${online?'var(--green)':'var(--red)'}">${online?'🟢 Online':'🔴 Offline'}</span></div>
-            <div class="detail-row"><span class="label">MAC</span><span class="value td-mono">${m.mac_address||'—'}</span></div>
-            <div class="detail-row"><span class="label">IP Locale</span><span class="value td-mono">${m.sta_ip || '—'}</span></div>
-        </div>
-        <div class="detail-section">
-            <h4>🧪 Sensori</h4>
-            <div class="sensor-big ${!online ? 'unknown' : (waterOk ? 'ok' : 'err')}">
-                <span style="font-size:18px">💧</span>
-                <span>${!online ? '❓ N/D (offline)' : (waterOk ? 'Acqua presente' : 'Acqua assente — rabboccare!')}</span>
+        document.getElementById('detailTitle').textContent = esc(m.machine_name || 'Impianto');
+        document.getElementById('detailSub').textContent = `${m.mac_address || '—'} · IP ${m.sta_ip || '—'}`;
+
+        // ── TAB INFO ──────────────────────────────────
+        // Colonna sinistra: stato + sensori + meteo + pannello cliente
+        let infoLeft = `
+            <div class="detail-section">
+                <h4>📡 Stato</h4>
+                <div class="detail-row"><span class="label">Connessione</span><span class="value" style="color:${online?'var(--green)':'var(--red)'}">${online?'🟢 Online':'🔴 Offline'}</span></div>
+                <div class="detail-row"><span class="label">MAC</span><span class="value td-mono">${m.mac_address||'—'}</span></div>
+                <div class="detail-row"><span class="label">IP Locale</span><span class="value td-mono">${m.sta_ip||'—'}</span></div>
+                ${m.firmware_version ? `<div class="detail-row"><span class="label">Firmware</span><span class="value td-mono">${esc(m.firmware_version)}</span></div>` : ''}
             </div>
-            <div class="sensor-big ${!online ? 'unknown' : (insOk ? 'ok' : 'err')}">
-                <span style="font-size:18px">🧪</span>
-                <span>${!online ? '❓ N/D (offline)' : (insOk ? 'Insetticida OK' : 'Insetticida esaurito!')}</span>
+            <div class="detail-section">
+                <h4>🧪 Sensori</h4>
+                <div class="sensor-big ${!online?'unknown':(waterOk?'ok':'err')}">
+                    <span style="font-size:18px">💧</span>
+                    <span>${!online?'❓ N/D (offline)':(waterOk?'Acqua presente':'Acqua assente — rabboccare!')}</span>
+                </div>
+                <div class="sensor-big ${!online?'unknown':(insOk?'ok':'err')}">
+                    <span style="font-size:18px">🧪</span>
+                    <span>${!online?'❓ N/D (offline)':(insOk?'Insetticida OK':'Insetticida esaurito!')}</span>
+                </div>
             </div>
-        </div>
-        <div class="detail-section">
-            <h4>🌤️ Meteo</h4>
-            ${ (m.latitude != null && m.longitude != null)
-                ? `<div class="detail-row"><span class="label">Posizione</span><span class="value">📍 ${esc(m.location_name || `${m.latitude.toFixed(3)}, ${m.longitude.toFixed(3)}`)}</span></div>`
-                : `<div style="color:var(--text-secondary); font-size:13px; margin-bottom:12px;">📍 Posizione non configurata — il cliente può impostarla dall'app.</div>`
-            }
-            <div style="margin-top:14px;">
-                <div style="font-size:11px; color:var(--text-secondary); font-weight:600; text-transform:uppercase; margin-bottom:10px;">Soglie blocco automatico</div>
+            <div class="detail-section">
+                <h4>🎮 Pannello cliente</h4>
+                <a href="/remote.html?machineId=${m.id}" target="_blank" class="btn-qr-big" style="text-decoration:none; display:block; text-align:center;">🌐 Apri pannello cliente</a>
+                <div class="info-note" style="margin-top:12px;">Avvia/ferma cicli, gestisce programmi e pausa vacanza.</div>
+            </div>
+        `;
+
+        // Colonna destra: assegnazione + telegram
+        let infoRight = '';
+
+        // Assegnazione
+        let assignSection = `<div class="detail-section"><h4>👤 Assegnazione</h4>`;
+        if (isAdmin) {
+            const clientOpts = allClients.map(c => `<option value="${c.id}" ${m.client_id==c.id?'selected':''}>${esc(c.name)}</option>`).join('');
+            const instOpts   = allUsers.filter(u=>u.role==='installer').map(u=>`<option value="${u.id}" ${m.installer_id==u.id?'selected':''}>${esc(u.username)}</option>`).join('');
+            assignSection += `<div class="assign-box">
+                <select id="det-client-${m.id}"><option value="">— Nessun cliente —</option>${clientOpts}</select>
+                <select id="det-inst-${m.id}"><option value="">— Nessun installatore —</option>${instOpts}</select>
+                <button class="btn-save-sm" onclick="saveDetailAssign(${m.id})">💾 Salva assegnazione</button>
+            </div>`;
+        } else if (isInstaller) {
+            const clientOpts = allClients.map(c => `<option value="${c.id}" ${m.client_id==c.id?'selected':''}>${esc(c.name)}</option>`).join('');
+            assignSection += `<div class="assign-box">
+                <select id="det-client-${m.id}"><option value="">— Nessun cliente —</option>${clientOpts}</select>
+                <button class="btn-save-sm" onclick="saveDetailAssignInstaller(${m.id})">💾 Salva cliente</button>
+            </div>`;
+        } else {
+            const clientName = m.client_name || allClients.find(c=>c.id==m.client_id)?.name || '—';
+            assignSection += `<div class="detail-row"><span class="label">Cliente</span><span class="value">${esc(clientName)}</span></div>`;
+        }
+        assignSection += `</div>`;
+        infoRight += assignSection;
+
+        // Telegram
+        const step1done = !!m.client_id;
+        const step2done = !!m.telegram_chat_id;
+        let telegramSection = `<div class="detail-section"><h4>📱 Telegram</h4>`;
+        if (step2done) {
+            telegramSection += `<div style="color:var(--green); font-size:13px; font-weight:600;">✅ Attivo — chat ID: ${esc(m.telegram_chat_id)}</div>`;
+            if (!isInstaller) telegramSection += `<button class="btn-qr-big telegram-ok" onclick="openQR(${m.id},'${esc(m.machine_name||m.mac_address)}')">🔄 Rigenera QR</button>`;
+        } else if (step1done) {
+            telegramSection += `<div style="color:var(--text-secondary); margin-bottom:12px;">Non ancora attivato dal cliente</div>`;
+            telegramSection += `<button class="btn-qr-big" onclick="openQR(${m.id},'${esc(m.machine_name||m.mac_address)}')">📲 Genera QR Telegram</button>`;
+        } else {
+            telegramSection += `<div style="color:var(--amber);">🔒 Assegna prima un cliente</div>`;
+        }
+        telegramSection += `</div>`;
+        infoRight += telegramSection;
+
+        // ── TAB AVANZATO ──────────────────────────────
+        let advLeft = `
+            <div class="detail-section">
+                <h4>🌤️ Meteo — soglie blocco</h4>
+                ${ (m.latitude != null && m.longitude != null)
+                    ? `<div class="detail-row" style="margin-bottom:10px;"><span class="label">Posizione</span><span class="value">📍 ${esc(m.location_name || `${m.latitude.toFixed(3)}, ${m.longitude.toFixed(3)}`)}</span></div>`
+                    : `<div style="color:var(--text-secondary); font-size:13px; margin-bottom:12px;">📍 Posizione non configurata — il cliente può impostarla dall'app.</div>`
+                }
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
                     <div>
                         <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:4px;">💨 Vento max (km/h)</label>
@@ -1702,102 +1787,72 @@ const apiDel  = (ep) => api('DELETE', ep);
                 <button class="btn-save-sm" onclick="saveWeatherThresholds(${m.id})">💾 Salva soglie</button>
                 <div id="weather-save-status-${m.id}" style="font-size:12px; margin-top:8px;"></div>
             </div>
-        </div>
-        <div class="detail-section">
-            <h4>📦 Aggiornamento OTA</h4>
-            <div class="detail-row"><span class="label">Firmware attuale</span><span class="value td-mono">${esc(m.firmware_version || '—')}</span></div>
-            ${ firmwareCache.length
-                ? `<div class="assign-box" style="margin-top:10px;">
-                    <label style="font-size:11px; color:var(--text-secondary); font-weight:600; text-transform:uppercase;">Seleziona firmware caricato</label>
-                    <select id="ota-fw-${m.id}" style="margin-top:6px;">
-                        <option value="">— Scegli firmware —</option>
-                        ${firmwareCache.map(f => `<option value="${f.id}|${f.fw_type}">${f.fw_type === 'littlefs' ? '🗂️' : '📦'} ${esc(f.filename)}${f.version ? ` (v${esc(f.version)})` : ''}</option>`).join('')}
-                    </select>
-                    <button class="btn-save-sm" onclick="sendOtaToMachine(${m.id})" style="margin-top:10px;">🚀 Invia aggiornamento a questo impianto</button>
-                   </div>
-                   <div style="font-size:11px; color:var(--text-secondary); margin-top:8px;">L'impianto scaricherà e installerà l'aggiornamento al prossimo ping (entro 60s), poi si riavvierà automaticamente.</div>`
-                : `<div style="font-size:13px; color:var(--text-secondary); margin-top:8px;">⚠️ Nessun firmware caricato. Carica un file .bin dalla sezione <strong>📦 Carica Firmware OTA</strong> sopra la lista impianti.</div>`
-            }
-        </div>
-    `;
-
-    // Assegnazione cliente/installatore
-    let assignSection = `<div class="detail-section"><h4>👤 Assegnazione</h4>`;
-    if (isAdmin) {
-        const clientOpts = allClients.map(c => `<option value="${c.id}" ${m.client_id==c.id?'selected':''}>${esc(c.name)}</option>`).join('');
-        const instOpts = allUsers.filter(u=>u.role==='installer').map(u => `<option value="${u.id}" ${m.installer_id==u.id?'selected':''}>${esc(u.username)}</option>`).join('');
-        assignSection += `
-            <div class="assign-box">
-                <select id="det-client-${m.id}"><option value="">— Nessun cliente —</option>${clientOpts}</select>
-                <select id="det-inst-${m.id}"><option value="">— Nessun installatore —</option>${instOpts}</select>
-                <button class="btn-save-sm" onclick="saveDetailAssign(${m.id})">💾 Salva assegnazione</button>
-            </div>
         `;
-    } else if (isInstaller) {
-        const clientOpts = allClients.map(c => `<option value="${c.id}" ${m.client_id==c.id?'selected':''}>${esc(c.name)}</option>`).join('');
-        assignSection += `
-            <div class="assign-box">
-                <select id="det-client-${m.id}"><option value="">— Nessun cliente —</option>${clientOpts}</select>
-                <button class="btn-save-sm" onclick="saveDetailAssignInstaller(${m.id})">💾 Salva cliente</button>
-            </div>
-        `;
-    } else {
-        const clientName = m.client_name || allClients.find(c=>c.id==m.client_id)?.name || '—';
-        assignSection += `<div class="detail-row"><span class="label">Cliente</span><span class="value">${esc(clientName)}</span></div>`;
-    }
-    assignSection += `</div>`;
-    left += assignSection;
 
-    // Telegram
-    let telegramSection = `<div class="detail-section"><h4>📱 Telegram</h4>`;
-    const step1done = !!m.client_id;
-    const step2done = !!m.telegram_chat_id;
-    if (step2done) {
-        telegramSection += `<div style="color:var(--green); font-size:13px; font-weight:600;">✅ Attivo — chat ID: ${esc(m.telegram_chat_id)}</div>`;
-        if (!isInstaller) telegramSection += `<button class="btn-qr-big telegram-ok" onclick="openQR(${m.id},'${esc(m.machine_name||m.mac_address)}')">🔄 Rigenera QR</button>`;
-    } else if (step1done) {
-        telegramSection += `<div style="color:var(--text-secondary);">Non ancora attivato dal cliente</div>`;
-        telegramSection += `<button class="btn-qr-big" onclick="openQR(${m.id},'${esc(m.machine_name||m.mac_address)}')">📲 Genera QR Telegram</button>`;
-    } else {
-        telegramSection += `<div style="color:var(--amber);">🔒 Assegna prima un cliente</div>`;
-    }
-    telegramSection += `</div>`;
-    left += telegramSection;
-
-    // Parte destra
-    let right = `
-        <div class="detail-section">
-            <h4>🎮 Pannello di controllo</h4>
-            <a href="/remote.html?machineId=${m.id}" target="_blank" class="btn-qr-big" style="text-decoration:none; display:block; text-align:center;">🌐 Apri pannello cliente</a>
-            <div class="info-note" style="margin-top:12px;">Da qui il cliente avvia/ferma cicli, gestisce programmi e attiva la pausa vacanza.</div>
-        </div>
-    `;
-
-    if (isAdmin || isInstaller) {
-        right += `
+        let advRight = `
             <div class="detail-section">
-                <h4>🛠 Manutenzione</h4>
-                <div class="cmd-grid">
-                    <button class="btn-cmd btn-cmd-reboot" onclick="sendMachineCmd(${m.id},'reboot')">🔄 Riavvia ESP</button>
-                    <button class="btn-cmd btn-cmd-ota" onclick="syncMachineTime(${m.id})">🕐 Sincronizza NTP</button>
+                <h4>📦 Aggiornamento OTA</h4>
+                <div class="detail-row"><span class="label">Firmware attuale</span><span class="value td-mono">${esc(m.firmware_version || '—')}</span></div>
+                ${ firmwareCache.length
+                    ? `<div class="assign-box" style="margin-top:10px;">
+                        <label style="font-size:11px; color:var(--text-secondary); font-weight:600; text-transform:uppercase;">Seleziona firmware</label>
+                        <select id="ota-fw-${m.id}" style="margin-top:6px;">
+                            <option value="">— Scegli firmware —</option>
+                            ${firmwareCache.map(f=>`<option value="${f.id}|${f.fw_type}">${f.fw_type==='littlefs'?'🗂️':'📦'} ${esc(f.filename)}${f.version?` (v${esc(f.version)})`:''}  </option>`).join('')}
+                        </select>
+                        <button class="btn-save-sm" onclick="sendOtaToMachine(${m.id})" style="margin-top:10px;">🚀 Invia aggiornamento</button>
+                        <div style="font-size:11px; color:var(--text-secondary); margin-top:8px;">Applicato al prossimo ping (entro 60s), poi l'impianto si riavvia.</div>
+                       </div>`
+                    : `<div style="font-size:13px; color:var(--text-secondary); margin-top:8px;">⚠️ Nessun firmware disponibile — carica un .bin dalla sezione <strong>📦 Firmware OTA</strong>.</div>`
+                }
+            </div>
+        `;
+
+        if (isAdmin || isInstaller) {
+            advRight += `
+                <div class="detail-section">
+                    <h4>🛠 Manutenzione</h4>
+                    <div class="cmd-grid">
+                        <button class="btn-cmd btn-cmd-reboot" onclick="sendMachineCmd(${m.id},'reboot')">🔄 Riavvia ESP</button>
+                        <button class="btn-cmd btn-cmd-ota" onclick="syncMachineTime(${m.id})">🕐 Sincronizza NTP</button>
+                    </div>
+                    <div class="cmd-status" id="cmd-status-${m.id}"></div>
                 </div>
-                <div class="cmd-status" id="cmd-status-${m.id}"></div>
-            </div>
-        `;
-    }
+            `;
+        }
 
-    if (isAdmin) {
-        right += `
-            <div class="detail-section">
-                <h4>⚠️ Pericolo</h4>
-                <button class="btn-del-big" onclick="deleteMachine(${m.id}); closeDetail();">🗑 Elimina impianto</button>
-            </div>
-        `;
-    }
+        if (isAdmin) {
+            advRight += `
+                <div class="detail-section">
+                    <h4>⚠️ Pericolo</h4>
+                    <button class="btn-del-big" onclick="deleteMachine(${m.id}); closeDetail();">🗑 Elimina impianto</button>
+                </div>
+            `;
+        }
 
-    document.getElementById('detailBody').innerHTML = left + right;
-    document.getElementById('detailModal').classList.add('open');
-}
+        // ── Assembla modal ────────────────────────────
+        const showAdv = isAdmin || isInstaller;
+        document.getElementById('detailBody').innerHTML = `
+            <div class="detail-tabs">
+                <button class="detail-tab active" data-tab="info" onclick="switchDetailTab('info')">📋 Info</button>
+                ${showAdv ? `<button class="detail-tab" data-tab="avanzato" onclick="switchDetailTab('avanzato')">⚙️ Avanzato</button>` : ''}
+            </div>
+            <div class="detail-tab-panel active" data-panel="info">
+                <div class="detail-body" style="display:flex; flex-direction:row; gap:0; padding:0;">
+                    <div style="flex:1; padding:28px; display:flex; flex-direction:column; gap:20px;">${infoLeft}</div>
+                    <div style="flex:1; padding:28px; display:flex; flex-direction:column; gap:20px; border-left:1px solid var(--border);">${infoRight}</div>
+                </div>
+            </div>
+            ${showAdv ? `
+            <div class="detail-tab-panel" data-panel="avanzato">
+                <div class="detail-body" style="display:flex; flex-direction:row; gap:0; padding:0;">
+                    <div style="flex:1; padding:28px; display:flex; flex-direction:column; gap:20px;">${advLeft}</div>
+                    <div style="flex:1; padding:28px; display:flex; flex-direction:column; gap:20px; border-left:1px solid var(--border);">${advRight}</div>
+                </div>
+            </div>` : ''}
+        `;
+        document.getElementById('detailModal').classList.add('open');
+    }
 
     function closeDetail() { document.getElementById('detailModal').classList.remove('open'); currentDetailId = null; }
 
