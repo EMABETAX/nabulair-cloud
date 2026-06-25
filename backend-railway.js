@@ -326,27 +326,56 @@ async function sendTelegramMessage(chatId, text) {
 // WEB PUSH HELPER
 // ─────────────────────────────────────────────
 async function sendPushNotification(clientId, title, body, url = '/remote.html') {
-    if (!process.env.VAPID_PUBLIC_KEY) return;
+    if (!process.env.VAPID_PUBLIC_KEY) {
+        console.warn('⚠️ Push non inviata: VAPID_PUBLIC_KEY non configurato');
+        return;
+    }
     try {
         const result = await pool.query(
             'SELECT push_subscription FROM clients WHERE id = $1',
             [clientId]
         );
-        if (!result.rows.length || !result.rows[0].push_subscription) return;
+        if (!result.rows.length || !result.rows[0].push_subscription) {
+            console.warn(`⚠️ Push non inviata: nessuna subscription per client ${clientId}`);
+            return;
+        }
 
-        const subscription = result.rows[0].push_subscription;
+        const raw = result.rows[0].push_subscription;
         const payload = JSON.stringify({ title, body, url, icon: '/logo.png' });
 
-        await webpush.sendNotification(subscription, payload);
-        console.log(`🔔 Push inviata a client ${clientId}: ${title}`);
-    } catch (err) {
-        if (err.statusCode === 410 || err.statusCode === 404) {
-            // Subscription scaduta — rimuovi
-            await pool.query('UPDATE clients SET push_subscription = NULL WHERE id = $1', [clientId]).catch(() => {});
-            console.log(`🔔 Push subscription rimossa per client ${clientId} (scaduta)`);
-        } else {
-            console.error('Errore push:', err.message);
+        // FIX: supporta sia il vecchio formato (oggetto singolo) sia il nuovo
+        // (array di subscription per più dispositivi). Invia a tutti i dispositivi
+        // registrati e rimuove solo quelli scaduti senza eliminare gli altri.
+        const subscriptions = Array.isArray(raw) ? raw : [raw];
+        const expiredEndpoints = [];
+
+        for (const subscription of subscriptions) {
+            try {
+                await webpush.sendNotification(subscription, payload);
+                console.log(`🔔 Push inviata a client ${clientId}: ${title} → ${subscription.endpoint?.substring(0, 50)}...`);
+            } catch (pushErr) {
+                if (pushErr.statusCode === 410 || pushErr.statusCode === 404) {
+                    expiredEndpoints.push(subscription.endpoint);
+                    console.log(`🔔 Subscription scaduta per client ${clientId}, rimossa`);
+                } else {
+                    // FIX: log dettagliato per debugging — prima si vedeva solo err.message
+                    console.error(`❌ Push fallita per client ${clientId}: HTTP ${pushErr.statusCode || 'N/A'} — ${pushErr.message}`);
+                    if (pushErr.body) console.error('   Body:', pushErr.body);
+                }
+            }
         }
+
+        // Rimuovi solo le subscription scadute, tieni le altre
+        if (expiredEndpoints.length > 0) {
+            const remaining = subscriptions.filter(s => !expiredEndpoints.includes(s.endpoint));
+            await pool.query(
+                'UPDATE clients SET push_subscription = $1 WHERE id = $2',
+                [remaining.length > 0 ? JSON.stringify(remaining) : null, clientId]
+            ).catch(() => {});
+        }
+
+    } catch (err) {
+        console.error(`❌ Errore sendPushNotification (client ${clientId}):`, err.message);
     }
 }
 
@@ -2264,16 +2293,42 @@ app.post('/api/push/subscribe', authenticateToken, async (req, res) => {
         return res.status(400).json({ success: false, message: 'Subscription non valida' });
     }
     try {
-        // Salva sulla riga client dell'utente loggato
         const clientId = req.user.client_id;
+
+        // FIX: in precedenza admin e installer venivano bloccati qui con 400
+        // perché il loro JWT non ha client_id. Ora salviamo la subscription
+        // direttamente sulla riga users invece di bloccare, così anche
+        // admin e installer ricevono le push di test e di sistema.
         if (!clientId) {
-            return res.status(400).json({ success: false, message: 'Solo i clienti possono iscriversi alle push' });
+            // Salva su users per admin/installer
+            await pool.query(
+                'ALTER TABLE users ADD COLUMN IF NOT EXISTS push_subscription JSONB'
+            ).catch(() => {});
+            await pool.query(
+                'UPDATE users SET push_subscription = $1 WHERE id = $2',
+                [JSON.stringify(subscription), req.user.id]
+            );
+            console.log(`🔔 Push subscription salvata per user ${req.user.id} (${req.user.role})`);
+            return res.json({ success: true });
         }
-        await pool.query(
-            'UPDATE clients SET push_subscription = $1 WHERE id = $2',
-            [JSON.stringify(subscription), clientId]
-        );
-        console.log(`🔔 Push subscription salvata per client ${clientId}`);
+
+        // FIX: usa JSONB array invece di sovrascrivere — supporta più dispositivi.
+        // Prima: una singola colonna sovrascriveva il dispositivo precedente.
+        // Ora: aggiungiamo l'endpoint se non esiste già, così sia telefono
+        // che tablet ricevono le notifiche.
+        await pool.query(`
+            UPDATE clients
+            SET push_subscription = CASE
+                WHEN push_subscription IS NULL
+                    THEN jsonb_build_array($1::jsonb)
+                WHEN push_subscription @> jsonb_build_array(jsonb_build_object('endpoint', $2::text))
+                    THEN push_subscription   -- endpoint già presente, non duplicare
+                ELSE push_subscription || jsonb_build_array($1::jsonb)
+            END
+            WHERE id = $3
+        `, [JSON.stringify(subscription), subscription.endpoint, clientId]);
+
+        console.log(`🔔 Push subscription salvata per client ${clientId} (endpoint: ${subscription.endpoint.substring(0, 50)}...)`);
         res.json({ success: true });
     } catch (error) {
         console.error('Errore subscribe:', error.message);
@@ -2281,12 +2336,33 @@ app.post('/api/push/subscribe', authenticateToken, async (req, res) => {
     }
 });
 
-// DELETE /api/push/unsubscribe — rimuove la subscription
+// DELETE /api/push/unsubscribe — rimuove la subscription del dispositivo corrente
 app.delete('/api/push/unsubscribe', authenticateToken, async (req, res) => {
     try {
         const clientId = req.user.client_id;
+        const { endpoint } = req.body || {};
+
         if (clientId) {
-            await pool.query('UPDATE clients SET push_subscription = NULL WHERE id = $1', [clientId]);
+            if (endpoint) {
+                // FIX: rimuovi solo questo dispositivo, non tutti.
+                // Prima si azzerava push_subscription intera: se avevi telefono + tablet
+                // e ti disiscrivevi dal tablet, anche il telefono smetteva di ricevere push.
+                const result = await pool.query(
+                    'SELECT push_subscription FROM clients WHERE id = $1', [clientId]
+                );
+                if (result.rows[0]?.push_subscription) {
+                    const raw = result.rows[0].push_subscription;
+                    const subs = Array.isArray(raw) ? raw : [raw];
+                    const remaining = subs.filter(s => s.endpoint !== endpoint);
+                    await pool.query(
+                        'UPDATE clients SET push_subscription = $1 WHERE id = $2',
+                        [remaining.length > 0 ? JSON.stringify(remaining) : null, clientId]
+                    );
+                }
+            } else {
+                // Nessun endpoint specificato: rimuovi tutto (logout esplicito)
+                await pool.query('UPDATE clients SET push_subscription = NULL WHERE id = $1', [clientId]);
+            }
         }
         res.json({ success: true });
     } catch (error) {
@@ -2294,7 +2370,59 @@ app.delete('/api/push/unsubscribe', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/health', async (req, res) => {
+// GET /api/push/status — diagnostica: verifica se le push sono configurate e attive
+app.get('/api/push/status', authenticateToken, async (req, res) => {
+    const vapidOk = !!process.env.VAPID_PUBLIC_KEY && !!process.env.VAPID_PRIVATE_KEY;
+    try {
+        const clientId = req.user.client_id;
+        let subscriptionCount = 0;
+        let hasSubscription = false;
+
+        if (clientId) {
+            const result = await pool.query(
+                'SELECT push_subscription FROM clients WHERE id = $1', [clientId]
+            );
+            const raw = result.rows[0]?.push_subscription;
+            if (raw) {
+                const subs = Array.isArray(raw) ? raw : [raw];
+                subscriptionCount = subs.length;
+                hasSubscription = subscriptionCount > 0;
+            }
+        }
+
+        res.json({
+            success: true,
+            vapid_configured: vapidOk,
+            has_subscription: hasSubscription,
+            device_count: subscriptionCount,
+            role: req.user.role,
+            client_id: clientId || null,
+            message: !vapidOk
+                ? '❌ VAPID_PUBLIC_KEY/PRIVATE_KEY non configurati su Railway'
+                : !hasSubscription
+                    ? '⚠️ Nessun dispositivo iscritto alle push — chiama /api/push/subscribe'
+                    : `✅ Push attive su ${subscriptionCount} dispositivo/i`
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// POST /api/push/test — invia una push di test al dispositivo corrente
+app.post('/api/push/test', authenticateToken, async (req, res) => {
+    if (!process.env.VAPID_PUBLIC_KEY) {
+        return res.status(503).json({ success: false, message: 'VAPID non configurato' });
+    }
+    const clientId = req.user.client_id;
+    if (!clientId) {
+        return res.status(400).json({ success: false, message: 'Solo i clienti possono testare le push' });
+    }
+    await sendPushNotification(clientId, '🔔 Test NabulAir', 'Le notifiche push funzionano correttamente!', '/remote.html');
+    res.json({ success: true, message: 'Push di test inviata' });
+});
+
+// GET /api/health — health check endpoint
+app.get('/api/health', async (req, res) => {
     let dbConnected = false;
     let dbError = null;
 
