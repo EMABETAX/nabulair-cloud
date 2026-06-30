@@ -1626,13 +1626,63 @@ app.post('/api/ping/ack-programs', async (req, res) => {
     }
 });
 
+// =============================================
+// BYPASS SENSORI - endpoint dedicato
+// POST /api/machines/:id/bypass
+// body: { "insetticida": true/false, "flussometro": true/false }
+// =============================================
+app.post('/api/machines/:id/bypass', authenticateToken, requireRole('admin', 'installer'), async (req, res) => {
+    const machineId = parseInt(req.params.id);
+    const { insetticida, flussometro } = req.body;
+
+    if (insetticida === undefined && flussometro === undefined) {
+        return res.status(400).json({ success: false, message: 'Specificare almeno uno tra insetticida e flussometro' });
+    }
+
+    try {
+        const machineResult = await queryWithRetry(
+            'SELECT id, machine_name, installer_id FROM machines WHERE id = $1',
+            [machineId]
+        );
+        if (machineResult.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Macchina non trovata' });
+        }
+        const machine = machineResult.rows[0];
+        if (req.user.role === 'installer' && machine.installer_id !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+
+        const payload = {};
+        if (insetticida !== undefined) payload.insetticida = Boolean(insetticida);
+        if (flussometro !== undefined) payload.flussometro = Boolean(flussometro);
+
+        // Cancella eventuali set_bypass pendenti
+        await queryWithRetry(
+            `UPDATE commands SET status = 'cancelled' WHERE machine_id = $1 AND type = 'set_bypass' AND status = 'pending'`,
+            [machineId]
+        );
+
+        const result = await queryWithRetry(
+            `INSERT INTO commands (machine_id, type, payload, created_by) VALUES ($1, 'set_bypass', $2, $3) RETURNING id`,
+            [machineId, payload, req.user.id]
+        );
+
+        console.log(`🔧 set_bypass in coda per macchina ${machineId}: ${JSON.stringify(payload)}`);
+        res.json({ success: true, command_id: result.rows[0].id, message: 'Bypass aggiornato — verrà applicato al prossimo ping (max 60s)' });
+
+    } catch (error) {
+        console.error('Errore bypass:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 app.post('/api/machines/:id/command', authenticateToken, async (req, res) => {
     const machineId = parseInt(req.params.id);
     const { type } = req.body;
     let { payload } = req.body;
 
     // AGGIUNTI sync_time e start_cycle
-    const ALLOWED_TYPES = ['update_programs', 'ota_firmware', 'ota_littlefs', 'reboot', 'sync_time', 'start_cycle', 'stop_cycle', 'wash_cycle', 'test_cycle'];
+    const ALLOWED_TYPES = ['update_programs', 'ota_firmware', 'ota_littlefs', 'reboot', 'sync_time', 'start_cycle', 'stop_cycle', 'wash_cycle', 'test_cycle', 'set_bypass'];
     if (!type || !ALLOWED_TYPES.includes(type)) {
         return res.status(400).json({ success: false, message: `Tipo comando non valido. Validi: ${ALLOWED_TYPES.join(', ')}` });
     }
