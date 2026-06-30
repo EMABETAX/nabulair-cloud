@@ -102,7 +102,7 @@
             border-radius: 14px;
             color: var(--text);
             font-family: var(--font-body);
-            font-size: 14px;
+            font-size: 16px;
             margin-bottom: 12px;
             outline: none;
             transition: all 0.2s;
@@ -142,11 +142,12 @@
         #appShell { display: none; }
 
         /* Topbar */
+        /* Topbar — mobile-first base, compact by default */
         .topbar {
             background: var(--surface);
             border-bottom: 1px solid var(--border);
-            padding: 0 28px;
-            height: 64px;
+            padding: 0 16px;
+            height: 56px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -158,32 +159,36 @@
         .topbar-left {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 10px;
+            min-width: 0;
         }
 
         .top-logo {
-            width: 38px;
-            height: 38px;
+            width: 32px;
+            height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
         }
 
         .top-logo img {
-            width: 38px;
-            height: 38px;
+            width: 32px;
+            height: 32px;
             object-fit: contain;
         }
 
         .top-brand {
             font-family: var(--font-display);
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 800;
             letter-spacing: -0.3px;
+            white-space: nowrap;
         }
 
+        /* Pill summary (online/offline/alerts) — hidden on phones, topbar stays clean */
         .top-pills {
-            display: flex;
+            display: none;
             gap: 8px;
             flex-wrap: wrap;
         }
@@ -205,18 +210,23 @@
         .topbar-right {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
         }
 
+        /* User identity collapses to just the role badge on phones */
         .user-chip {
             display: flex;
             align-items: center;
             gap: 8px;
             background: var(--card);
             border: 1px solid var(--border);
-            padding: 6px 16px;
+            padding: 5px 10px;
             border-radius: 40px;
-            font-size: 13px;
+            font-size: 12px;
+        }
+
+        .user-chip #topUsername {
+            display: none;
         }
 
         .role-badge {
@@ -231,6 +241,7 @@
         .role-admin { background: var(--blue-dim); color: var(--blue); }
         .role-installer { background: var(--green-dim); color: var(--green); }
 
+        /* Refresh button hidden on phones — pull-to-refresh / bottom nav covers it */
         .btn-icon {
             background: var(--card);
             border: 1px solid var(--border);
@@ -241,11 +252,16 @@
             font-size: 12px;
             font-weight: 500;
             transition: all 0.2s;
+            display: none;
         }
 
         .btn-icon:hover {
             border-color: var(--blue);
             color: var(--blue);
+        }
+
+        .btn-icon.btn-logout {
+            display: inline-block;
         }
 
         .btn-logout:hover {
@@ -256,19 +272,13 @@
         /* Layout */
         .layout {
             display: flex;
-            min-height: calc(100vh - 64px);
+            min-height: calc(100vh - 56px);
         }
 
+        /* Sidebar is desktop-only nav; phones use the bottom nav instead */
         .sidebar {
-            width: 240px;
-            min-width: 240px;
-            background: var(--surface);
-            border-right: 1px solid var(--border);
-            padding: 28px 16px;
             display: none;
         }
-
-        .sidebar.visible { display: block; }
 
         .sidebar-label {
             font-size: 10px;
@@ -320,21 +330,37 @@
             margin: 16px 0;
         }
 
-        /* Main */
+        /* Main — compact padding by default, room reserved for the bottom nav */
         .main {
             flex: 1;
-            padding: 32px 36px;
-            overflow-x: auto;
+            min-width: 0;
+            padding: 16px 16px 84px;
+            overflow-x: hidden;
         }
 
-        @media (max-width: 768px) {
-            .main { padding: 16px 16px 80px; }
-            .topbar { padding: 0 16px; height: 56px; }
-            .top-pills { display: none; }
-            .topbar-right .btn-icon:not(.btn-logout) { display: none; }
+        /* ── Tablet / Desktop: from here on we add room, not remove it ── */
+        @media (min-width: 769px) {
+            .topbar { padding: 0 28px; height: 64px; }
+            .topbar-left { gap: 16px; }
+            .top-logo, .top-logo img { width: 38px; height: 38px; }
+            .top-brand { font-size: 18px; }
+            .top-pills { display: flex; }
+            .user-chip { padding: 6px 16px; }
+            .user-chip #topUsername { display: inline; }
+            .btn-icon { display: inline-block; padding: 6px 14px; }
+            .layout { min-height: calc(100vh - 64px); }
+            .sidebar {
+                display: block;
+                width: 240px;
+                min-width: 240px;
+                background: var(--surface);
+                border-right: 1px solid var(--border);
+                padding: 28px 16px;
+            }
+            .main { padding: 32px 36px; overflow-x: auto; }
         }
 
-        /* Bottom nav mobile */
+        /* Bottom nav — the primary nav on phones, shown via JS once role is known */
         .bottom-nav {
             display: none;
             position: fixed;
@@ -378,9 +404,8 @@
             color: var(--green);
         }
 
-        @media (max-width: 768px) {
-            .bottom-nav { display: block; }
-            .sidebar { display: none !important; }
+        @media (min-width: 769px) {
+            .bottom-nav { display: none !important; }
         }
 
         /* Pages */
@@ -389,31 +414,36 @@
 
         .page-title {
             font-family: var(--font-display);
-            font-size: 26px;
+            font-size: 21px;
             font-weight: 800;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
 
         .page-sub {
             color: var(--text-secondary);
-            font-size: 14px;
-            margin-bottom: 28px;
+            font-size: 13px;
+            margin-bottom: 20px;
         }
 
         /* Alerts */
-        .alerts-wrap { display: none; margin-bottom: 24px; }
+        .alerts-wrap { display: none; margin-bottom: 18px; }
         .alerts-wrap.has-alerts { display: block; }
 
         .alert-row {
             background: var(--red-dim);
             border: 1px solid rgba(239, 68, 68, 0.3);
             border-radius: 16px;
-            padding: 14px 20px;
+            padding: 12px 14px;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
             margin-bottom: 10px;
-            font-size: 14px;
+            font-size: 13px;
+        }
+
+        .alert-row .btn-resolve {
+            align-self: flex-end;
         }
 
         .btn-resolve {
@@ -427,25 +457,36 @@
             font-weight: 600;
         }
 
-        /* Filters */
+        /* Filters — stack and go full-width by default, sit inline once there's room */
         .filters-bar {
             display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-bottom: 24px;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 18px;
         }
 
         .filters-bar input,
         .filters-bar select {
-            padding: 10px 16px;
+            width: 100%;
+            padding: 11px 14px;
             background: var(--card);
             border: 1px solid var(--border);
             border-radius: 12px;
             color: var(--text);
             font-family: var(--font-body);
-            font-size: 13px;
+            font-size: 14px;
             outline: none;
-            min-width: 180px;
+        }
+
+        @media (min-width: 769px) {
+            .page-title { font-size: 26px; margin-bottom: 6px; }
+            .page-sub { font-size: 14px; margin-bottom: 28px; }
+            .alerts-wrap { margin-bottom: 24px; }
+            .alert-row { flex-direction: row; padding: 14px 20px; font-size: 14px; }
+            .alert-row .btn-resolve { align-self: auto; }
+            .filters-bar { flex-direction: row; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+            .filters-bar input,
+            .filters-bar select { width: auto; padding: 10px 16px; font-size: 13px; min-width: 180px; }
         }
 
         .filters-bar input:focus,
@@ -454,8 +495,8 @@
         }
 
         /* Tables */
+        /* Data table — mobile-first: each row becomes a stacked card, real table from tablet up */
         .data-table-wrap {
-            overflow-x: auto;
             border-radius: 20px;
             background: var(--card);
             border: 1px solid var(--border);
@@ -467,29 +508,78 @@
             font-size: 13px;
         }
 
-        .data-table th {
-            text-align: left;
-            padding: 14px 16px;
-            background: rgba(0, 0, 0, 0.25);
-            color: var(--text-secondary);
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: 600;
+        .data-table thead {
+            display: none;
         }
 
-        .data-table td {
-            padding: 14px 16px;
+        .data-table tbody {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .data-table tr {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 16px;
             border-bottom: 1px solid var(--border);
-            vertical-align: middle;
         }
 
-        .data-table tr:last-child td {
+        .data-table tr:last-child {
             border-bottom: none;
         }
 
+        .data-table td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 0;
+            border: none;
+            text-align: right;
+        }
+
+        /* the data-label attribute becomes the row's left-hand caption on phones */
+        .data-table td[data-label]::before {
+            content: attr(data-label);
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-align: left;
+            flex-shrink: 0;
+        }
+
+        /* "Nome" / first identifying column reads as the card title, not a label/value pair */
+        .data-table td:first-child {
+            justify-content: flex-start;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 4px;
+        }
+
+        .data-table td:first-child::before {
+            display: none;
+        }
+
+        .data-table td:first-child strong {
+            font-size: 15px;
+        }
+
+        /* Actions row spans full width, buttons wrap and grow to be tappable */
+        .data-table td.td-actions {
+            justify-content: flex-start;
+            flex-wrap: wrap;
+            padding-top: 4px;
+        }
+
+        .data-table td.td-actions::before {
+            display: none;
+        }
+
         .data-table tr:hover td {
-            background: rgba(255, 255, 255, 0.02);
+            background: none;
         }
 
         .td-mono {
@@ -510,6 +600,7 @@
             width: 8px;
             height: 8px;
             border-radius: 50%;
+            flex-shrink: 0;
         }
 
         .td-dot.online {
@@ -547,17 +638,73 @@
             color: var(--text-secondary);
         }
 
+        @media (min-width: 769px) {
+            .data-table-wrap { overflow-x: auto; }
+
+            .data-table thead { display: table-header-group; }
+
+            .data-table tbody { display: table-row-group; }
+
+            .data-table tr {
+                display: table-row;
+                padding: 0;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .data-table th {
+                text-align: left;
+                padding: 14px 16px;
+                background: rgba(0, 0, 0, 0.25);
+                color: var(--text-secondary);
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                font-weight: 600;
+            }
+
+            .data-table td {
+                display: table-cell;
+                padding: 14px 16px;
+                border-bottom: 1px solid var(--border);
+                vertical-align: middle;
+                text-align: left;
+            }
+
+            .data-table td[data-label]::before { content: none; }
+
+            .data-table td:first-child {
+                padding-bottom: 14px;
+                border-bottom: 1px solid var(--border);
+                margin-bottom: 0;
+            }
+
+            .data-table tr:last-child td { border-bottom: none; }
+            .data-table tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+            .data-table td.td-actions { flex-wrap: nowrap; }
+        }
+
         /* Buttons */
         .btn-row {
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 11px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 12px;
             font-weight: 600;
             cursor: pointer;
             border: 1px solid;
             transition: opacity 0.2s;
             background: none;
             white-space: nowrap;
+            min-height: 38px;
+        }
+
+        @media (min-width: 769px) {
+            .btn-row {
+                padding: 6px 12px;
+                border-radius: 8px;
+                font-size: 11px;
+                min-height: auto;
+            }
         }
 
         .btn-row-view {
@@ -586,23 +733,23 @@
         .form-card {
             background: var(--card);
             border: 1px solid var(--border);
-            border-radius: 24px;
-            padding: 24px;
-            margin-bottom: 28px;
+            border-radius: 20px;
+            padding: 18px;
+            margin-bottom: 20px;
         }
 
         .form-card h3 {
             font-family: var(--font-display);
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 700;
-            margin-bottom: 18px;
+            margin-bottom: 14px;
         }
 
         /* Firmware dropzone */
         .fw-dropzone {
             border: 2px dashed var(--border);
             border-radius: 20px;
-            padding: 40px 20px;
+            padding: 32px 16px;
             text-align: center;
             color: var(--text-secondary);
             cursor: pointer;
@@ -617,14 +764,13 @@
         .fw-dropzone .fw-icon { font-size: 36px; margin-bottom: 8px; }
         .fw-item {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
+            align-items: stretch;
             padding: 14px 16px;
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 16px;
             margin-bottom: 10px;
-            flex-wrap: wrap;
             gap: 12px;
         }
         .fw-item-name { font-weight: 700; font-size: 14px; }
@@ -635,21 +781,23 @@
         }
         .fw-badge.littlefs { background: var(--amber-dim); color: var(--amber); }
 
+        /* Form grid — one column by default, the natural mobile reading order */
         .form-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px;
-            margin-bottom: 16px;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-bottom: 14px;
         }
 
         .form-grid input,
         .form-grid select {
-            padding: 11px 14px;
+            width: 100%;
+            padding: 13px 14px;
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--border);
             border-radius: 12px;
             color: var(--text);
-            font-size: 13px;
+            font-size: 16px; /* 16px prevents iOS auto-zoom on focus */
             outline: none;
         }
 
@@ -659,13 +807,14 @@
         }
 
         .btn-add {
-            padding: 10px 24px;
+            width: 100%;
+            padding: 13px 24px;
             background: var(--green);
             color: #000;
             border: none;
             border-radius: 40px;
             font-family: var(--font-display);
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 700;
             cursor: pointer;
             transition: opacity 0.2s;
@@ -673,6 +822,16 @@
 
         .btn-add:hover {
             opacity: 0.85;
+        }
+
+        @media (min-width: 769px) {
+            .form-card { border-radius: 24px; padding: 24px; margin-bottom: 28px; }
+            .form-card h3 { font-size: 16px; margin-bottom: 18px; }
+            .fw-dropzone { padding: 40px 20px; }
+            .fw-item { flex-direction: row; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+            .form-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px; }
+            .form-grid input, .form-grid select { padding: 11px 14px; font-size: 13px; }
+            .btn-add { width: auto; padding: 10px 24px; font-size: 13px; }
         }
 
         /* Modal */
@@ -683,50 +842,61 @@
             background: rgba(0, 0, 0, 0.85);
             backdrop-filter: blur(8px);
             z-index: 1000;
-            align-items: center;
+            align-items: flex-end;
             justify-content: center;
-            padding: 20px;
+            padding: 0;
         }
 
         .modal-bg.open {
             display: flex;
         }
 
+        /* Phones: bottom sheet that fills almost the full height */
         .modal-box {
             background: var(--card);
             border: 1px solid var(--border);
-            border-radius: 32px;
+            border-top-left-radius: 24px;
+            border-top-right-radius: 24px;
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
             width: 100%;
-            max-width: 500px;
-            max-height: 90vh;
+            max-width: 100%;
+            max-height: 92vh;
             overflow-y: auto;
             position: relative;
         }
 
         .modal-close-btn {
             position: absolute;
-            top: 16px;
-            right: 18px;
-            background: none;
+            top: 14px;
+            right: 14px;
+            background: rgba(255,255,255,0.06);
             border: none;
             color: var(--text-secondary);
-            font-size: 24px;
+            font-size: 22px;
+            line-height: 1;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
             cursor: pointer;
             z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .modal-close-btn:hover {
             color: var(--text);
+            background: rgba(255,255,255,0.1);
         }
 
-        /* Detail Modal (large) */
+        /* Detail Modal */
         #detailModal .modal-box {
-            max-width: 800px;
             padding: 0;
         }
 
         .detail-head {
-            padding: 20px 28px;
+            padding: 18px 20px;
             border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
@@ -735,29 +905,30 @@
 
         .detail-head h3 {
             font-family: var(--font-display);
-            font-size: 20px;
+            font-size: 17px;
             font-weight: 800;
+            padding-right: 36px;
         }
 
         .detail-body {
-            padding: 28px;
+            padding: 18px;
             display: flex;
             flex-direction: column;
-            gap: 24px;
+            gap: 16px;
         }
 
         .detail-section {
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 20px;
+            border-radius: 18px;
+            padding: 16px;
         }
 
         .detail-section h4 {
             font-family: var(--font-display);
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 700;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -826,21 +997,22 @@
         }
 
         .btn-save-sm {
-            padding: 8px 16px;
+            padding: 11px 18px;
             background: var(--blue-dim);
             color: var(--blue);
             border: 1px solid rgba(59, 130, 246, 0.3);
             border-radius: 30px;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            align-self: flex-start;
+            align-self: stretch;
+            text-align: center;
         }
 
         .btn-qr-big {
             width: 100%;
             margin-top: 16px;
-            padding: 12px;
+            padding: 14px;
             background: var(--green);
             border: none;
             border-radius: 40px;
@@ -862,7 +1034,7 @@
         .btn-del-big {
             width: 100%;
             margin-top: 16px;
-            padding: 12px;
+            padding: 14px;
             background: var(--red-dim);
             color: var(--red);
             border: 1px solid rgba(239, 68, 68, 0.3);
@@ -874,11 +1046,11 @@
         .cmd-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 12px;
+            gap: 10px;
         }
 
         .btn-cmd {
-            padding: 12px;
+            padding: 13px 8px;
             border-radius: 12px;
             font-size: 13px;
             font-weight: 600;
@@ -886,6 +1058,26 @@
             border: 1px solid;
             text-align: center;
             background: none;
+            min-height: 44px;
+        }
+
+        @media (min-width: 769px) {
+            /* Modal: classic centered box instead of bottom sheet */
+            .modal-bg { align-items: center; padding: 20px; }
+            .modal-box {
+                border-radius: 32px;
+                max-width: 500px;
+                max-height: 90vh;
+            }
+            .modal-close-btn { top: 16px; right: 18px; }
+            #detailModal .modal-box { max-width: 800px; }
+            .detail-head { padding: 20px 28px; }
+            .detail-head h3 { font-size: 20px; padding-right: 0; }
+            .detail-body { padding: 28px; gap: 24px; }
+            .detail-section { border-radius: 20px; padding: 20px; }
+            .detail-section h4 { font-size: 14px; margin-bottom: 16px; }
+            .btn-save-sm { align-self: flex-start; padding: 8px 16px; font-size: 12px; }
+            .btn-cmd { min-height: auto; padding: 12px; }
         }
 
         .btn-cmd-reboot {
@@ -907,6 +1099,156 @@
             text-align: center;
         }
 
+        /* ── Bypass: relay-style override cards ── */
+        .bypass-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 4px;
+        }
+
+        @media (max-width: 480px) {
+            .bypass-grid { grid-template-columns: 1fr; }
+        }
+
+        .bypass-card {
+            position: relative;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 14px;
+            cursor: pointer;
+            transition: border-color 0.2s ease, background 0.2s ease;
+            overflow: hidden;
+        }
+
+        .bypass-card:hover {
+            border-color: var(--border-hover);
+        }
+
+        .bypass-card.live {
+            border-color: rgba(245, 158, 11, 0.45);
+            background: linear-gradient(180deg, rgba(245,158,11,0.08), transparent 60%);
+        }
+
+        /* status rail along the top edge — the "relay" cue */
+        .bypass-card::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: var(--muted);
+            transition: background 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .bypass-card.live::before {
+            background: var(--amber);
+            box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+        }
+
+        .bypass-card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .bypass-icon {
+            font-size: 18px;
+            opacity: 0.85;
+        }
+
+        .bypass-switch {
+            position: relative;
+            width: 38px;
+            height: 21px;
+            flex-shrink: 0;
+        }
+
+        .bypass-switch input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .bypass-switch .rail {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.10);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            transition: background 0.2s ease, border-color 0.2s ease;
+            pointer-events: none;
+        }
+
+        .bypass-switch .knob {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+            transition: transform 0.2s cubic-bezier(.4,0,.2,1), background 0.2s ease;
+            pointer-events: none;
+        }
+
+        .bypass-switch input:checked + .rail {
+            background: rgba(245, 158, 11, 0.18);
+            border-color: rgba(245, 158, 11, 0.5);
+        }
+
+        .bypass-switch input:checked + .rail + .knob {
+            transform: translateX(17px);
+            background: var(--amber);
+            box-shadow: 0 0 6px rgba(245, 158, 11, 0.7);
+        }
+
+        .bypass-switch input:focus-visible + .rail {
+            outline: 2px solid var(--blue);
+            outline-offset: 2px;
+        }
+
+        .bypass-card-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.3;
+        }
+
+        .bypass-card-desc {
+            font-size: 11px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+            margin-top: 2px;
+        }
+
+        .bypass-card-state {
+            display: inline-block;
+            margin-top: 10px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            color: var(--muted);
+            transition: color 0.2s ease;
+        }
+
+        .bypass-card.live .bypass-card-state {
+            color: var(--amber);
+        }
+
+        .bypass-footnote {
+            font-size: 11px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 14px;
+        }
+
 
         .info-note {
             background: var(--blue-dim);
@@ -924,6 +1266,12 @@
             color: var(--text-secondary);
         }
 
+        .data-table td.empty-state {
+            display: block !important;
+            text-align: center;
+            border-bottom: none;
+        }
+
         .empty-state .big {
             font-size: 48px;
             margin-bottom: 14px;
@@ -931,14 +1279,13 @@
 
         /* Edit modal */
         #editModal .modal-box {
-            max-width: 450px;
-            padding: 32px;
+            padding: 22px 18px calc(22px + env(safe-area-inset-bottom));
         }
 
         .edit-form {
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 14px;
         }
 
         .edit-form label {
@@ -950,22 +1297,31 @@
 
         .edit-form input,
         .edit-form select {
-            padding: 11px 14px;
+            padding: 13px 14px;
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--border);
             border-radius: 12px;
             color: var(--text);
-            font-size: 13px;
+            font-size: 16px;
         }
 
         .edit-actions {
             display: flex;
-            gap: 12px;
-            margin-top: 8px;
+            flex-direction: column-reverse;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        @media (min-width: 769px) {
+            #editModal .modal-box { max-width: 450px; padding: 32px; }
+            .edit-form { gap: 16px; }
+            .edit-form input, .edit-form select { padding: 11px 14px; font-size: 13px; }
+            .edit-actions { flex-direction: row; gap: 12px; margin-top: 8px; }
+            .edit-actions .btn-add { width: auto; flex: 1; }
         }
 
         .btn-cancel {
-            padding: 10px 22px;
+            padding: 13px 22px;
             background: transparent;
             color: var(--text-secondary);
             border: 1px solid var(--border);
@@ -1019,10 +1375,14 @@
             flex-shrink: 0;
         }
 
-        @media (max-width: 640px) {
-            .detail-body { padding: 20px; }
-            .cmd-grid { grid-template-columns: 1fr; }
+        .qr-modal-box {
+            padding: 22px 18px calc(22px + env(safe-area-inset-bottom));
         }
+
+        @media (min-width: 769px) {
+            .qr-modal-box { padding: 32px; }
+        }
+
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <base target="_blank">
@@ -1234,7 +1594,7 @@
         <div class="bottom-nav-inner" id="bottomNavInner"></div>
     </nav>
     <div class="modal-bg" id="qrModal">
-    <div class="modal-box" style="text-align:center; padding:32px;">
+    <div class="modal-box qr-modal-box" style="text-align:center;">
         <button class="modal-close-btn" onclick="closeQR()">×</button>
         <h3>📲 Attiva notifiche Telegram</h3>
         <div class="modal-machine-name" id="qrMachineName" style="color:var(--text-secondary); margin-bottom:16px;"></div>
@@ -1611,10 +1971,10 @@ const apiDel  = (ep) => api('DELETE', ep);
         }
 
         return `<tr>
-            <td><strong>${esc(m.machine_name || 'Impianto')}</strong></td>
-            <td class="td-mono">${m.mac_address || '—'}</td>
-            <td><span class="td-status"><span class="td-dot ${online ? 'online' : 'offline'}"></span>${online ? 'Online' : 'Offline'}</span></td>
-            <td>
+            <td data-label="Nome"><strong>${esc(m.machine_name || 'Impianto')}</strong></td>
+            <td data-label="MAC" class="td-mono">${m.mac_address || '—'}</td>
+            <td data-label="Stato"><span class="td-status"><span class="td-dot ${online ? 'online' : 'offline'}"></span>${online ? 'Online' : 'Offline'}</span></td>
+            <td data-label="Sensori">
                 <span class="td-sensor ${waterUnknown ? 'unknown' : (waterOk ? 'ok' : 'err')}">
                     ${waterUnknown ? '❓ N/D' : (waterOk ? '💧 OK' : '💧 ❌')}
                 </span>
@@ -1622,9 +1982,9 @@ const apiDel  = (ep) => api('DELETE', ep);
                     ${insUnknown ? '❓ N/D' : (insOk ? '🧪 OK' : '🧪 ❌')}
                 </span>
             </td>
-            <td>${esc(clientName)}</td>
-            <td>${esc(instName)}</td>
-            <td class="td-actions">${actions}</td>
+            <td data-label="Cliente">${esc(clientName)}</td>
+            <td data-label="Installatore">${esc(instName)}</td>
+            <td data-label="Azioni" class="td-actions">${actions}</td>
         </tr>`;
     }).join('');
 }
@@ -1783,30 +2143,40 @@ const apiDel  = (ep) => api('DELETE', ep);
                 </div>
                 <div class="cmd-status" id="cmd-status-${m.id}"></div>
             </div>
+        `;
+    }
+
+    if (isAdmin || isInstaller) {
+        right += `
             <div class="detail-section">
-                <h4>🔧 Bypass Sensori</h4>
-                <p style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">
-                    Disabilita temporaneamente i sensori per test o manutenzione.<br>
-                    Il comando viene eseguito al prossimo ping ESP32 (max 60s).
-                </p>
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border);">
-                    <div>
-                        <div style="font-weight:600; font-size:14px;">Bypass Insetticida</div>
-                        <div style="font-size:12px; color:var(--text-secondary);">Ignora sensore livello contenitore</div>
-                    </div>
-                    <label class="toggle-switch" style="margin-left:12px;">
-                        <input type="checkbox" id="bypass-ins-${m.id}" onchange="saveMachineBypass(${m.id})">
-                        <span class="toggle-slider"></span>
+                <h4>⚙️ Avanzate</h4>
+                <div class="bypass-footnote">Esclude temporaneamente un sensore dal controllo cicli. Applicato al prossimo ping ESP32 (max 60s).</div>
+                <div class="bypass-grid">
+                    <label class="bypass-card" id="bypass-card-ins-${m.id}">
+                        <div class="bypass-card-top">
+                            <span class="bypass-icon">🧪</span>
+                            <span class="bypass-switch">
+                                <input type="checkbox" id="bypass-ins-${m.id}" onchange="onBypassToggle(${m.id}, 'ins')">
+                                <span class="rail"></span>
+                                <span class="knob"></span>
+                            </span>
+                        </div>
+                        <div class="bypass-card-label">Insetticida</div>
+                        <div class="bypass-card-desc">Ignora il sensore di livello contenitore</div>
+                        <div class="bypass-card-state" id="bypass-state-ins-${m.id}">Attivo</div>
                     </label>
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; margin-bottom:12px;">
-                    <div>
-                        <div style="font-weight:600; font-size:14px;">Bypass Flussometro</div>
-                        <div style="font-size:12px; color:var(--text-secondary);">Ignora sensore flusso acqua F92C</div>
-                    </div>
-                    <label class="toggle-switch" style="margin-left:12px;">
-                        <input type="checkbox" id="bypass-fls-${m.id}" onchange="saveMachineBypass(${m.id})">
-                        <span class="toggle-slider"></span>
+                    <label class="bypass-card" id="bypass-card-fls-${m.id}">
+                        <div class="bypass-card-top">
+                            <span class="bypass-icon">💧</span>
+                            <span class="bypass-switch">
+                                <input type="checkbox" id="bypass-fls-${m.id}" onchange="onBypassToggle(${m.id}, 'fls')">
+                                <span class="rail"></span>
+                                <span class="knob"></span>
+                            </span>
+                        </div>
+                        <div class="bypass-card-label">Flussometro</div>
+                        <div class="bypass-card-desc">Ignora il sensore di flusso acqua F92C</div>
+                        <div class="bypass-card-state" id="bypass-state-fls-${m.id}">Attivo</div>
                     </label>
                 </div>
                 <div class="cmd-status" id="bypass-status-${m.id}"></div>
@@ -1825,6 +2195,7 @@ const apiDel  = (ep) => api('DELETE', ep);
 
     document.getElementById('detailBody').innerHTML = left + right;
     document.getElementById('detailModal').classList.add('open');
+    if (isAdmin || isInstaller) loadMachineBypass(m.id);
 }
 
     function closeDetail() { document.getElementById('detailModal').classList.remove('open'); currentDetailId = null; }
@@ -1861,6 +2232,55 @@ const apiDel  = (ep) => api('DELETE', ep);
         }
     }
 
+    function toggleOtaPanel(id) {} // deprecated
+
+    async function syncMachineTime(machineId) {
+        const statusEl = document.getElementById(`cmd-status-${machineId}`);
+        statusEl.textContent = '⏳ Sincronizzazione NTP...';
+        statusEl.style.color = 'var(--amber)';
+        try {
+            const res = await apiPost(`/machines/${machineId}/command`, { type: 'sync_time' });
+            if (res.success) {
+                statusEl.textContent = '✅ Sincronizzazione NTP richiesta';
+                statusEl.style.color = 'var(--green)';
+            } else {
+                statusEl.textContent = '❌ ' + (res.message || 'Errore');
+                statusEl.style.color = 'var(--red)';
+            }
+        } catch(e) {
+            statusEl.textContent = '❌ Errore di rete';
+            statusEl.style.color = 'var(--red)';
+        }
+    }
+
+    async function loadMachineBypass(machineId) {
+        const insEl = document.getElementById(`bypass-ins-${machineId}`);
+        const flsEl = document.getElementById(`bypass-fls-${machineId}`);
+        if (!insEl || !flsEl) return;
+        try {
+            const res = await apiGet(`/machines/${machineId}/bypass`);
+            if (res.success) {
+                insEl.checked = !!res.bypass_insetticida;
+                flsEl.checked = !!res.bypass_flussometro;
+                updateBypassCardVisual(machineId, 'ins', insEl.checked);
+                updateBypassCardVisual(machineId, 'fls', flsEl.checked);
+            }
+        } catch(e) { console.error('loadMachineBypass:', e); }
+    }
+
+    function updateBypassCardVisual(machineId, key, isLive) {
+        const card = document.getElementById(`bypass-card-${key}-${machineId}`);
+        const state = document.getElementById(`bypass-state-${key}-${machineId}`);
+        if (card) card.classList.toggle('live', isLive);
+        if (state) state.textContent = isLive ? 'Bypassato' : 'Attivo';
+    }
+
+    function onBypassToggle(machineId, key) {
+        const el = document.getElementById(`bypass-${key}-${machineId}`);
+        updateBypassCardVisual(machineId, key, el.checked);
+        saveMachineBypass(machineId);
+    }
+
     async function saveMachineBypass(machineId) {
         const statusEl = document.getElementById(`bypass-status-${machineId}`);
         const ins = document.getElementById(`bypass-ins-${machineId}`)?.checked || false;
@@ -1881,27 +2301,6 @@ const apiDel  = (ep) => api('DELETE', ep);
             statusEl.style.color = 'var(--red)';
         }
         setTimeout(() => statusEl.textContent = '', 5000);
-    }
-
-    function toggleOtaPanel(id) {} // deprecated
-
-    async function syncMachineTime(machineId) {
-        const statusEl = document.getElementById(`cmd-status-${machineId}`);
-        statusEl.textContent = '⏳ Sincronizzazione NTP...';
-        statusEl.style.color = 'var(--amber)';
-        try {
-            const res = await apiPost(`/machines/${machineId}/command`, { type: 'sync_time' });
-            if (res.success) {
-                statusEl.textContent = '✅ Sincronizzazione NTP richiesta';
-                statusEl.style.color = 'var(--green)';
-            } else {
-                statusEl.textContent = '❌ ' + (res.message || 'Errore');
-                statusEl.style.color = 'var(--red)';
-            }
-        } catch(e) {
-            statusEl.textContent = '❌ Errore di rete';
-            statusEl.style.color = 'var(--red)';
-        }
     }
 
     async function saveWeatherThresholds(machineId) {
@@ -1954,12 +2353,12 @@ const apiDel  = (ep) => api('DELETE', ep);
                 actions = `<button class="btn-row btn-row-edit" onclick="editClient(${c.id})">✎</button><button class="btn-row btn-row-del" onclick="deleteClient(${c.id})">🗑</button>`;
             }
             return `<tr>
-                <td><strong>${esc(c.name)}</strong></td>
-                <td>${esc(c.email||'—')}</td>
-                <td>${esc(c.phone||'—')}</td>
-                <td>${c.username ? `<span style="color:var(--green);">✅ ${esc(c.username)}</span>` : '<span style="color:var(--amber);">⚠️ Nessun account</span>'}</td>
-                <td>${c.telegram_chat_id ? `<span style="color:var(--green);">✅ ${esc(c.telegram_chat_id)}</span>` : '—'}</td>
-                <td class="td-actions">${actions}</td>
+                <td data-label="Nome"><strong>${esc(c.name)}</strong></td>
+                <td data-label="Email">${esc(c.email||'—')}</td>
+                <td data-label="Telefono">${esc(c.phone||'—')}</td>
+                <td data-label="Username">${c.username ? `<span style="color:var(--green);">✅ ${esc(c.username)}</span>` : '<span style="color:var(--amber);">⚠️ Nessun account</span>'}</td>
+                <td data-label="Telegram">${c.telegram_chat_id ? `<span style="color:var(--green);">✅ ${esc(c.telegram_chat_id)}</span>` : '—'}</td>
+                <td data-label="Azioni" class="td-actions">${actions}</td>
             </tr>`;
         }).join('');
     }
@@ -2022,9 +2421,9 @@ const apiDel  = (ep) => api('DELETE', ep);
         tbody.innerHTML = installers.map(u => {
             const count = allMachines.filter(m => m.installer_id == u.id).length;
             return `<tr>
-                <td><strong>${esc(u.username)}</strong></td>
-                <td>${count} impianto${count !== 1 ? 'i' : ''}</td>
-                <td class="td-actions"><button class="btn-row btn-row-edit" onclick="editInstaller(${u.id})">✎</button><button class="btn-row btn-row-del" onclick="deleteInstaller(${u.id})">🗑</button></td>
+                <td data-label="Nome utente"><strong>${esc(u.username)}</strong></td>
+                <td data-label="Impianti assegnati">${count} impianto${count !== 1 ? 'i' : ''}</td>
+                <td data-label="Azioni" class="td-actions"><button class="btn-row btn-row-edit" onclick="editInstaller(${u.id})">✎</button><button class="btn-row btn-row-del" onclick="deleteInstaller(${u.id})">🗑</button></td>
             </tr>`;
         }).join('');
     }
@@ -2264,12 +2663,12 @@ const apiDel  = (ep) => api('DELETE', ep);
         el.innerHTML = `<div class="data-table-wrap"><table class="data-table">
             <thead><tr><th>Data/Ora</th><th>Impianto</th><th>Prodotto</th><th>Durata</th><th>ml</th><th>Zona</th></tr></thead>
             <tbody>${cicli.slice(0,50).map(c => `<tr>
-                <td class="td-mono">${new Date(c.started_at).toLocaleString('it-IT', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
-                <td>${esc(c.machine_name || '—')}</td>
-                <td>${c.product === 'repellent' ? '🌸 Repellente' : '🧪 Insetticida'}</td>
-                <td>${c.duration_sec}s</td>
-                <td style="color:var(--green);">${parseFloat(c.ml_consumed||0).toFixed(1)}</td>
-                <td>Z${c.zona}</td>
+                <td data-label="Data/Ora" class="td-mono">${new Date(c.started_at).toLocaleString('it-IT', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
+                <td data-label="Impianto">${esc(c.machine_name || '—')}</td>
+                <td data-label="Prodotto">${c.product === 'repellent' ? '🌸 Repellente' : '🧪 Insetticida'}</td>
+                <td data-label="Durata">${c.duration_sec}s</td>
+                <td data-label="ml" style="color:var(--green);">${parseFloat(c.ml_consumed||0).toFixed(1)}</td>
+                <td data-label="Zona">Z${c.zona}</td>
             </tr>`).join('')}</tbody>
         </table></div>`;
         if (cicli.length > 50) el.innerHTML += `<div style="text-align:center; padding:10px; color:var(--text-secondary); font-size:12px;">... e altri ${cicli.length - 50} cicli</div>`;
