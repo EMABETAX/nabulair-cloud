@@ -31,6 +31,9 @@ const APP_URL    = process.env.APP_URL    || 'https://nabulair-cloud-production.
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ── FIX OTA LOOP: max tentativi di consegna per comandi non-OTA ──
+const MAX_DELIVERY_ATTEMPTS = 3;
+
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',')
     : ['https://nabulair-cloud-production.up.railway.app', 'http://localhost:3000'];
@@ -152,8 +155,6 @@ async function initDatabase() {
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS water_ok BOOLEAN DEFAULT NULL`).catch(() => {});
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS insecticide_ok BOOLEAN DEFAULT NULL`).catch(() => {});
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS flow FLOAT DEFAULT 0`).catch(() => {});
-        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS bypass_insetticida BOOLEAN DEFAULT false`).catch(() => {});
-        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS bypass_flussometro BOOLEAN DEFAULT false`).catch(() => {});
 
         // Posizione per il meteo (impostata dal cliente dall'app)
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS latitude FLOAT DEFAULT NULL`).catch(() => {});
@@ -210,6 +211,10 @@ async function initDatabase() {
                 created_by INTEGER REFERENCES users(id)
             )
         `);
+
+        // ── FIX OTA LOOP: tracking retry per evitare loop infiniti ──
+        await pool.query(`ALTER TABLE commands ADD COLUMN IF NOT EXISTS delivery_attempts INTEGER DEFAULT 0`).catch(() => {});
+        await pool.query(`ALTER TABLE commands ADD COLUMN IF NOT EXISTS last_delivered_at TIMESTAMP NULL`).catch(() => {});
 
         // ========== NUOVA TABELLA PER I PROGRAMMI ==========
         await pool.query(`
@@ -1535,18 +1540,66 @@ app.post('/api/ping', async (req, res) => {
 
         let command = null;
         if (machine_id) {
+            // ── FIX OTA LOOP ──
+            // OTA: marca 'sent' al primo tentativo (l'ESP si riavvia → niente confirm)
+            // Altri: max 3 retry, poi auto-failed
             const cmdResult = await queryWithRetry(
-                `SELECT id, type, payload FROM commands
-                 WHERE machine_id = $1 AND status = 'pending'
-                 ORDER BY created_at ASC LIMIT 1`,
-                [machine_id]
+                `UPDATE commands 
+                 SET status = CASE 
+                     WHEN type IN ('ota_firmware', 'ota_littlefs') THEN 'sent'
+                     ELSE status 
+                 END,
+                 delivery_attempts = CASE 
+                     WHEN type IN ('ota_firmware', 'ota_littlefs') THEN COALESCE(delivery_attempts, 0)
+                     ELSE COALESCE(delivery_attempts, 0) + 1
+                 END,
+                 last_delivered_at = NOW()
+                 WHERE id = (
+                     SELECT id FROM commands
+                     WHERE machine_id = $1 AND status = 'pending'
+                     AND (
+                         type IN ('ota_firmware', 'ota_littlefs') 
+                         OR COALESCE(delivery_attempts, 0) < $2
+                     )
+                     ORDER BY created_at ASC
+                     LIMIT 1
+                 )
+                 RETURNING id, type, payload, delivery_attempts, status`,
+                [machine_id, MAX_DELIVERY_ATTEMPTS]
             );
+
             if (cmdResult.rows.length > 0) {
                 const cmd = cmdResult.rows[0];
-                // NON impostare 'sent' qui. L'ESP32 confermerà esplicitamente via /api/command/:id/confirm
-                // Se la rete cade o l'ESP crasha, il comando resta 'pending' e viene riproposto al ping successivo
-                command = { id: cmd.id, type: cmd.type, payload: cmd.payload };
-                console.log(`📤 Comando in attesa di conferma: ${cmd.type} (ID ${cmd.id})`);
+
+                // Se non-OTA e ha superato il limite, marca failed e non proporlo
+                if (!cmd.type.startsWith('ota_') && cmd.delivery_attempts >= MAX_DELIVERY_ATTEMPTS) {
+                    await queryWithRetry(
+                        `UPDATE commands SET status = 'failed' WHERE id = $1`,
+                        [cmd.id]
+                    );
+                    console.log(`⚠️ Comando ${cmd.type} (ID ${cmd.id}) fallito dopo ${cmd.delivery_attempts} tentativi`);
+                } else {
+                    command = { id: cmd.id, type: cmd.type, payload: cmd.payload };
+                    const otaNote = cmd.type.startsWith('ota_') ? ' [OTA: no-repeat]' : '';
+                    console.log(`📤 Comando in attesa di conferma: ${cmd.type} (ID ${cmd.id}, tentativo ${cmd.delivery_attempts})${otaNote}`);
+                }
+            }
+
+            // Pulisci eventuali comandi non-OTA "stuck" con troppi retry
+            const stuckResult = await queryWithRetry(
+                `UPDATE commands 
+                 SET status = 'failed'
+                 WHERE machine_id = $1 
+                 AND status = 'pending'
+                 AND type NOT IN ('ota_firmware', 'ota_littlefs')
+                 AND COALESCE(delivery_attempts, 0) >= $2
+                 RETURNING id, type, delivery_attempts`,
+                [machine_id, MAX_DELIVERY_ATTEMPTS]
+            );
+            if (stuckResult.rows.length > 0) {
+                for (const stuck of stuckResult.rows) {
+                    console.log(`🧹 Comando stuck pulito: ${stuck.type} (ID ${stuck.id}, ${stuck.delivery_attempts} tentativi)`);
+                }
             }
         }
 
@@ -1629,35 +1682,10 @@ app.post('/api/ping/ack-programs', async (req, res) => {
 });
 
 // =============================================
-// BYPASS SENSORI
-// GET  /api/machines/:id/bypass  — legge stato attuale dal DB
-// POST /api/machines/:id/bypass  — salva in DB e mette in coda per ESP32
+// BYPASS SENSORI - endpoint dedicato
+// POST /api/machines/:id/bypass
+// body: { "insetticida": true/false, "flussometro": true/false }
 // =============================================
-app.get('/api/machines/:id/bypass', authenticateToken, requireRole('admin', 'installer'), async (req, res) => {
-    const machineId = parseInt(req.params.id);
-    try {
-        const machineResult = await queryWithRetry(
-            'SELECT id, installer_id, bypass_insetticida, bypass_flussometro FROM machines WHERE id = $1',
-            [machineId]
-        );
-        if (machineResult.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Macchina non trovata' });
-        }
-        const machine = machineResult.rows[0];
-        if (req.user.role === 'installer' && machine.installer_id !== req.user.id) {
-            return res.status(403).json({ success: false, message: 'Accesso negato' });
-        }
-        res.json({
-            success: true,
-            bypass_insetticida: machine.bypass_insetticida || false,
-            bypass_flussometro: machine.bypass_flussometro || false
-        });
-    } catch (error) {
-        console.error('Errore get bypass:', error.message);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
 app.post('/api/machines/:id/bypass', authenticateToken, requireRole('admin', 'installer'), async (req, res) => {
     const machineId = parseInt(req.params.id);
     const { insetticida, flussometro } = req.body;
@@ -1668,7 +1696,7 @@ app.post('/api/machines/:id/bypass', authenticateToken, requireRole('admin', 'in
 
     try {
         const machineResult = await queryWithRetry(
-            'SELECT id, machine_name, installer_id, bypass_insetticida, bypass_flussometro FROM machines WHERE id = $1',
+            'SELECT id, machine_name, installer_id FROM machines WHERE id = $1',
             [machineId]
         );
         if (machineResult.rows.length === 0) {
@@ -1679,35 +1707,23 @@ app.post('/api/machines/:id/bypass', authenticateToken, requireRole('admin', 'in
             return res.status(403).json({ success: false, message: 'Accesso negato' });
         }
 
-        // Valori finali: merge con stato corrente se solo uno dei due viene passato
-        const newIns = insetticida !== undefined ? Boolean(insetticida) : (machine.bypass_insetticida || false);
-        const newFls = flussometro !== undefined ? Boolean(flussometro) : (machine.bypass_flussometro || false);
-        const payload = { insetticida: newIns, flussometro: newFls };
+        const payload = {};
+        if (insetticida !== undefined) payload.insetticida = Boolean(insetticida);
+        if (flussometro !== undefined) payload.flussometro = Boolean(flussometro);
 
-        // 1. Salva subito in DB — stato persistente anche se l'ESP32 è offline
-        await queryWithRetry(
-            'UPDATE machines SET bypass_insetticida = $1, bypass_flussometro = $2 WHERE id = $3',
-            [newIns, newFls, machineId]
-        );
-
-        // 2. Cancella eventuali set_bypass pendenti e mette il nuovo in coda
+        // Cancella eventuali set_bypass pendenti
         await queryWithRetry(
             `UPDATE commands SET status = 'cancelled' WHERE machine_id = $1 AND type = 'set_bypass' AND status = 'pending'`,
             [machineId]
         );
+
         const result = await queryWithRetry(
             `INSERT INTO commands (machine_id, type, payload, created_by) VALUES ($1, 'set_bypass', $2, $3) RETURNING id`,
             [machineId, payload, req.user.id]
         );
 
-        console.log(`🔧 set_bypass per macchina ${machineId}: ins=${newIns} fls=${newFls}`);
-        res.json({
-            success: true,
-            command_id: result.rows[0].id,
-            bypass_insetticida: newIns,
-            bypass_flussometro: newFls,
-            message: 'Bypass aggiornato — verrà applicato al prossimo ping (max 60s)'
-        });
+        console.log(`🔧 set_bypass in coda per macchina ${machineId}: ${JSON.stringify(payload)}`);
+        res.json({ success: true, command_id: result.rows[0].id, message: 'Bypass aggiornato — verrà applicato al prossimo ping (max 60s)' });
 
     } catch (error) {
         console.error('Errore bypass:', error.message);
@@ -1777,11 +1793,21 @@ app.post('/api/machines/:id/command', authenticateToken, async (req, res) => {
             console.log(`☁️ OTA URL generato: ${payload.url}`);
         }
 
-        await queryWithRetry(
-            `UPDATE commands SET status = 'cancelled'
-             WHERE machine_id = $1 AND type = $2 AND status = 'pending'`,
-            [machineId, type]
-        );
+        // Cancella eventuali comandi precedenti dello stesso tipo
+        // FIX OTA LOOP: per OTA cancella anche 'sent' (l'ESP non può confermare dopo reboot)
+        if (type === 'ota_firmware' || type === 'ota_littlefs') {
+            await queryWithRetry(
+                `UPDATE commands SET status = 'cancelled'
+                 WHERE machine_id = $1 AND type = $2 AND status IN ('pending', 'sent')`,
+                [machineId, type]
+            );
+        } else {
+            await queryWithRetry(
+                `UPDATE commands SET status = 'cancelled'
+                 WHERE machine_id = $1 AND type = $2 AND status = 'pending'`,
+                [machineId, type]
+            );
+        }
 
         const result = await queryWithRetry(
             `INSERT INTO commands (machine_id, type, payload, created_by)
@@ -1830,9 +1856,6 @@ app.post('/api/command/:id/confirm', async (req, res) => {
                             [cmd.machine_id]
                         );
                         console.log(`📋 last_prog_sync aggiornato per macchina ${cmd.machine_id}`);
-                    } else if (cmd.type === 'set_bypass') {
-                        // Il DB è già aggiornato al momento del POST — questa conferma è solo logging
-                        console.log(`🔧 set_bypass confermato da ESP32 per macchina ${cmd.machine_id}`);
                     }
                 }
             } catch (syncErr) {
