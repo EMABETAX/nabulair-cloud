@@ -2038,6 +2038,40 @@ const apiDel  = (ep) => api('DELETE', ep);
                 <span style="font-size:18px">🧪</span>
                 <span>${!online ? '❓ N/D (offline)' : (insOk ? 'Insetticida OK' : 'Insetticida esaurito!')}</span>
             </div>
+            ${(isAdmin || isInstaller) ? `
+            <div style="border-top:1px solid var(--border); margin-top:14px; padding-top:14px;">
+                <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:var(--text-secondary); margin-bottom:10px;">Override sensori</div>
+                <div class="bypass-footnote">Esclude temporaneamente un sensore dal controllo cicli. Attivo al prossimo ping ESP32 (max 60s).</div>
+                <div class="bypass-grid">
+                    <label class="bypass-card" id="bypass-card-ins-${m.id}">
+                        <div class="bypass-card-top">
+                            <span class="bypass-icon">🧪</span>
+                            <span class="bypass-switch">
+                                <input type="checkbox" id="bypass-ins-${m.id}" onchange="onBypassToggle(${m.id}, 'ins')">
+                                <span class="rail"></span>
+                                <span class="knob"></span>
+                            </span>
+                        </div>
+                        <div class="bypass-card-label">Insetticida</div>
+                        <div class="bypass-card-desc">Ignora sensore livello contenitore</div>
+                        <div class="bypass-card-state" id="bypass-state-ins-${m.id}">Attivo</div>
+                    </label>
+                    <label class="bypass-card" id="bypass-card-fls-${m.id}">
+                        <div class="bypass-card-top">
+                            <span class="bypass-icon">💧</span>
+                            <span class="bypass-switch">
+                                <input type="checkbox" id="bypass-fls-${m.id}" onchange="onBypassToggle(${m.id}, 'fls')">
+                                <span class="rail"></span>
+                                <span class="knob"></span>
+                            </span>
+                        </div>
+                        <div class="bypass-card-label">Flussometro</div>
+                        <div class="bypass-card-desc">Ignora sensore flusso acqua F92C</div>
+                        <div class="bypass-card-state" id="bypass-state-fls-${m.id}">Attivo</div>
+                    </label>
+                </div>
+                <div class="cmd-status" id="bypass-status-${m.id}"></div>
+            </div>` : ''}
         </div>
         <div class="detail-section">
             <h4>🌤️ Meteo</h4>
@@ -2142,44 +2176,6 @@ const apiDel  = (ep) => api('DELETE', ep);
                     <button class="btn-cmd btn-cmd-ota" onclick="syncMachineTime(${m.id})">🕐 Sincronizza NTP</button>
                 </div>
                 <div class="cmd-status" id="cmd-status-${m.id}"></div>
-            </div>
-        `;
-    }
-
-    if (isAdmin || isInstaller) {
-        right += `
-            <div class="detail-section">
-                <h4>⚙️ Avanzate</h4>
-                <div class="bypass-footnote">Esclude temporaneamente un sensore dal controllo cicli. Applicato al prossimo ping ESP32 (max 60s).</div>
-                <div class="bypass-grid">
-                    <label class="bypass-card" id="bypass-card-ins-${m.id}">
-                        <div class="bypass-card-top">
-                            <span class="bypass-icon">🧪</span>
-                            <span class="bypass-switch">
-                                <input type="checkbox" id="bypass-ins-${m.id}" onchange="onBypassToggle(${m.id}, 'ins')">
-                                <span class="rail"></span>
-                                <span class="knob"></span>
-                            </span>
-                        </div>
-                        <div class="bypass-card-label">Insetticida</div>
-                        <div class="bypass-card-desc">Ignora il sensore di livello contenitore</div>
-                        <div class="bypass-card-state" id="bypass-state-ins-${m.id}">Attivo</div>
-                    </label>
-                    <label class="bypass-card" id="bypass-card-fls-${m.id}">
-                        <div class="bypass-card-top">
-                            <span class="bypass-icon">💧</span>
-                            <span class="bypass-switch">
-                                <input type="checkbox" id="bypass-fls-${m.id}" onchange="onBypassToggle(${m.id}, 'fls')">
-                                <span class="rail"></span>
-                                <span class="knob"></span>
-                            </span>
-                        </div>
-                        <div class="bypass-card-label">Flussometro</div>
-                        <div class="bypass-card-desc">Ignora il sensore di flusso acqua F92C</div>
-                        <div class="bypass-card-state" id="bypass-state-fls-${m.id}">Attivo</div>
-                    </label>
-                </div>
-                <div class="cmd-status" id="bypass-status-${m.id}"></div>
             </div>
         `;
     }
