@@ -152,6 +152,8 @@ async function initDatabase() {
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS water_ok BOOLEAN DEFAULT NULL`).catch(() => {});
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS insecticide_ok BOOLEAN DEFAULT NULL`).catch(() => {});
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS flow FLOAT DEFAULT 0`).catch(() => {});
+        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS bypass_insetticida BOOLEAN DEFAULT false`).catch(() => {});
+        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS bypass_flussometro BOOLEAN DEFAULT false`).catch(() => {});
 
         // Posizione per il meteo (impostata dal cliente dall'app)
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS latitude FLOAT DEFAULT NULL`).catch(() => {});
@@ -1627,10 +1629,35 @@ app.post('/api/ping/ack-programs', async (req, res) => {
 });
 
 // =============================================
-// BYPASS SENSORI - endpoint dedicato
-// POST /api/machines/:id/bypass
-// body: { "insetticida": true/false, "flussometro": true/false }
+// BYPASS SENSORI
+// GET  /api/machines/:id/bypass  — legge stato attuale dal DB
+// POST /api/machines/:id/bypass  — salva in DB e mette in coda per ESP32
 // =============================================
+app.get('/api/machines/:id/bypass', authenticateToken, requireRole('admin', 'installer'), async (req, res) => {
+    const machineId = parseInt(req.params.id);
+    try {
+        const machineResult = await queryWithRetry(
+            'SELECT id, installer_id, bypass_insetticida, bypass_flussometro FROM machines WHERE id = $1',
+            [machineId]
+        );
+        if (machineResult.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Macchina non trovata' });
+        }
+        const machine = machineResult.rows[0];
+        if (req.user.role === 'installer' && machine.installer_id !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'Accesso negato' });
+        }
+        res.json({
+            success: true,
+            bypass_insetticida: machine.bypass_insetticida || false,
+            bypass_flussometro: machine.bypass_flussometro || false
+        });
+    } catch (error) {
+        console.error('Errore get bypass:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 app.post('/api/machines/:id/bypass', authenticateToken, requireRole('admin', 'installer'), async (req, res) => {
     const machineId = parseInt(req.params.id);
     const { insetticida, flussometro } = req.body;
@@ -1641,7 +1668,7 @@ app.post('/api/machines/:id/bypass', authenticateToken, requireRole('admin', 'in
 
     try {
         const machineResult = await queryWithRetry(
-            'SELECT id, machine_name, installer_id FROM machines WHERE id = $1',
+            'SELECT id, machine_name, installer_id, bypass_insetticida, bypass_flussometro FROM machines WHERE id = $1',
             [machineId]
         );
         if (machineResult.rows.length === 0) {
@@ -1652,23 +1679,35 @@ app.post('/api/machines/:id/bypass', authenticateToken, requireRole('admin', 'in
             return res.status(403).json({ success: false, message: 'Accesso negato' });
         }
 
-        const payload = {};
-        if (insetticida !== undefined) payload.insetticida = Boolean(insetticida);
-        if (flussometro !== undefined) payload.flussometro = Boolean(flussometro);
+        // Valori finali: merge con stato corrente se solo uno dei due viene passato
+        const newIns = insetticida !== undefined ? Boolean(insetticida) : (machine.bypass_insetticida || false);
+        const newFls = flussometro !== undefined ? Boolean(flussometro) : (machine.bypass_flussometro || false);
+        const payload = { insetticida: newIns, flussometro: newFls };
 
-        // Cancella eventuali set_bypass pendenti
+        // 1. Salva subito in DB — stato persistente anche se l'ESP32 è offline
+        await queryWithRetry(
+            'UPDATE machines SET bypass_insetticida = $1, bypass_flussometro = $2 WHERE id = $3',
+            [newIns, newFls, machineId]
+        );
+
+        // 2. Cancella eventuali set_bypass pendenti e mette il nuovo in coda
         await queryWithRetry(
             `UPDATE commands SET status = 'cancelled' WHERE machine_id = $1 AND type = 'set_bypass' AND status = 'pending'`,
             [machineId]
         );
-
         const result = await queryWithRetry(
             `INSERT INTO commands (machine_id, type, payload, created_by) VALUES ($1, 'set_bypass', $2, $3) RETURNING id`,
             [machineId, payload, req.user.id]
         );
 
-        console.log(`🔧 set_bypass in coda per macchina ${machineId}: ${JSON.stringify(payload)}`);
-        res.json({ success: true, command_id: result.rows[0].id, message: 'Bypass aggiornato — verrà applicato al prossimo ping (max 60s)' });
+        console.log(`🔧 set_bypass per macchina ${machineId}: ins=${newIns} fls=${newFls}`);
+        res.json({
+            success: true,
+            command_id: result.rows[0].id,
+            bypass_insetticida: newIns,
+            bypass_flussometro: newFls,
+            message: 'Bypass aggiornato — verrà applicato al prossimo ping (max 60s)'
+        });
 
     } catch (error) {
         console.error('Errore bypass:', error.message);
@@ -1791,6 +1830,9 @@ app.post('/api/command/:id/confirm', async (req, res) => {
                             [cmd.machine_id]
                         );
                         console.log(`📋 last_prog_sync aggiornato per macchina ${cmd.machine_id}`);
+                    } else if (cmd.type === 'set_bypass') {
+                        // Il DB è già aggiornato al momento del POST — questa conferma è solo logging
+                        console.log(`🔧 set_bypass confermato da ESP32 per macchina ${cmd.machine_id}`);
                     }
                 }
             } catch (syncErr) {
