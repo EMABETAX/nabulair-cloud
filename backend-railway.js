@@ -252,6 +252,14 @@ async function initDatabase() {
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS last_ntp_sync TIMESTAMP`).catch(() => {});
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS last_prog_sync TIMESTAMP`).catch(() => {});
 
+        // ========== ✅ NUOVO: STATO BYPASS REALE (riportato dal dispositivo via /api/ping) ==========
+        // Prima non esisteva: il backend conosceva solo l'ultimo comando set_bypass
+        // messo in coda, mai se fosse stato davvero applicato. Ora l'ESP32 riporta
+        // lo stato vero ad ogni ping e queste colonne riflettono la realtà.
+        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS bypass_insetticida BOOLEAN DEFAULT NULL`).catch(() => {});
+        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS bypass_flussometro BOOLEAN DEFAULT NULL`).catch(() => {});
+        await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS bypass_reported_at TIMESTAMP`).catch(() => {});
+
         // ========== NUOVE COLONNE PER SOGLIE METEO (vento/pioggia) ==========
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS wind_threshold FLOAT DEFAULT 40`).catch(() => {});
         await pool.query(`ALTER TABLE machines ADD COLUMN IF NOT EXISTS rain_threshold FLOAT DEFAULT 5`).catch(() => {});
@@ -716,6 +724,9 @@ app.get('/api/machines', authenticateToken, async (req, res) => {
                 m.water_ok,
                 m.insecticide_ok,
                 m.flow,
+                m.bypass_insetticida,
+                m.bypass_flussometro,
+                m.bypass_reported_at,
                 m.client_id,
                 m.installer_id,
                 m.paused,
@@ -862,6 +873,9 @@ app.get('/api/machine/:id', authenticateToken, async (req, res) => {
                 m.water_ok,
                 m.insecticide_ok,
                 m.flow,
+                m.bypass_insetticida,
+                m.bypass_flussometro,
+                m.bypass_reported_at,
                 m.client_id,
                 m.installer_id,
                 m.paused,
@@ -1406,7 +1420,8 @@ app.post('/api/register', async (req, res) => {
 });
 
 app.post('/api/ping', async (req, res) => {
-    const { mac_address, ip, water_ok, insecticide_ok, flow, status, local_time, programs_ok } = req.body;
+    const { mac_address, ip, water_ok, insecticide_ok, flow, status, local_time, programs_ok,
+            bypass_insetticida, bypass_flussometro, device_programs } = req.body;
 
     if (!mac_address) {
         return res.status(400).json({ success: false });
@@ -1432,7 +1447,11 @@ app.post('/api/ping', async (req, res) => {
                  insecticide_ok = CASE WHEN $4::boolean IS NOT NULL THEN $4::boolean ELSE insecticide_ok END,
                  flow = COALESCE($5, flow),
                  last_ntp_sync  = CASE WHEN $7 THEN NOW() ELSE last_ntp_sync END,
-                 last_prog_sync = CASE WHEN $8 THEN NOW() ELSE last_prog_sync END
+                 last_prog_sync = CASE WHEN $8 THEN NOW() ELSE last_prog_sync END,
+                 bypass_insetticida = CASE WHEN $9::boolean  IS NOT NULL THEN $9::boolean  ELSE bypass_insetticida END,
+                 bypass_flussometro = CASE WHEN $10::boolean IS NOT NULL THEN $10::boolean ELSE bypass_flussometro END,
+                 bypass_reported_at = CASE WHEN $9::boolean IS NOT NULL OR $10::boolean IS NOT NULL
+                                           THEN NOW() ELSE bypass_reported_at END
              WHERE mac_address = $6`,
             [ip || null, status || 'online',
              water_ok   !== undefined ? water_ok   : null,
@@ -1440,7 +1459,9 @@ app.post('/api/ping', async (req, res) => {
              flow        !== undefined ? flow        : null,
              normalizedMac,
              ntpSyncValid,
-             programs_ok === true]
+             programs_ok === true,
+             bypass_insetticida !== undefined ? bypass_insetticida : null,
+             bypass_flussometro !== undefined ? bypass_flussometro : null]
         );
 
         const machineResult = await queryWithRetry(
@@ -1603,6 +1624,30 @@ app.post('/api/ping', async (req, res) => {
             }
         }
 
+        // ========== ✅ NUOVO: REPORT STATO REALE DAI PROGRAMMI DEL DISPOSITIVO ==========
+        // L'ESP32 include "device_programs" quando l'utente ha modificato i
+        // programmi localmente (index.html → /setPrograms) o ha premuto "Sync".
+        // Adottiamo questa versione come corrente sul cloud, invece di lasciare
+        // che machine_programs resti fermo alla vecchia versione mentre il
+        // dispositivo ha già qualcos'altro. Aggiorniamo anche last_prog_sync
+        // SUBITO, così la logica di auto-push qui sotto non rimanda giù la
+        // versione appena ricevuta (evita ping-pong nello stesso giro).
+        if (machine_id && Array.isArray(device_programs)) {
+            await queryWithRetry(
+                `INSERT INTO machine_programs (machine_id, programs, updated_at)
+                 VALUES ($1, $2::jsonb, NOW())
+                 ON CONFLICT (machine_id)
+                 DO UPDATE SET programs = $2::jsonb, updated_at = NOW()`,
+                [machine_id, JSON.stringify(device_programs)]
+            );
+            await queryWithRetry(
+                'UPDATE machines SET last_prog_sync = NOW() WHERE id = $1',
+                [machine_id]
+            );
+            if (machine) machine.last_prog_sync = new Date(); // riflette l'update anche in memoria per il codice sotto
+            console.log(`📋 Stato programmi reale ricevuto da ${normalizedMac}: ${device_programs.length} programmi salvati come versione corrente`);
+        }
+
         // ========== LOGICA AUTO-SYNC ==========
         let requestSync = false;
         let pushPrograms = null;
@@ -1678,6 +1723,39 @@ app.post('/api/ping/ack-programs', async (req, res) => {
     } catch (err) {
         console.error('❌ Errore ack-programs:', err.message);
         return res.status(500).json({ success: false });
+    }
+});
+
+// =============================================
+// ✅ NUOVO: BYPASS SENSORI - lettura stato reale
+// GET /api/machines/:id/bypass
+// Prima mancava del tutto: il dashboard la chiamava (loadMachineBypass)
+// ma andava sempre in errore silenzioso e i toggle restavano sul
+// default. Restituisce lo stato VERO riportato dall'ESP32 ad ogni
+// ping (colonne bypass_insetticida/bypass_flussometro), non l'ultimo
+// comando messo in coda che potrebbe non essere mai stato applicato.
+// =============================================
+app.get('/api/machines/:id/bypass', authenticateToken, async (req, res) => {
+    const machineId = parseInt(req.params.id);
+    try {
+        const result = await queryWithRetry(
+            'SELECT bypass_insetticida, bypass_flussometro, bypass_reported_at FROM machines WHERE id = $1',
+            [machineId]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Macchina non trovata' });
+        }
+        const row = result.rows[0];
+        res.json({
+            success: true,
+            bypass_insetticida: row.bypass_insetticida === true,
+            bypass_flussometro: row.bypass_flussometro === true,
+            bypass_reported_at: row.bypass_reported_at, // null = mai riportato dall'ESP32 (firmware vecchio o mai connesso)
+            known: row.bypass_reported_at !== null // ✅ false = non sappiamo ancora lo stato reale, non fidarti del toggle
+        });
+    } catch (error) {
+        console.error('Errore GET bypass:', error.message);
+        res.status(500).json({ success: false });
     }
 });
 
