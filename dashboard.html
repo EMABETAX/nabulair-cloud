@@ -1873,6 +1873,11 @@ const apiDel  = (ep) => api('DELETE', ep);
             populateFilterDropdowns();
             populatePreregInstallers();
 
+            // ✅ FIX: se il pannello dettaglio è aperto, tieni vivi gli
+            // indicatori sensore invece di lasciarli congelati allo
+            // stato di quando è stato aperto.
+            refreshDetailSensors(currentDetailId);
+
         } else {
             console.error("Errore dal server:", data.message || "Errore sconosciuto");
 
@@ -2005,6 +2010,35 @@ const apiDel  = (ep) => api('DELETE', ep);
     // ==================== DETAIL MODAL (without programs, with reboot/OTA and remote link) ====================
     let currentDetailId = null;
 
+    // ✅ FIX: il pannello dettaglio (openDetail) veniva popolato UNA SOLA
+    // VOLTA all'apertura e non si aggiornava mai più, anche se loadMachines()
+    // ricaricava dati freschi ogni 30s in background. Risultato: se lasci
+    // il pannello aperto, "Acqua presente" resta congelato allo stato di
+    // quando l'hai aperto, anche se il flussometro segnala poi acqua
+    // assente — a differenza di remote.html che ri-renderizza tutto ad
+    // ogni polling. Questa funzione aggiorna SOLO i due indicatori
+    // sensore in-place (senza toccare form, soglie o bypass in modifica)
+    // ed è chiamata da loadMachines() ogni volta che arrivano dati nuovi.
+    function refreshDetailSensors(id) {
+        if (!id) return;
+        const m = allMachines.find(x => x.id === id);
+        if (!m) return;
+        const online = (m.status === 'online' || m.status === 'active');
+        const waterOk = online && m.water_ok === true;
+        const insOk = online && m.insecticide_ok === true;
+
+        const waterEl = document.getElementById(`detail-water-${id}`);
+        if (waterEl) {
+            waterEl.className = `sensor-big ${!online ? 'unknown' : (waterOk ? 'ok' : 'err')}`;
+            waterEl.innerHTML = `<span style="font-size:18px">💧</span><span>${!online ? '❓ N/D (offline)' : (waterOk ? 'Acqua presente' : 'Acqua assente — rabboccare!')}</span>`;
+        }
+        const insEl = document.getElementById(`detail-ins-${id}`);
+        if (insEl) {
+            insEl.className = `sensor-big ${!online ? 'unknown' : (insOk ? 'ok' : 'err')}`;
+            insEl.innerHTML = `<span style="font-size:18px">🧪</span><span>${!online ? '❓ N/D (offline)' : (insOk ? 'Insetticida OK' : 'Insetticida esaurito!')}</span>`;
+        }
+    }
+
     function openDetail(id) {
     const m = allMachines.find(x => x.id === id);
     if (!m) {
@@ -2030,11 +2064,11 @@ const apiDel  = (ep) => api('DELETE', ep);
         </div>
         <div class="detail-section">
             <h4>🧪 Sensori</h4>
-            <div class="sensor-big ${!online ? 'unknown' : (waterOk ? 'ok' : 'err')}">
+            <div class="sensor-big ${!online ? 'unknown' : (waterOk ? 'ok' : 'err')}" id="detail-water-${m.id}">
                 <span style="font-size:18px">💧</span>
                 <span>${!online ? '❓ N/D (offline)' : (waterOk ? 'Acqua presente' : 'Acqua assente — rabboccare!')}</span>
             </div>
-            <div class="sensor-big ${!online ? 'unknown' : (insOk ? 'ok' : 'err')}">
+            <div class="sensor-big ${!online ? 'unknown' : (insOk ? 'ok' : 'err')}" id="detail-ins-${m.id}">
                 <span style="font-size:18px">🧪</span>
                 <span>${!online ? '❓ N/D (offline)' : (insOk ? 'Insetticida OK' : 'Insetticida esaurito!')}</span>
             </div>
@@ -2252,6 +2286,7 @@ const apiDel  = (ep) => api('DELETE', ep);
     async function loadMachineBypass(machineId) {
         const insEl = document.getElementById(`bypass-ins-${machineId}`);
         const flsEl = document.getElementById(`bypass-fls-${machineId}`);
+        const statusEl = document.getElementById(`bypass-status-${machineId}`);
         if (!insEl || !flsEl) return;
         try {
             const res = await apiGet(`/machines/${machineId}/bypass`);
@@ -2260,6 +2295,20 @@ const apiDel  = (ep) => api('DELETE', ep);
                 flsEl.checked = !!res.bypass_flussometro;
                 updateBypassCardVisual(machineId, 'ins', insEl.checked);
                 updateBypassCardVisual(machineId, 'fls', flsEl.checked);
+
+                // ✅ FIX: se l'ESP32 non ha MAI riportato il suo stato reale
+                // (firmware vecchio, o macchina mai connessa dopo l'update),
+                // avvisiamo invece di mostrare silenziosamente un default
+                // che potrebbe non corrispondere alla realtà.
+                if (!res.known && statusEl) {
+                    statusEl.textContent = '⚠️ Stato reale non ancora confermato dal dispositivo';
+                    statusEl.style.color = 'var(--amber)';
+                } else if (statusEl && res.bypass_reported_at) {
+                    const mins = Math.round((Date.now() - new Date(res.bypass_reported_at).getTime()) / 60000);
+                    statusEl.textContent = `✅ Stato reale confermato dal dispositivo (${mins < 1 ? 'ora' : mins + ' min fa'})`;
+                    statusEl.style.color = 'var(--text-secondary)';
+                    setTimeout(() => { if (statusEl.textContent.startsWith('✅ Stato reale')) statusEl.textContent = ''; }, 5000);
+                }
             }
         } catch(e) { console.error('loadMachineBypass:', e); }
     }
