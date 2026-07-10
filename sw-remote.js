@@ -3,13 +3,21 @@
 // NabulAir v1.5
 // =============================================
 
-const CACHE_NAME = 'nabulair-remote-v1';
+const CACHE_NAME = 'nabulair-remote-v2';
 
 // Installa e attiva
 self.addEventListener('install', e => {
     e.waitUntil(
         caches.open(CACHE_NAME).then(cache =>
-            cache.addAll(['/remote.html', '/logo.png'])
+            cache.addAll([
+                '/remote.html',
+                '/logo.png',
+                '/manifest.json',
+                '/icon-96x96.png',
+                '/icon-192x192.png',
+                '/icon-512x512.png',
+                '/apple-touch-icon.png'
+            ])
         ).then(() => self.skipWaiting())
     );
 });
